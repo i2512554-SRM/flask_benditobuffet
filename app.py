@@ -249,6 +249,12 @@ def eliminar_empleado(id):
     flash("Empleado eliminado", "success")
     return redirect(url_for("empleados"))
 
+@app.route("/perfil/<int:id>")
+@login_required
+def perfil(id):
+    empleado = Usuario.query.get_or_404(id)
+    return render_template("perfil.html", empleado=empleado)
+
 # -------------------------------
 # INICIALIZACIÓN
 # -------------------------------

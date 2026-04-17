@@ -10,7 +10,7 @@
         <p>Gestión integral del restaurante</p>
     </div>
     <div class="header-buttons">
-        <button class="btn-outline">Mi Perfil</button>
+        <a href="{{ url_for('perfil', id=session.get('usuario_id')) }}" class="btn-outline">Mi Perfil</a>
         <button class="btn-outline" onclick="toggleDarkMode()">🌙</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
         

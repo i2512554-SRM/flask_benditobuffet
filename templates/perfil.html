@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Perfil - {{ empleado.nombres }} - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/perfil.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="perfil-container">
+    <a href="{{ url_for('empleados') if session.get('rol').lower() == 'administrador' else url_for('panel') }}" class="volver">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Dashboard
+    </a>
+
+    <div class="perfil-header">
+        <div class="perfil-avatar avatar-{{ empleado.rol.nombre.lower() if empleado.rol else 'trabajador' }}">
+            {{ empleado.nombres[0] }}{{ empleado.apellido[0] if empleado.apellido else '' }}
+        </div>
+
+        <div class="perfil-info">
+            <div class="perfil-nombre">
+                <h1>{{ empleado.nombres }} {{ empleado.apellido if empleado.apellido else '' }}</h1>
+                <span class="rol-badge">{{ empleado.rol.nombre if empleado.rol else 'Sin rol' }}</span>
+            </div>
+
+            <div class="perfil-detalles">
+                <div class="detalle-item">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>{{ empleado.correo }}</span>
+                </div>
+                <div class="detalle-item">
+                    <i class="fa-solid fa-phone"></i>
+                    <span>{{ empleado.telefono if empleado.telefono else 'N/A' }}</span>
+                </div>
+                <div class="detalle-item">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>8:00 AM - 6:00 PM</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="perfil-salario">
+            <div class="perfil-salario-label">💰 Salario Mensual</div>
+            <div class="perfil-salario-valor">$2,500.00</div>
+        </div>
+    </div>
+
+    <div class="contenedor-secciones">
+        <!-- Historial de Pagos -->
+        <div class="seccion">
+            <div class="seccion-titulo">
+                <i class="fa-solid fa-history"></i> Historial de Pagos
+            </div>
+            <div>
+                <div class="pago-item">
+                    <div>
+                        <div class="pago-mes">Noviembre 2024</div>
+                        <div class="pago-fecha">30 Nov 2024</div>
+                    </div>
+                    <div>
+                        <div style="text-align: right;">
+                            <div class="pago-monto">$2,500.00</div>
+                            <div class="pago-estado">Pagado</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pago-item">
+                    <div>
+                        <div class="pago-mes">Octubre 2024</div>
+                        <div class="pago-fecha">31 Oct 2024</div>
+                    </div>
+                    <div>
+                        <div style="text-align: right;">
+                            <div class="pago-monto">$2,500.00</div>
+                            <div class="pago-estado">Pagado</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pago-item">
+                    <div>
+                        <div class="pago-mes">Septiembre 2024</div>
+                        <div class="pago-fecha">30 Sep 2024</div>
+                    </div>
+                    <div>
+                        <div style="text-align: right;">
+                            <div class="pago-monto">$2,500.00</div>
+                            <div class="pago-estado">Pagado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adelantos Recibidos -->
+        <div class="seccion">
+            <div class="seccion-titulo">
+                <i class="fa-solid fa-dollar-sign"></i> Adelantos Recibidos
+            </div>
+            <div>
+                <div class="adelanto-item">
+                    <div>
+                        <div class="adelanto-concepto">Adelanto solicitado</div>
+                        <div class="adelanto-fecha">15 Nov 2024</div>
+                    </div>
+                    <div class="adelanto-monto">$300.00</div>
+                </div>
+
+                <div class="adelanto-item">
+                    <div>
+                        <div class="adelanto-concepto">Emergencia médica</div>
+                        <div class="adelanto-fecha">10 Oct 2024</div>
+                    </div>
+                    <div class="adelanto-monto">$200.00</div>
+                </div>
+            </div>
+            <button class="btn-solicitar">Solicitar Adelanto</button>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endblock %}
