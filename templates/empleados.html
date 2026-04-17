@@ -34,9 +34,9 @@
             <form method="POST" action="{{ url_for('nuevo_empleado') }}" class="form-grid">
                 <input type="text" name="nombres" placeholder="Nombres" required>
                 <input type="text" name="apellido" placeholder="Apellido">
-                <input type="text" name="dni" placeholder="DNI" required>
+                <input type="text" name="dni" placeholder="DNI" inputmode="numeric" pattern="\d{1,8}" maxlength="8" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
                 <input type="email" name="correo" placeholder="Correo electrónico" required>
-                <input type="text" name="telefono" placeholder="Teléfono">
+                <input type="text" name="telefono" placeholder="Teléfono" inputmode="numeric" pattern="\d{1,9}" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
                 <input type="password" name="clave" placeholder="Contraseña" required>
                 <select name="rol_id" required>
                     <option value="">Seleccionar rol</option>

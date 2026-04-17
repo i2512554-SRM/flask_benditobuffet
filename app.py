@@ -28,6 +28,18 @@ def verify_password(stored_password, provided_password):
         return bcrypt.check_password_hash(stored_password, provided_password)
     return stored_password == provided_password
 
+
+def is_digits(value):
+    return isinstance(value, str) and value.isdigit()
+
+
+def validate_dni(dni):
+    return is_digits(dni) and 1 <= len(dni) <= 8
+
+
+def validate_telefono(telefono):
+    return is_digits(telefono) and 1 <= len(telefono) <= 9
+
 # -------------------------------
 # DECORADOR: LOGIN REQUERIDO
 # -------------------------------
@@ -134,13 +146,28 @@ def nuevo_empleado():
     roles = Rol.query.all()
 
     if request.method == "POST":
-        nombres = request.form["nombres"]
-        apellido = request.form.get("apellido", "")
-        dni = request.form["dni"]
-        correo = request.form["correo"]
-        telefono = request.form.get("telefono", "")
-        rol_id = int(request.form["rol_id"])
+        nombres = request.form["nombres"].strip()
+        apellido = request.form.get("apellido", "").strip()
+        dni = request.form["dni"].strip()
+        correo = request.form["correo"].strip()
+        telefono = request.form.get("telefono", "").strip()
+        try:
+            rol_id = int(request.form["rol_id"])
+        except (ValueError, TypeError):
+            rol_id = None
         clave = request.form["clave"]
+
+        if not nombres or not dni or not correo or not telefono or not rol_id or not clave:
+            flash("Todos los campos obligatorios deben completarse", "error")
+            return render_template("empleados_from.html", roles=roles)
+
+        if not validate_dni(dni):
+            flash("DNI debe contener solo números y hasta 8 dígitos", "error")
+            return render_template("empleados_from.html", roles=roles)
+
+        if not validate_telefono(telefono):
+            flash("Teléfono debe contener solo números y hasta 9 dígitos", "error")
+            return render_template("empleados_from.html", roles=roles)
 
         usuario_login = correo
         hashed_clave = bcrypt.generate_password_hash(clave).decode('utf-8')
@@ -172,15 +199,37 @@ def editar_empleado(id):
     roles = Rol.query.all()
 
     if request.method == "POST":
-        empleado.nombres = request.form["nombres"]
-        empleado.apellido = request.form.get("apellido", "")
-        empleado.dni = request.form["dni"]
-        empleado.correo = request.form["correo"]
-        empleado.telefono = request.form.get("telefono", "")
-        empleado.id_rol = int(request.form["rol_id"])
+        nombres = request.form["nombres"].strip()
+        apellido = request.form.get("apellido", "").strip()
+        dni = request.form["dni"].strip()
+        correo = request.form["correo"].strip()
+        telefono = request.form.get("telefono", "").strip()
+        try:
+            rol_id = int(request.form["rol_id"])
+        except (ValueError, TypeError):
+            rol_id = None
+        clave_nueva = request.form.get("clave")
+
+        if not nombres or not dni or not correo or not telefono or not rol_id:
+            flash("Todos los campos obligatorios deben completarse", "error")
+            return render_template("empleados_from.html", empleado=empleado, roles=roles)
+
+        if not validate_dni(dni):
+            flash("DNI debe contener solo números y hasta 8 dígitos", "error")
+            return render_template("empleados_from.html", empleado=empleado, roles=roles)
+
+        if not validate_telefono(telefono):
+            flash("Teléfono debe contener solo números y hasta 9 dígitos", "error")
+            return render_template("empleados_from.html", empleado=empleado, roles=roles)
+
+        empleado.nombres = nombres
+        empleado.apellido = apellido
+        empleado.dni = dni
+        empleado.correo = correo
+        empleado.telefono = telefono
+        empleado.id_rol = rol_id
         empleado.usuario = request.form.get("usuario", empleado.correo)
 
-        clave_nueva = request.form.get("clave")
         if clave_nueva:
             empleado.clave = bcrypt.generate_password_hash(clave_nueva).decode('utf-8')
 
