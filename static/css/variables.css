@@ -21,4 +21,8 @@
     --color-negro-suave: #f9fafb;
     --color-gris: #9ca3af;
     --color-gris-suave: #374151;
+    --color-error-bg: #7f1d1d;
+    --color-error-text: #fecaca;
+    --color-success-bg: #14532d;
+    --color-success-text: #bbf7d0;
 }
