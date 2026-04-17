@@ -134,3 +134,8 @@ button {
     border: 1px solid var(--color-gris-suave);
     color: var(--color-negro-suave);
 }
+.module-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
