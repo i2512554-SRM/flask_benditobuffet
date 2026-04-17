@@ -1,17 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
 
-
+* {
+    transition: background 0.3s, color 0.3s;
+}
 
 body{
     margin:0;
     font-family: Lexend, sans-serif;
-    background: var(--gris-claro);
+    background: var(--color-gris-claro);
 }
 
+/* CONTENEDOR GENERAL */
 .login{
     padding:30px;
 }
 
+/* BRAND */
 .brand-container{
     display:flex;
     align-items:center;
@@ -19,9 +23,9 @@ body{
     gap:20px;
     margin-bottom:20px;
     padding:20px 30px;
-    background: var(--blanco);
+    background: var(--color-blanco);
     border-radius:20px;
-    border:1px solid var(--borde);
+    border:1px solid var(--color-gris-suave);
     max-width:600px;
     margin-left:auto;
     margin-right:auto;
@@ -35,29 +39,31 @@ body{
 .brand-text h1{
     margin:0;
     font-size:24px;
-    color: var(--oscuro);
+    color: var(--color-negro-suave);
 }
 
 .brand-text p{
     margin:5px 0 0;
-    color: var(--gris);
+    color: var(--color-gris);
     font-size:14px;
 }
 
+/* VOLVER */
 .volver{
     text-decoration:none;
-    color: var(--gris);
+    color: var(--color-gris);
     display:inline-block;
     margin-bottom:20px;
 }
 
+/* CARD LOGIN */
 .card{
     width:600px;
     margin:auto;
-    background: var(--blanco);
+    background: var(--color-blanco);
     padding:40px;
     border-radius:20px;
-    border:1px solid var(--naranja-claro);
+    border:1px solid var(--color-primario-naranja);
     text-align:center;
 }
 
@@ -67,20 +73,21 @@ body{
 }
 
 .sub{
-    color: var(--gris);
+    color: var(--color-gris);
     margin:5px 0;
 }
 
 .sub2{
-    color: var(--gris);
+    color: var(--color-gris);
     font-size:14px;
     margin-bottom:20px;
 }
 
+/* ROLES */
 .roles{
     display:flex;
     justify-content:space-between;
-    background:#eeeeee;
+    background: var(--color-gris-suave);
     border-radius:12px;
     padding:5px;
     margin-bottom:20px;
@@ -99,17 +106,18 @@ body{
 }
 
 .activo{
-    background: var(--blanco);
-    border:1px solid var(--borde);
+    background: var(--color-blanco);
+    border:1px solid var(--color-gris-suave);
     font-weight:600;
 }
 
+/* INFO */
 .info{
     display:flex;
     align-items:center;
     gap:10px;
-    background: var(--naranja-claro);
-    border:1px solid var(--naranja);
+    background: rgba(255, 123, 0, 0.1);
+    border:1px solid var(--color-primario-naranja);
     border-radius:12px;
     padding:15px;
     text-align:left;
@@ -117,12 +125,13 @@ body{
 }
 
 .info i{
-    background: var(--naranja);
-    color: var(--blanco);
+    background: var(--color-primario-naranja);
+    color: var(--color-blanco);
     padding:10px;
     border-radius:50%;
 }
 
+/* FORM */
 .form{
     text-align:left;
 }
@@ -135,22 +144,24 @@ body{
 .form input{
     width:100%;
     padding:12px;
-    border:1px solid var(--borde);
+    border:1px solid var(--color-gris-suave);
     border-radius:10px;
     margin-top:5px;
+    background: var(--color-blanco);
 }
 
 .form input:focus{
     outline:none;
-    border:1px solid var(--naranja);
+    border:1px solid var(--color-primario-naranja);
 }
 
+/* BOTON */
 .btn{
     width:100%;
     margin-top:20px;
     padding:14px;
-    background: var(--naranja);
-    color: var(--blanco);
+    background: var(--color-primario-naranja);
+    color: var(--color-blanco);
     border:none;
     border-radius:10px;
     font-weight:600;
@@ -161,18 +172,20 @@ body{
     opacity:0.9;
 }
 
+/* TEXTOS */
 .olvide{
     text-align:center;
-    color: var(--gris);
+    color: var(--color-gris);
     margin-top:15px;
 }
 
 .final{
     text-align:center;
     font-size:14px;
-    color: var(--gris);
+    color: var(--color-gris);
 }
 
+/* ALERTAS */
 .flash {
     margin-top: 10px;
     padding: 10px;
@@ -180,11 +193,17 @@ body{
 }
 
 .flash.error {
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
 }
 
 .flash.success {
-    background: #d4edda;
-    color: #155724;
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+/* 🌙 DARK MODE */
+body.dark-mode .card,
+body.dark-mode .brand-container {
+    border: 1px solid var(--color-gris-suave);
 }
