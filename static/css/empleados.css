@@ -126,6 +126,16 @@ input:focus, select:focus {
     filter: brightness(0.9);
 }
 
+.btn-outline {
+    background: none;
+    border: 1px solid var(--color-gris-suave);
+    color: var(--color-negro-suave);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
 .btn-edit {
     background: var(--color-verde-fuerte);
     color: var(--color-blanco);

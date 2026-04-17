@@ -162,7 +162,7 @@ def nuevo_empleado():
         flash("Empleado registrado exitosamente", "success")
         return redirect(url_for("empleados"))
 
-    return render_template("empleados_form.html", roles=roles)
+    return render_template("empleados_from.html", roles=roles)
 
 @app.route("/empleados/editar/<int:id>", methods=["GET", "POST"])
 @login_required
@@ -188,7 +188,7 @@ def editar_empleado(id):
         flash("Empleado actualizado", "success")
         return redirect(url_for("empleados"))
 
-    return render_template("empleados_form.html", empleado=empleado, roles=roles)
+    return render_template("empleados_from.html", empleado=empleado, roles=roles)
 
 @app.route("/empleados/eliminar/<int:id>")
 @login_required
