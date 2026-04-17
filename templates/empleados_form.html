@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{% if empleado %}Editar{% else %}Nuevo{% endif %} Empleado - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/empleados.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+{% endblock %}
+{% block content %}
+<header class="header-empleados">
+    <div>
+        <h1>
+            <a href="{{ url_for('empleados') }}">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+            {% if empleado %}Editar{% else %}Nuevo{% endif %} Empleado
+        </h1>
+        <p>{% if empleado %}Modificar datos del empleado{% else %}Registro de nuevo empleado{% endif %}</p>
+    </div>
+</header>
+<main>
+    <section class="contenido active">
+        <div class="card">
+            <h2>{% if empleado %}Editar{% else %}Nuevo{% endif %} Empleado</h2>
+            <form method="POST" action="{% if empleado %}{{ url_for('editar_empleado', id=empleado.id_usuario) }}{% else %}{{ url_for('nuevo_empleado') }}{% endif %}" class="form-grid">
+                <div class="form-group">
+                    <label>Nombres</label>
+                    <input type="text" name="nombres" placeholder="Nombres" value="{% if empleado %}{{ empleado.nombres }}{% endif %}" required>
+                </div>
+                <div class="form-group">
+                    <label>Apellido</label>
+                    <input type="text" name="apellido" placeholder="Apellido" value="{% if empleado %}{{ empleado.apellido }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label>DNI</label>
+                    <input type="text" name="dni" placeholder="DNI" value="{% if empleado %}{{ empleado.dni }}{% endif %}" required>
+                </div>
+                <div class="form-group">
+                    <label>Correo electrónico</label>
+                    <input type="email" name="correo" placeholder="Correo electrónico" value="{% if empleado %}{{ empleado.correo }}{% endif %}" required>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" name="telefono" placeholder="Teléfono" value="{% if empleado %}{{ empleado.telefono }}{% endif %}">
+                </div>
+                {% if not empleado %}
+                <input type="password" name="clave" placeholder="Contraseña" required>
+                {% endif %}
+                <select name="rol_id" required>
+                    <option value="">Seleccionar rol</option>
+                    {% for rol in roles %}
+                        <option value="{{ rol.id_rol }}" {% if empleado and empleado.id_rol == rol.id_rol %}selected{% endif %}>{{ rol.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn-primary" onclick="document.querySelector('form').submit()">{% if empleado %}Actualizar{% else %}Registrar{% endif %} Empleado</button>
+            </form>
+            
+        </div>
+    </section>
+</main>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endblock %}

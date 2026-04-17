@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Panel Administrativo - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+{% endblock %}
+{% block content %}
+<header>
+    <div>
+        <h1>Panel Administrativo</h1>
+        <p>Gestión integral del restaurante</p>
+    </div>
+    <div class="header-buttons">
+        <button class="btn-outline">Mi Perfil</button>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+        <button class="btn-outline" onclick="toggleDarkMode()">🌙</button>
+    </div>
+</header>
+
+<section class="stats">
+    <div class="card">
+        <h3>Ventas del Día</h3>
+        <h2>$2,450.00</h2>
+        <span class="positive">+12.5% vs ayer</span>
+    </div>
+
+    <div class="card">
+        <h3>Egresos del Día</h3>
+        <h2>$580.00</h2>
+        <span class="negative">-5.2% vs ayer</span>
+    </div>
+
+    <div class="card">
+        <h3>Ganancia Neta</h3>
+        <h2>$1,870.00</h2>
+        <span class="positive">+18.3% vs ayer</span>
+    </div>
+
+    <div class="card">
+        <h3>Clientes Hoy</h3>
+        <h2>127</h2>
+        <span class="positive">+8.1% vs ayer</span>
+    </div>
+</section>
+
+<section class="modules">
+    <h2>Módulos del Sistema</h2>
+
+    <div class="module-grid">
+        <div class="module-card" onclick="location.href='#'">
+            <h3>Gestión de Caja</h3>
+            <p>Registrar ventas, egresos y cierre diario</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='#'">
+            <h3>Clientes</h3>
+            <p>Registro y seguimiento de clientes</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='#'">
+            <h3>Pagos a Personal</h3>
+            <p>Salarios, adelantos e historial</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='#'">
+            <h3>Inventario e Inversión</h3>
+            <p>Compras, equipamiento y costos</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='#'">
+            <h3>IA Predictiva</h3>
+            <p>Análisis y predicciones inteligentes</p>
+        </div>
+        <div class="module-card" onclick="location.href='{{ url_for('empleados') }}'">
+            <h3>Empleados</h3>
+            <p>Registro y administración del personal</p>
+        </div>
+    </div>
+</section>
+
+<section class="actions">
+    <h2>Acciones Rápidas</h2>
+    <div class="actions-buttons">
+        <button class="btn-primary">Registrar Venta</button>
+        <button class="btn-secondary">Registrar Egreso</button>
+        <button class="btn-secondary">Ver Inventario</button>
+        <button class="btn-secondary">Cerrar Caja</button>
+    </div>
+</section>
+
+{% endblock %}

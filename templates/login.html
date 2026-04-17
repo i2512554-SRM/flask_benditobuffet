@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Bendito Buffet{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<main>
+    <div class="login">
+        <a href="/" class="volver">
+            <i class="fa-solid fa-arrow-left"></i> Volver al inicio
+        </a>
+        <div class="card">
+            <img src="{{ url_for('static', filename='imgs/logo.png') }}" class="logo" alt="Logo">
+
+            <h2>Iniciar Sesión</h2>
+            <p class="sub">Sistema de Gestión Integral – Bendito Buffet</p>
+            <p class="sub2">Selecciona tu rol para acceder al sistema</p>
+
+            <div class="roles">
+                <div class="rol activo" onclick="cambiarRol('administrador', this)">
+                    <i class="fa-solid fa-shield"></i> Administrador
+                </div>
+                <div class="rol" onclick="cambiarRol('cajero', this)">
+                    <i class="fa-solid fa-dollar-sign"></i> Cajero
+                </div>
+            </div>
+            <div class="info">
+                <i class="fa-solid fa-shield"></i>
+                <div>
+                    <h4 id="tituloRol">Administrador</h4>
+                    <p id="descRol">Acceso completo a todos los módulos del sistema.</p>
+                </div>
+            </div>
+
+            <form method="POST" class="form" autocomplete="off">
+                <label>Usuario / Correo electrónico</label>
+                <input type="text" id="usuario" name="correo" autocomplete="off" placeholder="correo@ejemplo.com" required>
+
+                <label>Contraseña</label>
+                <input type="password" id="password" name="clave" autocomplete="new-password" placeholder="987654" required>
+
+                <button class="btn" id="btnLogin" type="submit">
+                    Entrar como Administrador
+                </button>
+            </form>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <p class="olvide">¿Olvidaste tu contraseña?</p>
+
+            <hr>
+
+            <p class="final">
+                Acceso exclusivo para trabajadores del restaurante.
+            </p>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function clearLoginFields() {
+        const usuario = document.getElementById('usuario');
+        const password = document.getElementById('password');
+        if (usuario) usuario.value = '';
+        if (password) password.value = '';
+    }
+
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2)) {
+            clearLoginFields();
+        }
+    });
+</script>
+{% endblock %}
