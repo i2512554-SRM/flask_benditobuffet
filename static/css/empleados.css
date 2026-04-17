@@ -1,5 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
 
+* {
+    transition: background 0.3s, color 0.3s;
+}
 
 body {
     margin: 0;
@@ -8,6 +11,7 @@ body {
     color: var(--color-negro-suave);
 }
 
+/* HEADER */
 .header-empleados {
     padding: 20px 40px;
 }
@@ -29,10 +33,12 @@ body {
     color: var(--color-gris);
 }
 
+/* MAIN */
 main {
     padding-bottom: 40px;
 }
 
+/* TABS */
 .tabs {
     display: flex;
     gap: 10px;
@@ -54,6 +60,7 @@ main {
     border: 1px solid var(--color-gris-suave);
 }
 
+/* CONTENIDO */
 .contenido {
     display: none;
     padding: 0 40px;
@@ -63,6 +70,7 @@ main {
     display: block;
 }
 
+/* CARD */
 .card {
     background: var(--color-blanco);
     padding: 20px;
@@ -74,6 +82,7 @@ main {
     margin-top: 0;
 }
 
+/* FORM */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -81,13 +90,28 @@ main {
     margin: 20px 0;
 }
 
+.form-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
 input, select {
     padding: 10px;
     border-radius: 8px;
-    border: 1px solid var(--color-gris-suave);
     font-size: 14px;
+    background-color: var(--color-blanco);
+    border: 1px solid var(--color-gris-suave);
+    transition: 0.2s;
 }
 
+input:focus, select:focus {
+    border-color: var(--color-primario-naranja);
+    box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
+    outline: none;
+}
+
+/* BOTONES */
 .btn-primary {
     background: var(--color-primario-naranja);
     color: var(--color-blanco);
@@ -138,6 +162,7 @@ input, select {
     cursor: pointer;
 }
 
+/* TABLA */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -155,6 +180,7 @@ td {
     border-bottom: 1px solid var(--color-gris-suave);
 }
 
+/* ESTADOS */
 .estado {
     padding: 5px 10px;
     border-radius: 6px;
@@ -173,6 +199,7 @@ td {
     color: var(--color-blanco);
 }
 
+/* ALERTAS (🔥 corregido para modo oscuro) */
 .flash {
     margin: 10px 40px;
     padding: 10px;
@@ -180,27 +207,16 @@ td {
 }
 
 .flash.error {
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
 }
 
 .flash.success {
-    background: #d4edda;
-    color: #155724;
-}
-.form-group {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-input, select {
-    background-color: var(--color-blanco);
-    border: 1px solid var(--color-gris-suave);
-    transition: 0.2s;
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
 }
 
-input:focus, select:focus {
-    border-color: var(--color-primario-naranja);
-    box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
-    outline: none;
+/* 🌙 AJUSTES DARK MODE */
+body.dark-mode .card {
+    border: 1px solid var(--color-gris-suave);
 }

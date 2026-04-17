@@ -1,23 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
-:root {
-    --color-primario-naranja: #ff7b00;
-    /*--color-primario-naranja: #d838ed;*/ 
-    --color-secundario-verde-petroleo: #0f3d3e; 
-    --color-gris-claro: #f5f6f8;
-    --color-blanco: #ffffff;
-    --color-negro-suave: #111827;
-    --color-gris: #6b7280;
-    --color-gris-suave: #e5e7eb;
-    --color-verde-fuerte: #16a34a;
-    --color-rojo: #dc2626;
-}
-/* 🌙 Variables Modo Oscuro */
-.dark-mode {
-    --color-gris-claro: #111827;
-    --color-blanco: #1f2937;
-    --color-negro-suave: #f9fafb;
-    --color-gris: #9ca3af;
-    --color-gris-suave: #374151;
+
+* {
+    transition: background 0.3s, color 0.3s;
 }
 
 body {
@@ -25,9 +9,9 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: var(--color-gris-claro);
     color: var(--color-negro-suave);
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* HEADER */
 header {
     background: var(--color-blanco);
     padding: 20px 40px;
@@ -48,6 +32,7 @@ header p {
     color: var(--color-gris);
 }
 
+/* STATS */
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -55,16 +40,18 @@ header p {
     padding: 30px 40px;
 }
 
+/* CARDS */
 .card {
     background: var(--color-blanco);
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    
 }
+
 .card, .module-card {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     transition: 0.3s ease;
 }
+
 .card h2 {
     margin: 10px 0;
 }
@@ -79,6 +66,7 @@ header p {
     font-weight: 600;
 }
 
+/* MODULES */
 .modules {
     padding: 0 40px 40px;
 }
@@ -93,14 +81,15 @@ header p {
     background: var(--color-blanco);
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    transition: 0.3s;
+    text-decoration: none;
+    color: inherit;
 }
 
 .module-card:hover {
     transform: translateY(-5px);
 }
 
+/* ACTIONS */
 .actions {
     padding: 20px 40px 50px;
 }
@@ -111,6 +100,7 @@ header p {
     gap: 15px;
 }
 
+/* BOTONES */
 button {
     padding: 10px 18px;
     border-radius: 8px;
@@ -134,8 +124,9 @@ button {
     border: 1px solid var(--color-gris-suave);
     color: var(--color-negro-suave);
 }
-.module-card {
-    display: block;
-    text-decoration: none;
-    color: inherit;
+
+/* 🌙 AJUSTES MODO OSCURO */
+body.dark-mode .card,
+body.dark-mode .module-card {
+    border: 1px solid var(--color-gris-suave);
 }
