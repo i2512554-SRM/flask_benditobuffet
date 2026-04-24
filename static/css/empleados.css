@@ -230,3 +230,31 @@ td {
 body.dark-mode .card {
     border: 1px solid var(--color-gris-suave);
 }
+.mensaje-dni {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: none;
+}
+
+.mensaje-dni.error {
+    background: #ffe5e5;
+    color: #b30000;
+    border: 1px solid #ffb3b3;
+    display: block;
+}
+
+.mensaje-dni.success {
+    background: #e6ffed;
+    color: #0f5132;
+    border: 1px solid #b7ebc6;
+    display: block;
+}
+
+.mensaje-dni.loading {
+    background: #e7f3ff;
+    color: #084298;
+    border: 1px solid #b6d4fe;
+    display: block;
+}

@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Gestión de Empleados - Bendito Buffet{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/empleados.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
 {% endblock %}
+
 {% block content %}
 <header class="header-empleados">
     <div>
         <h1>
             <a href="{{ url_for('panel') }}">
-    <i class="fa-solid fa-arrow-left"></i>
-</a>
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
             Gestión de Empleados
         </h1>
         <p>Registro y administración del personal</p>
@@ -19,98 +21,193 @@
         <button class="btn-outline" onclick="toggleDarkMode()">🌙</button>
     </div>
 </header>
+
 <main>
-    <section class="tabs">
-        <button class="tab active" onclick="mostrarTab('registro', event)">
-            <i class="fa-solid fa-user-plus"></i> Registrar Empleado
-        </button>
-        <button class="tab" onclick="mostrarTab('lista', event)">
-            <i class="fa-solid fa-users"></i> Lista de Empleados
-        </button>
-    </section>
-    <section id="registro" class="contenido active">
-        <div class="card">
-            <h2>Nuevo Empleado</h2>
-            <form method="POST" action="{{ url_for('nuevo_empleado') }}" class="form-grid">
-                <input type="text" name="nombres" placeholder="Nombres" required>
-                <input type="text" name="apellido" placeholder="Apellido">
-                <input type="text" name="dni" placeholder="DNI" inputmode="numeric" pattern="\d{1,8}" maxlength="8" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
-                <input type="email" name="correo" placeholder="Correo electrónico" required>
-                <input type="text" name="telefono" placeholder="Teléfono" inputmode="numeric" pattern="\d{1,9}" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
-                <input type="password" name="clave" placeholder="Contraseña" required>
-                <select name="rol_id" required>
-                    <option value="">Seleccionar rol</option>
-                    {% for rol in roles %}
-                        <option value="{{ rol.id_rol }}">{{ rol.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-            <div class="form-actions">
-                <button class="btn-primary" onclick="document.querySelector('form').submit()">Registrar Empleado</button>
-            </div>
-        </div>
-    </section>
-    <section id="lista" class="contenido">
-        <div class="card">
-            <h2>Empleados Registrados</h2>
-            {% if empleados %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>DNI</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for empleado in empleados %}
-                    <tr>
-                        <td>{{ empleado.nombres }} {{ empleado.apellido }}</td>
-                        <td>{{ empleado.dni }}</td>
-                        <td>{{ empleado.correo }}</td>
-                        <td>{{ empleado.telefono }}</td>
-                        <td>{{ empleado.rol.nombre if empleado.rol else 'N/A' }}</td>
-                        <td><span class="estado {{ 'activo' if empleado.estado == 1 else 'inactivo' }}">{{ 'activo' if empleado.estado == 1 else 'inactivo' }}</span></td>
-                        <td>
-                            <a href="{{ url_for('editar_empleado', id=empleado.id_usuario) }}"><button class="btn-edit">Editar</button></a>
-                            <a href="{{ url_for('toggle_estado_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Cambiar estado del empleado?')">
-                                <button class="btn-state {{ 'btn-activar' if empleado.estado == 0 else 'btn-desactivar' }}">
-                                    {{ 'Activar' if empleado.estado == 0 else 'Desactivar' }}
-                                </button>
-                            </a>
-                            <a href="{{ url_for('eliminar_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Eliminar empleado?')"><button class="btn-delete">Eliminar</button></a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No hay empleados registrados.</p>
-            {% endif %}
-        </div>
-    </section>
+<section class="tabs">
+    <button class="tab active" onclick="mostrarTab('registro', event)">
+        <i class="fa-solid fa-user-plus"></i> Registrar Empleado
+    </button>
+    <button class="tab" onclick="mostrarTab('lista', event)">
+        <i class="fa-solid fa-users"></i> Lista de Empleados
+    </button>
+</section>
+
+<!-- 🔵 REGISTRO -->
+<section id="registro" class="contenido active">
+<div class="card">
+<h2>Nuevo Empleado</h2>
+
+<form method="POST" action="{{ url_for('nuevo_empleado') }}" class="form-grid-dos">
+
+<!-- 🟦 IZQUIERDA -->
+<div class="lado-izq">
+
+<label>DNI</label>
+<input type="text" id="dni" name="dni"
+maxlength="8" required
+oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+<button type="button" onclick="buscarDNI()">Buscar</button>
+
+<div class="resultado-dni">
+    <p><strong>Nombres:</strong> <span id="txtNombres">-</span></p>
+    <p><strong>Apellidos:</strong> <span id="txtApellidos">-</span></p>
+</div>
+
+<input type="hidden" id="nombres" name="nombres">
+<input type="hidden" id="apellidos" name="apellidos">
+
+</div>
+
+<!-- 🟩 DERECHA -->
+<div class="lado-der">
+
+<label>Correo electrónico</label>
+<input type="email" name="correo" required>
+
+<label>Teléfono</label>
+<input type="text" name="telefono"
+inputmode="numeric" pattern="\d{1,9}" maxlength="9"
+oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
+
+<label>Contraseña</label>
+<input type="password" name="clave" required>
+
+<label>Rol</label>
+<select name="rol_id" required>
+    <option value="">Seleccionar rol</option>
+    {% for rol in roles %}
+        <option value="{{ rol.id_rol }}">{{ rol.nombre }}</option>
+    {% endfor %}
+</select>
+
+<button class="btn-primary" type="submit">Registrar Empleado</button>
+
+</div>
+
+</form>
+</div>
+</section>
+
+<!-- 🟢 LISTA -->
+<section id="lista" class="contenido">
+<div class="card">
+<h2>Empleados Registrados</h2>
+
+{% if empleados %}
+<table>
+<thead>
+<tr>
+    <th>Nombre</th>
+    <th>DNI</th>
+    <th>Email</th>
+    <th>Teléfono</th>
+    <th>Rol</th>
+    <th>Estado</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+
+<tbody>
+{% for empleado in empleados %}
+<tr>
+    <td>{{ empleado.nombres }} {{ empleado.apellidos }}</td>
+    <td>{{ empleado.dni }}</td>
+    <td>{{ empleado.correo }}</td>
+    <td>{{ empleado.telefono }}</td>
+    <td>{{ empleado.rol.nombre if empleado.rol else 'N/A' }}</td>
+    <td>
+        <span class="estado {{ 'activo' if empleado.estado == 1 else 'inactivo' }}">
+            {{ 'activo' if empleado.estado == 1 else 'inactivo' }}
+        </span>
+    </td>
+    <td>
+        <a href="{{ url_for('editar_empleado', id=empleado.id_usuario) }}">
+            <button class="btn-edit">Editar</button>
+        </a>
+
+        <a href="{{ url_for('toggle_estado_empleado', id=empleado.id_usuario) }}"
+        onclick="return confirm('¿Cambiar estado del empleado?')">
+            <button class="btn-state {{ 'btn-activar' if empleado.estado == 0 else 'btn-desactivar' }}">
+                {{ 'Activar' if empleado.estado == 0 else 'Desactivar' }}
+            </button>
+        </a>
+
+        <a href="{{ url_for('eliminar_empleado', id=empleado.id_usuario) }}"
+        onclick="return confirm('¿Eliminar empleado?')">
+            <button class="btn-delete">Eliminar</button>
+        </a>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% else %}
+<p>No hay empleados registrados.</p>
+{% endif %}
+
+</div>
+</section>
+
 </main>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="flash {{ category }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
 {% endwith %}
 
+<!-- 🔥 JS -->
 <script>
-    function mostrarTab(tab) {
-        document.querySelectorAll('.contenido').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(tab).classList.add('active');
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('active');
-        }
+function mostrarTab(tab, event) {
+    document.querySelectorAll('.contenido').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tab).classList.add('active');
+    if (event) event.currentTarget.classList.add('active');
+}
+
+let dniConsultado = false;
+
+function buscarDNI() {
+    const dni = document.getElementById("dni").value.trim();
+
+    if (dni.length !== 8 || !/^\d+$/.test(dni)) {
+        alert("DNI inválido");
+        return;
     }
+
+    fetch(`/api/dni/${dni}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                dniConsultado = false;
+                return;
+            }
+
+            document.getElementById("txtNombres").innerText = data.nombres;
+            document.getElementById("txtApellidos").innerText = data.apellidos;
+
+            document.getElementById("nombres").value = data.nombres;
+            document.getElementById("apellidos").value = data.apellidos;
+
+            dniConsultado = true;
+        })
+        .catch(() => {
+            alert("Error consultando DNI");
+            dniConsultado = false;
+        });
+}
+
+document.querySelector("form").addEventListener("submit", function(e) {
+    if (!dniConsultado) {
+        e.preventDefault();
+        alert("Primero debes consultar el DNI");
+    }
+});
 </script>
+
 {% endblock %}

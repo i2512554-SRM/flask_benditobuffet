@@ -255,6 +255,38 @@ def perfil(id):
     empleado = Usuario.query.get_or_404(id)
     return render_template("perfil.html", empleado=empleado)
 
+@app.route("/consulta_dni")
+@login_required
+def consulta_dni():
+    return render_template("consulta_dni.html")
+
+@app.route('/api/dni/<dni>')
+def consultar_dni(dni):
+    import requests
+
+    token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImkyNTEyNTU0QGNvbnRpbmVudGFsLmVkdS5wZSJ9.atmlR91JznkCYGLaL5wQg7BW1vYo6aMC5YIkHg40-Zo"  
+
+    url = f"https://dniruc.apisperu.com/api/v1/dni/{dni}?token={token}"
+
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()
+
+        # Validar respuesta
+        if not data or data.get("success") is False:
+            return {"error": "No se encontró el DNI"}
+
+        nombres = data.get("nombres", "")
+        apellidos = f"{data.get('apellidoPaterno', '')} {data.get('apellidoMaterno', '')}"
+
+        return {
+            "nombres": nombres,
+            "apellidos": apellidos
+        }
+
+    except Exception as e:
+        print("Error API:", e)
+        return {"error": "Error consultando DNI"}
 # -------------------------------
 # INICIALIZACIÓN
 # -------------------------------
