@@ -33,8 +33,8 @@ class Usuario(db.Model):
 def get_connection():
     # Conexión a MySQL
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="bendito_buffet"
+        host=" mysql-bendito-buffet.alwaysdata.net",
+        user="bendito-buffet",
+        password="bendito-buffet-admin-db",
+        database="bendito-buffet"
     )
