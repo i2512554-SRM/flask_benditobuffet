@@ -8,9 +8,9 @@ from bd import db, Usuario, Rol
 app = Flask(__name__)
 app.secret_key = "clave_secreta_segura_bendito_buffet"
 # Configuración de SQLAlchemy para conectar con MySQL usando mysqlconnector
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:@localhost/bendito_buffet'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito-buffet:bendito-buffet-admin-db@mysql-bendito-buffet.alwaysdata.net/bendito-buffet_db?charset=utf8mb4'
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Inicializamos SQLAlchemy con la aplicación Flask
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -287,6 +287,15 @@ def consultar_dni(dni):
     except Exception as e:
         print("Error API:", e)
         return {"error": "Error consultando DNI"}
+    
+@app.route("/test-db")
+def test_db():
+    try:
+        from bd import Usuario
+        usuarios = Usuario.query.all()
+        return f"✅ Conectado. Usuarios encontrados: {len(usuarios)}"
+    except Exception as e:
+        return f"💥 Error: {str(e)}"
 # -------------------------------
 # INICIALIZACIÓN
 # -------------------------------

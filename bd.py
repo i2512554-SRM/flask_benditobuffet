@@ -1,11 +1,11 @@
-import mysql.connector
 from flask_sqlalchemy import SQLAlchemy
 
-# Instancia de SQLAlchemy para manejar la conexión ORM
+# Instancia de SQLAlchemy
 db = SQLAlchemy()
 
 class Rol(db.Model):
     __tablename__ = 'roles'
+    
     id_rol = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
 
@@ -14,6 +14,7 @@ class Rol(db.Model):
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
+    
     id_usuario = db.Column(db.Integer, primary_key=True)
     nombres = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100))
@@ -22,19 +23,11 @@ class Usuario(db.Model):
     telefono = db.Column(db.String(15))
     usuario = db.Column(db.String(50), unique=True, nullable=False)
     clave = db.Column(db.String(255), nullable=False)
+    
     id_rol = db.Column(db.Integer, db.ForeignKey('roles.id_rol'))
     estado = db.Column(db.Integer, default=1)
+
     rol = db.relationship('Rol', backref='usuarios')
 
     def __repr__(self):
         return f"<Usuario {self.id_usuario} {self.usuario}>"
-
-
-def get_connection():
-    # Conexión a MySQL
-    return mysql.connector.connect(
-        host=" mysql-bendito-buffet.alwaysdata.net",
-        user="bendito-buffet",
-        password="bendito-buffet-admin-db",
-        database="bendito-buffet"
-    )
