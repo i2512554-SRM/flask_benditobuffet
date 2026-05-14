@@ -1,14 +1,21 @@
 # Importamos la clase Flask desde el paquete flask
+import os
+from datetime import datetime, timedelta, timezone
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_bcrypt import Bcrypt
 from functools import wraps
-from bd import db, Usuario, Rol
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.middleware.proxy_fix import ProxyFix
+from bd import db, Usuario, Rol, BloqueoLogin
 
 # Creamos una instancia de la aplicación Flask
 app = Flask(__name__)
-app.secret_key = "clave_secreta_segura_bendito_buffet"
+app.secret_key = os.environ.get("SECRET_KEY", "clave_secreta_segura_bendito_buffet")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
 # Configuración de SQLAlchemy para conectar con MySQL usando mysqlconnector
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito-buffet:bendito-buffet-admin-db@mysql-bendito-buffet.alwaysdata.net/bendito-buffet_db?charset=utf8mb4'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito_sebas:sebas1819+@mysql-bendito.alwaysdata.net/bendito_buffet?charset=utf8mb4'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Inicializamos SQLAlchemy con la aplicación Flask
@@ -27,6 +34,61 @@ def verify_password(stored_password, provided_password):
     if is_hashed_password(stored_password):
         return bcrypt.check_password_hash(stored_password, provided_password)
     return stored_password == provided_password
+
+LOCK_THRESHOLD = 5
+LOCK_DURATION = timedelta(minutes=15)
+DUMMY_HASH = bcrypt.generate_password_hash("dummy_password").decode("utf-8")
+
+
+def get_client_ip():
+    return request.remote_addr or "0.0.0.0"
+
+
+def normalize_expired_block(bloqueo):
+    if bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta <= datetime.now(timezone.utc):
+        bloqueo.intentos = 0
+        bloqueo.bloqueado_hasta = None
+    return bloqueo
+
+
+def get_login_block(tipo, usuario=None, ip=None):
+    query = BloqueoLogin.query.filter_by(tipo=tipo)
+    if usuario is not None:
+        query = query.filter_by(usuario=usuario)
+    else:
+        query = query.filter(BloqueoLogin.usuario.is_(None))
+    if ip is not None:
+        query = query.filter_by(ip=ip)
+    else:
+        query = query.filter(BloqueoLogin.ip.is_(None))
+    bloqueo = query.first()
+    return normalize_expired_block(bloqueo)
+
+
+def get_or_create_login_block(tipo, usuario=None, ip=None):
+    bloqueo = get_login_block(tipo, usuario=usuario, ip=ip)
+    if bloqueo is None:
+        bloqueo = BloqueoLogin(tipo=tipo, usuario=usuario, ip=ip, intentos=0)
+        db.session.add(bloqueo)
+    return bloqueo
+
+
+def is_blocked(bloqueo):
+    return bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta > datetime.now(timezone.utc)
+
+
+def reset_block(bloqueo):
+    if bloqueo:
+        bloqueo.intentos = 0
+        bloqueo.bloqueado_hasta = None
+
+
+def increment_failure(bloqueo):
+    if bloqueo is None:
+        return
+    bloqueo.intentos = (bloqueo.intentos or 0) + 1
+    if bloqueo.intentos >= LOCK_THRESHOLD:
+        bloqueo.bloqueado_hasta = datetime.now(timezone.utc) + LOCK_DURATION
 
 
 def is_digits(value):
@@ -78,21 +140,58 @@ def admin_required(f):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        correo = request.form["correo"]
+        correo = request.form["correo"].strip()
         clave = request.form["clave"]
+        client_ip = get_client_ip()
 
         usuario = Usuario.query.filter_by(correo=correo).first()
+        ip_block = get_login_block("ip", ip=client_ip)
+        user_block = get_login_block("usuario", usuario=correo) if usuario else None
 
-        if usuario and verify_password(usuario.clave, clave):
+        if is_blocked(ip_block) or is_blocked(user_block):
+            flash("Acceso bloqueado temporalmente. Intente más tarde.", "error")
+            return render_template("login.html")
+
+        if usuario:
+            password_ok = verify_password(usuario.clave, clave)
+        else:
+            password_ok = bcrypt.check_password_hash(DUMMY_HASH, clave)
+
+        if usuario and password_ok:
             if not is_hashed_password(usuario.clave):
                 usuario.clave = bcrypt.generate_password_hash(clave).decode('utf-8')
-                db.session.commit()
+
+            reset_block(ip_block)
+            reset_block(user_block)
 
             session.clear()
             session["usuario_id"] = usuario.id_usuario
             session["rol"] = usuario.rol.nombre.lower() if usuario.rol else ""
             session["nombre"] = usuario.nombres
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                flash("Error interno. Intente de nuevo más tarde.", "error")
+                return render_template("login.html")
+
             return redirect(url_for("panel"))
+
+        ip_block = get_or_create_login_block("ip", ip=client_ip)
+        if usuario:
+            user_block = get_or_create_login_block("usuario", usuario=correo)
+
+        increment_failure(ip_block)
+        increment_failure(user_block)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Error interno. Intente de nuevo más tarde.", "error")
+            return render_template("login.html")
+
         flash("Credenciales incorrectas", "error")
     else:
         session.clear()
