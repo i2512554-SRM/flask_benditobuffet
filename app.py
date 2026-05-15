@@ -1,10 +1,10 @@
 # Importamos la clase Flask desde el paquete flask
 import os
 from datetime import datetime, timedelta, timezone
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_bcrypt import Bcrypt
 from functools import wraps
+from markupsafe import Markup
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from bd import db, Usuario, Rol, BloqueoLogin
@@ -15,7 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "clave_secreta_segura_bendito_buff
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # Configuración de SQLAlchemy para conectar con MySQL usando mysqlconnector
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito_sebas:sebas1819%2B@mysql-bendito.alwaysdata.net/bendito_buffet?charset=utf8mb4'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito_sebas:sebas1819+@mysql-bendito.alwaysdata.net/bendito_buffet?charset=utf8mb4'
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True
 }
@@ -38,10 +38,12 @@ def verify_password(stored_password, provided_password):
     return stored_password == provided_password
 
 LOCK_THRESHOLDS = {
-    "usuario": 5,
-    "ip": 10,
+    "usuario": 3,
+    "ip": 5,
 }
-LOCK_DURATION = timedelta(minutes=3)
+LOCK_DURATION_USER = timedelta(minutes=10)
+LOCK_DURATION_IP_TEMP = timedelta(hours=24)
+PERMANENT_IP_LOCK = timedelta(days=365 * 100)
 DUMMY_HASH = bcrypt.generate_password_hash("dummy_password").decode("utf-8")
 
 
@@ -55,8 +57,11 @@ def get_client_ip():
 
 def normalize_expired_block(bloqueo):
     if bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta <= current_time():
-        bloqueo.intentos = 0
-        bloqueo.bloqueado_hasta = None
+        if bloqueo.tipo == "ip" and bloqueo.intentos >= get_lock_threshold("ip"):
+            bloqueo.bloqueado_hasta = None
+        else:
+            bloqueo.intentos = 0
+            bloqueo.bloqueado_hasta = None
     return bloqueo
 
 
@@ -90,6 +95,46 @@ def get_lock_threshold(tipo):
     return LOCK_THRESHOLDS.get(tipo, 5)
 
 
+def is_permanent_ip_block(bloqueo):
+    if bloqueo is None or bloqueo.tipo != "ip" or bloqueo.bloqueado_hasta is None:
+        return False
+    return bloqueo.bloqueado_hasta - current_time() >= timedelta(days=365 * 10)
+
+
+def get_remaining_block_seconds(bloqueo):
+    if bloqueo is None or bloqueo.bloqueado_hasta is None:
+        return 0
+    remaining = bloqueo.bloqueado_hasta - current_time()
+    return max(int(remaining.total_seconds()), 0)
+
+
+def format_remaining_time(seconds):
+    minutes, secs = divmod(seconds, 60)
+    return f"{minutes}m {secs:02d}s" if minutes else f"{secs}s"
+
+
+def render_temporal_block_message(label, seconds):
+    formatted = format_remaining_time(seconds)
+    return Markup(
+        f"{label} bloqueado temporalmente. Vuelve a intentarlo en "
+        f'<span class="blocked-countdown" data-seconds="{seconds}">{formatted}</span>.'
+    )
+
+
+def render_permanent_ip_message():
+    return "IP baneada permanentemente. Contacta al administrador."
+
+
+def get_block_message(bloqueo):
+    if bloqueo.tipo == "usuario":
+        return render_temporal_block_message("Usuario", get_remaining_block_seconds(bloqueo))
+    if bloqueo.tipo == "ip":
+        if is_permanent_ip_block(bloqueo):
+            return render_permanent_ip_message()
+        return render_temporal_block_message("IP", get_remaining_block_seconds(bloqueo))
+    return "Acceso bloqueado temporalmente. Intente más tarde."
+
+
 def reset_block(bloqueo):
     if bloqueo:
         bloqueo.intentos = 0
@@ -100,8 +145,14 @@ def increment_failure(bloqueo):
     if bloqueo is None:
         return
     bloqueo.intentos = (bloqueo.intentos or 0) + 1
-    if bloqueo.intentos >= get_lock_threshold(bloqueo.tipo):
-        bloqueo.bloqueado_hasta = current_time() + LOCK_DURATION
+    threshold = get_lock_threshold(bloqueo.tipo)
+    if bloqueo.bloqueado_hasta is None and bloqueo.intentos >= threshold:
+        if bloqueo.tipo == "ip" and bloqueo.intentos > threshold:
+            bloqueo.bloqueado_hasta = current_time() + PERMANENT_IP_LOCK
+        elif bloqueo.tipo == "ip":
+            bloqueo.bloqueado_hasta = current_time() + LOCK_DURATION_IP_TEMP
+        else:
+            bloqueo.bloqueado_hasta = current_time() + LOCK_DURATION_USER
 
 
 def is_digits(value):
@@ -162,7 +213,10 @@ def login():
         user_block = get_login_block("usuario", usuario=correo) if usuario else None
 
         if is_blocked(ip_block) or is_blocked(user_block):
-            flash("Acceso bloqueado temporalmente. Intente más tarde.", "error")
+            if is_blocked(user_block):
+                flash(get_block_message(user_block), "error")
+            if is_blocked(ip_block):
+                flash(get_block_message(ip_block), "error")
             return render_template("login.html")
 
         if usuario:
