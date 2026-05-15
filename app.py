@@ -35,9 +35,16 @@ def verify_password(stored_password, provided_password):
         return bcrypt.check_password_hash(stored_password, provided_password)
     return stored_password == provided_password
 
-LOCK_THRESHOLD = 5
-LOCK_DURATION = timedelta(minutes=15)
+LOCK_THRESHOLDS = {
+    "usuario": 5,
+    "ip": 10,
+}
+LOCK_DURATION = timedelta(minutes=3)
 DUMMY_HASH = bcrypt.generate_password_hash("dummy_password").decode("utf-8")
+
+
+def current_time():
+    return datetime.now()
 
 
 def get_client_ip():
@@ -45,7 +52,7 @@ def get_client_ip():
 
 
 def normalize_expired_block(bloqueo):
-    if bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta <= datetime.now(timezone.utc):
+    if bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta <= current_time():
         bloqueo.intentos = 0
         bloqueo.bloqueado_hasta = None
     return bloqueo
@@ -74,7 +81,11 @@ def get_or_create_login_block(tipo, usuario=None, ip=None):
 
 
 def is_blocked(bloqueo):
-    return bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta > datetime.now(timezone.utc)
+    return bloqueo and bloqueo.bloqueado_hasta and bloqueo.bloqueado_hasta > current_time()
+
+
+def get_lock_threshold(tipo):
+    return LOCK_THRESHOLDS.get(tipo, 5)
 
 
 def reset_block(bloqueo):
@@ -87,8 +98,8 @@ def increment_failure(bloqueo):
     if bloqueo is None:
         return
     bloqueo.intentos = (bloqueo.intentos or 0) + 1
-    if bloqueo.intentos >= LOCK_THRESHOLD:
-        bloqueo.bloqueado_hasta = datetime.now(timezone.utc) + LOCK_DURATION
+    if bloqueo.intentos >= get_lock_threshold(bloqueo.tipo):
+        bloqueo.bloqueado_hasta = current_time() + LOCK_DURATION
 
 
 def is_digits(value):
