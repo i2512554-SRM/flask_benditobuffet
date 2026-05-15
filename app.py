@@ -15,8 +15,10 @@ app.secret_key = os.environ.get("SECRET_KEY", "clave_secreta_segura_bendito_buff
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # Configuración de SQLAlchemy para conectar con MySQL usando mysqlconnector
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito_sebas:sebas1819+@mysql-bendito.alwaysdata.net/bendito_buffet?charset=utf8mb4'
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://bendito_sebas:sebas1819%2B@mysql-bendito.alwaysdata.net/bendito_buffet?charset=utf8mb4'
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Inicializamos SQLAlchemy con la aplicación Flask
 db.init_app(app)
@@ -169,6 +171,11 @@ def login():
             password_ok = bcrypt.check_password_hash(DUMMY_HASH, clave)
 
         if usuario and password_ok:
+            # Validar estado del usuario
+            if usuario.estado == 0:
+                flash("Tu usuario ha sido deshabilitado. Contacta con el administrador.", "error")
+                return render_template("login.html")
+
             if not is_hashed_password(usuario.clave):
                 usuario.clave = bcrypt.generate_password_hash(clave).decode('utf-8')
 

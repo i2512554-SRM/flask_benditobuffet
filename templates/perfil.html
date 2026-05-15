@@ -9,7 +9,7 @@
 {% block content %}
 <div class="perfil-container">
     <a href="{{ url_for('empleados') if session.get('rol').lower() == 'administrador' else url_for('panel') }}" class="volver">
-        <i class="fa-solid fa-arrow-left"></i> Volver al Dashboard
+        <i class="fa-solid fa-arrow-left"></i> Volver
     </a>
 
     <div class="perfil-header">
