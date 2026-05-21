@@ -2,17 +2,15 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_bcrypt import Bcrypt
 from functools import wraps
-from bd import db, Usuario, Rol
+from bd import db, init_db
+from models import Usuario, Rol
 
 # Creamos una instancia de la aplicación Flask
 app = Flask(__name__)
 app.secret_key = "clave_secreta_segura_bendito_buffet"
-# Configuración de SQLAlchemy para conectar con MySQL usando mysqlconnector
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:@localhost/bendito_buffet'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializamos SQLAlchemy con la aplicación Flask
-db.init_app(app)
+init_db(app)
 bcrypt = Bcrypt(app)
 
 # Helpers de contraseña
