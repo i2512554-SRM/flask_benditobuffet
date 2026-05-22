@@ -46,7 +46,7 @@
     <h2>Módulos del Sistema</h2>
 
     <div class="module-grid">
-        <div class="module-card" onclick="location.href='#'">
+        <div class="module-card" onclick="location.href='{{ url_for('caja') }}'">
             <h3>Gestión de Caja</h3>
             <p>Registrar ventas, egresos y cierre diario</p>
         </div>
@@ -80,10 +80,10 @@
 <section class="actions">
     <h2>Acciones Rápidas</h2>
     <div class="actions-buttons">
-        <button class="btn-primary">Registrar Venta</button>
-        <button class="btn-secondary">Registrar Egreso</button>
+        <button class="btn-primary" onclick="location.href='{{ url_for('caja') }}'">Ir a Caja</button>
+        <button class="btn-secondary" onclick="location.href='{{ url_for('caja') }}'">Registrar Egreso</button>
         <button class="btn-secondary">Ver Inventario</button>
-        <button class="btn-secondary">Cerrar Caja</button>
+        <button class="btn-secondary" onclick="location.href='{{ url_for('caja') }}'">Cerrar Caja</button>
     </div>
 </section>
 

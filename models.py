@@ -29,3 +29,34 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f"<Usuario {self.id_usuario} {self.usuario}>"
+
+
+class TransaccionCaja(db.Model):
+    __tablename__ = 'transacciones_caja'
+
+    id_transaccion = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    tipo = db.Column(db.String(50), nullable=False)
+    monto = db.Column(db.Float, nullable=False)
+    metodo_pago = db.Column(db.String(50), nullable=False)
+    categoria = db.Column(db.String(150), nullable=False)
+    descripcion = db.Column(db.Text)
+    fecha = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<TransaccionCaja {self.id_transaccion} {self.tipo} {self.monto}>"
+
+
+class CierreCaja(db.Model):
+    __tablename__ = 'cierres_caja'
+
+    id_cierre = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    total_ventas = db.Column(db.Float, nullable=False)
+    total_gastos = db.Column(db.Float, nullable=False)
+    neto = db.Column(db.Float, nullable=False)
+    observaciones = db.Column(db.Text)
+    fecha = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<CierreCaja {self.id_cierre} {self.fecha}>"

@@ -1,9 +1,11 @@
 # Importamos la clase Flask desde el paquete flask
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_bcrypt import Bcrypt
 from functools import wraps
+from datetime import datetime, date
+import re
 from bd import db, init_db
-from models import Usuario, Rol
+from models import Usuario, Rol, TransaccionCaja, CierreCaja
 
 # Creamos una instancia de la aplicación Flask
 app = Flask(__name__)
@@ -102,6 +104,125 @@ def panel():
     else:
         flash("Rol no reconocido", "error")
         return redirect(url_for("login"))
+
+# -------------------------------
+# GESTIÓN DE CAJA
+# -------------------------------
+
+def _calcular_resumen_caja():
+    hoy = date.today()
+    ventas = db.session.query(db.func.coalesce(db.func.sum(TransaccionCaja.monto), 0))
+    ventas = ventas.filter(TransaccionCaja.tipo == "Venta", db.func.date(TransaccionCaja.fecha) == hoy).scalar() or 0
+    gastos = db.session.query(db.func.coalesce(db.func.sum(TransaccionCaja.monto), 0))
+    gastos = gastos.filter(TransaccionCaja.tipo == "Gasto", db.func.date(TransaccionCaja.fecha) == hoy).scalar() or 0
+    neto = float(ventas) - float(gastos)
+    return float(ventas), float(gastos), float(neto)
+
+
+def _validar_categoria(categoria):
+    return bool(re.match(r'^[A-Za-záéíóúÁÉÍÓÚñÑ ]+$', categoria.strip()))
+
+
+@app.route("/caja")
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def caja():
+    ventas_dia, gastos_dia, neto_dia = _calcular_resumen_caja()
+    transacciones = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).all()
+    cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).all()
+    return render_template(
+        "caja.html",
+        ventas_dia=ventas_dia,
+        gastos_dia=gastos_dia,
+        neto_dia=neto_dia,
+        transacciones=transacciones,
+        cierres=cierres
+    )
+
+
+@app.route("/caja/registrar", methods=["POST"])
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def caja_registrar():
+    tipo = request.form.get("tipo", "").strip()
+    monto_text = request.form.get("monto", "").strip().replace(',', '.')
+    metodo_pago = request.form.get("metodo_pago", "").strip()
+    categoria = request.form.get("categoria", "").strip()
+    descripcion = request.form.get("descripcion", "").strip()
+
+    errores = []
+    if tipo not in ["Venta", "Gasto"]:
+        errores.append("El tipo de transacción es inválido.")
+    try:
+        monto = float(monto_text)
+        if monto <= 0:
+            errores.append("El monto debe ser un número positivo.")
+    except ValueError:
+        errores.append("El monto debe ser un valor numérico válido.")
+    if metodo_pago not in ["Efectivo", "Tarjeta", "Transferencia"]:
+        errores.append("El método de pago es inválido.")
+    if not categoria or not _validar_categoria(categoria):
+        errores.append("La categoría es obligatoria y no puede contener números.")
+
+    if errores:
+        mensaje = errores[0]
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": mensaje}), 400
+        flash(mensaje, "error")
+        return redirect(url_for("caja"))
+
+    nueva_transaccion = TransaccionCaja(
+        id_usuario=session.get("usuario_id"),
+        tipo=tipo,
+        monto=monto,
+        metodo_pago=metodo_pago,
+        categoria=categoria,
+        descripcion=descripcion,
+        fecha=datetime.now()
+    )
+    db.session.add(nueva_transaccion)
+    db.session.commit()
+
+    ventas_dia, gastos_dia, neto_dia = _calcular_resumen_caja()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "success": True,
+            "message": "Transacción registrada correctamente.",
+            "ventas_dia": ventas_dia,
+            "gastos_dia": gastos_dia,
+            "neto_dia": neto_dia
+        })
+
+    flash("Transacción registrada correctamente", "success")
+    return redirect(url_for("caja"))
+
+
+@app.route("/caja/cerrar", methods=["POST"])
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def caja_cerrar():
+    observaciones = request.form.get("observaciones", "").strip()
+    if not observaciones:
+        observaciones = "Sin anotaciones"
+
+    ventas_dia, gastos_dia, neto_dia = _calcular_resumen_caja()
+
+    cierre = CierreCaja(
+        id_usuario=session.get("usuario_id"),
+        total_ventas=ventas_dia,
+        total_gastos=gastos_dia,
+        neto=neto_dia,
+        observaciones=observaciones,
+        fecha=datetime.now()
+    )
+    db.session.add(cierre)
+    db.session.commit()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "message": "Caja cerrada correctamente."})
+
+    flash("Caja cerrada correctamente", "success")
+    return redirect(url_for("caja"))
 
 # -------------------------------
 # EMPLEADOS (solo admin)
