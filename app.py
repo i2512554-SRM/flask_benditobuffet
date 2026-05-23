@@ -5,7 +5,7 @@ from functools import wraps
 from datetime import datetime, date
 import re
 from bd import db, init_db
-from models import Usuario, Rol, TransaccionCaja, CierreCaja
+from models import Usuario, Rol, TransaccionCaja, CierreCaja, Producto, Inversion
 
 # Creamos una instancia de la aplicación Flask
 app = Flask(__name__)
@@ -13,6 +13,8 @@ app.secret_key = "clave_secreta_segura_bendito_buffet"
 
 # Inicializamos SQLAlchemy con la aplicación Flask
 init_db(app)
+with app.app_context():
+    db.create_all()
 bcrypt = Bcrypt(app)
 
 # Helpers de contraseña
@@ -318,6 +320,154 @@ def eliminar_empleado(id):
     db.session.commit()
     flash("Empleado eliminado", "success")
     return redirect(url_for("empleados"))
+
+# -------------------------------
+# INVENTARIO E INVERSIÓN
+# -------------------------------
+
+def _calcular_resumen_inventario():
+    total_inventario = db.session.query(
+        db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
+    ).scalar() or 0
+    total_equipamiento = db.session.query(
+        db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
+    ).filter(
+        db.func.lower(Producto.categoria).like('%equipamiento%')
+    ).scalar() or 0
+    return float(total_inventario), float(total_equipamiento)
+
+
+def _inversiones_del_mes():
+    hoy = date.today()
+    primer_dia = date(hoy.year, hoy.month, 1)
+    return db.session.query(
+        db.func.coalesce(db.func.sum(Inversion.monto), 0)
+    ).filter(
+        db.func.date(Inversion.fecha) >= primer_dia,
+        db.func.date(Inversion.fecha) <= hoy
+    ).scalar() or 0
+
+
+def _productos_registrados_mes():
+    hoy = date.today()
+    primer_dia = date(hoy.year, hoy.month, 1)
+    return Producto.query.filter(
+        db.func.date(Producto.fecha_registro) >= primer_dia,
+        db.func.date(Producto.fecha_registro) <= hoy
+    ).count()
+
+
+@app.route("/inventario")
+@login_required
+@admin_required
+def inventario():
+    valor_total_inventario, equipamiento_valor = _calcular_resumen_inventario()
+    inversiones_mes = _inversiones_del_mes()
+    articulos_registrados = Producto.query.count()
+    productos_mes = _productos_registrados_mes()
+    productos = Producto.query.order_by(Producto.fecha_registro.desc()).all()
+    inversiones = Inversion.query.order_by(Inversion.fecha.desc()).all()
+    return render_template(
+        "inventario.html",
+        valor_total_inventario=valor_total_inventario,
+        inversiones_mes=inversiones_mes,
+        articulos_registrados=articulos_registrados,
+        productos_mes=productos_mes,
+        equipamiento_valor=equipamiento_valor,
+        productos=productos,
+        inversiones=inversiones
+    )
+
+
+@app.route("/inventario/articulo/nuevo", methods=["POST"])
+@login_required
+@admin_required
+def inventario_articulo_nuevo():
+    nombre = request.form.get("nombre", "").strip()
+    categoria = request.form.get("categoria", "").strip()
+    precio_text = request.form.get("precio", "").strip().replace(',', '.')
+    stock_text = request.form.get("stock", "").strip().replace(',', '.')
+
+    errores = []
+    if not nombre:
+        errores.append("El nombre del artículo es obligatorio.")
+    if not categoria:
+        errores.append("La categoría es obligatoria.")
+    try:
+        precio = float(precio_text)
+        if precio < 0:
+            errores.append("El precio debe ser un número válido.")
+    except ValueError:
+        errores.append("El precio debe ser un número válido.")
+    try:
+        stock = float(stock_text)
+        if stock < 0:
+            errores.append("El stock debe ser un número válido.")
+    except ValueError:
+        errores.append("El stock debe ser un número válido.")
+
+    if errores:
+        flash(errores[0], "error")
+        return redirect(url_for("inventario"))
+
+    producto = Producto(
+        nombre=nombre,
+        categoria=categoria,
+        precio=precio,
+        stock=stock,
+        fecha_registro=datetime.now()
+    )
+    db.session.add(producto)
+    db.session.commit()
+    flash("Artículo agregado al inventario", "success")
+    return redirect(url_for("inventario"))
+
+
+@app.route("/inventario/compra/nuevo", methods=["POST"])
+@login_required
+@admin_required
+def inventario_compra_nuevo():
+    descripcion = request.form.get("descripcion", "").strip()
+    proveedor = request.form.get("proveedor", "").strip()
+    notas = request.form.get("notas", "").strip()
+    monto_text = request.form.get("monto", "").strip().replace(',', '.')
+
+    errores = []
+    if not descripcion:
+        errores.append("La descripción de la inversión es obligatoria.")
+    if not proveedor:
+        errores.append("El proveedor es obligatorio.")
+    try:
+        monto = float(monto_text)
+        if monto <= 0:
+            errores.append("El monto debe ser mayor a cero.")
+    except ValueError:
+        errores.append("El monto debe ser un valor numérico válido.")
+
+    if errores:
+        flash(errores[0], "error")
+        return redirect(url_for("inventario"))
+
+    inversion = Inversion(
+        descripcion=descripcion,
+        proveedor=proveedor,
+        notas=notas,
+        monto=monto,
+        fecha=datetime.now()
+    )
+    db.session.add(inversion)
+    db.session.commit()
+    flash("Inversión registrada correctamente", "success")
+    return redirect(url_for("inventario"))
+
+
+@app.route("/inventario/compra/<int:id>")
+@login_required
+@admin_required
+def inventario_compra_detalle(id):
+    inversion = Inversion.query.get_or_404(id)
+    return render_template("inventario_compra_detalle.html", inversion=inversion)
+
 
 # -------------------------------
 # INICIALIZACIÓN

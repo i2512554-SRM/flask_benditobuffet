@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Inversión - Bendito Buffet{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<header class="inventario-header">
+    <div>
+        <h1>Detalle de Inversión</h1>
+        <p>Información completa de la inversión seleccionada.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('inventario') }}" class="btn-secondary">Volver al Inventario</a>
+    </div>
+</header>
+
+<section class="detalle-card">
+    <div class="detalle-grid">
+        <div>
+            <h2>Inversión #{{ inversion.id_inversion }}</h2>
+        </div>
+        <div class="detalle-meta">
+            <p><strong>Monto:</strong> ${{ "%.2f" | format(inversion.monto) }}</p>
+            <p><strong>Proveedor:</strong> {{ inversion.proveedor }}</p>
+            <p><strong>Fecha:</strong> {{ inversion.fecha.strftime('%d/%m/%Y %H:%M') if inversion.fecha else '' }}</p>
+        </div>
+    </div>
+
+    <div class="detalle-section">
+        <h3>Descripción</h3>
+        <p>{{ inversion.descripcion }}</p>
+    </div>
+    {% if inversion.notas %}
+    <div class="detalle-section">
+        <h3>Notas</h3>
+        <p>{{ inversion.notas }}</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

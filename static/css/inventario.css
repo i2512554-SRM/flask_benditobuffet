@@ -1,0 +1,476 @@
+/* =============================================
+   VARIABLES GLOBALES DEL TEMA (ROOT)
+   ============================================= */
+:root {
+    --inventario-bg: #f7f8fb;           /* Color de fondo principal de toda la página */
+    --inventario-card: #ffffff;         /* Color de fondo de tarjetas, paneles y contenedores */
+    --inventario-border: #e5e7eb;       /* Color usado para bordes de elementos */
+    --inventario-primary: #ff7a18;      /* Color principal del sistema (naranja vibrante) */
+    --inventario-secondary: #374151;    /* Color principal para textos y encabezados */
+    --inventario-muted: #6b7280;        /* Color para textos secundarios y descripciones */
+    --inventario-success: #10b981;      /* Color verde para indicar éxito o positivo */
+    --inventario-warning: #f59e0b;      /* Color para advertencias */
+    --inventario-danger: #ef4444;       /* Color rojo para errores o acciones peligrosas */
+}
+
+/* Fondo general de la aplicación */
+body {
+    background: var(--inventario-bg);
+}
+
+/* =============================================
+   HEADER / CABECERA PRINCIPAL
+   ============================================= */
+.inventario-header {
+    display: flex;                    /* Usamos flexbox para alinear elementos */
+    flex-wrap: wrap;                  /* Permite saltar a nueva línea en pantallas pequeñas */
+    justify-content: space-between;   /* Espacio entre elementos a los lados */
+    gap: 1rem;                        /* Espacio entre los hijos */
+    align-items: flex-start;          /* Alineación vertical al inicio */
+    margin-bottom: 1.4rem;            /* Margen inferior */
+}
+
+.inventario-breadcrumb {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Enlace para volver a la página anterior */
+.link-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--inventario-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.inventario-header h1 {
+    margin: 0;
+    font-size: 1.95rem;
+    color: var(--inventario-secondary);
+}
+
+.inventario-header p {
+    margin: 0.35rem 0 0;
+    color: var(--inventario-muted);
+    max-width: 500px;                 /* Ancho máximo para evitar líneas muy largas */
+}
+
+/* Contenedor de acciones del header (botones, etc) */
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* =============================================
+   SECCIÓN DE ESTADÍSTICAS
+   ============================================= */
+.inventario-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(200px, 1fr)); /* 4 columnas responsivas */
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--inventario-card);
+    border: 1px solid var(--inventario-border);
+    border-radius: 18px;
+    padding: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-medium); /* Sombra suave */
+}
+
+/* Icono circular con gradiente */
+.stat-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--stat-gradient-start), var(--stat-gradient-end));
+    color: white;
+    font-size: 1.2rem;
+}
+
+.stat-card h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--inventario-muted);
+}
+
+.stat-card strong {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 1.5rem;
+    color: var(--inventario-secondary);
+}
+
+/* =============================================
+   TOOLBAR - BÚSQUEDA Y FILTROS
+   ============================================= */
+.inventario-toolbar {
+    display: grid;
+    grid-template-columns: 70% auto;   /* Campo de búsqueda y filtros */
+    gap: 5rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+/* Campo de búsqueda */
+.search-field,
+.filter-field {
+    background: var(--inventario-card);
+    border: 1px solid var(--inventario-border);
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.search-field {
+    width: 80%;
+}
+
+.search-field input,
+.filter-field select {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 0.96rem;
+    color: var(--inventario-secondary);
+    background: transparent;
+}
+
+.filter-field {
+    min-width: 220px;
+}
+
+.filter-field label {
+    color: var(--inventario-muted);
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+/* =============================================
+   SISTEMA DE PESTAÑAS (TABS)
+   ============================================= */
+.tabs-container {
+    background: transparent;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.tabs-nav {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    border: none;
+    background: var(--bg-secondary);
+    color: var(--inventario-secondary);
+    padding: 0.85rem 1.2rem;
+    border-radius: 999px;             /* Bordes completamente redondeados */
+    cursor: pointer;
+    transition: all 180ms ease;
+    font-weight: 600;
+}
+
+.tab-button.active {
+    background: var(--inventario-primary);
+    color: white;
+}
+
+/* =============================================
+   TARJETAS Y CONTENEDORES GENERALES
+   ============================================= */
+.panel-card {
+    background: var(--inventario-card);
+    border: 1px solid var(--inventario-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+/* =============================================
+   TABLA DE DATOS
+   ============================================= */
+.table-wrapper {
+    overflow-x: auto;                 /* Permite scroll horizontal en móviles */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;                 /* Ancho mínimo para que no se rompa */
+}
+
+thead th {
+    text-align: left;
+    padding: 1rem 0.75rem;
+    color: var(--inventario-muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 150ms ease;
+}
+
+thead th.sortable:hover {
+    color: var(--inventario-primary);
+}
+
+tbody tr {
+    border-top: 1px solid var(--inventario-border);
+}
+
+tbody td {
+    padding: 0.95rem 0.75rem;
+    color: var(--inventario-secondary);
+    vertical-align: middle;
+}
+
+tbody tr:nth-child(even) {
+    background: var(--table-row-alt);              /* Color alterno para filas */
+}
+
+/* Mensaje cuando no hay datos */
+.empty-state,
+.empty-state-card p {
+    text-align: center;
+    color: var(--inventario-muted);
+    padding: 2rem 0;
+}
+
+/* =============================================
+   TARJETAS DE COMPRAS E INVERSIONES
+   ============================================= */
+.compra-cards {
+    display: grid;
+    gap: 1rem;
+}
+
+.inversion-card,
+.compra-card {
+    background: var(--inventario-card);
+    border: 1px solid var(--inventario-border);
+    border-radius: 18px;
+    padding: 1.2rem;
+}
+
+.compra-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.fecha {
+    color: var(--inventario-muted);
+    font-size: 0.9rem;
+}
+
+.compra-card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+/* =============================================
+   MODALES (VENTANAS EMERGENTES)
+   ============================================= */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg); /* Fondo oscuro semitransparente */
+    display: none;
+    place-items: center;
+    padding: 1.5rem;
+    z-index: 50;
+}
+
+.modal.active {
+    display: grid;
+}
+
+.modal-content {
+    width: min(760px, 100%);
+    background: var(--inventario-card);
+    border-radius: 24px;
+    padding: 1.75rem;
+    position: relative;
+    box-shadow: var(--shadow-medium);
+}
+
+.close-modal {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    color: var(--inventario-muted);
+    cursor: pointer;
+}
+
+/* Formularios dentro de modales */
+.modal-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    width: 90%;
+    border: 1px solid var(--inventario-border);
+    border-radius: 14px;
+    padding: 0.95rem 1rem;
+    font-size: 0.95rem;
+    color: var(--inventario-secondary);
+    background: var(--input-bg);
+}
+
+.modal-form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.inline-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Botones principales */
+.btn-primary {
+    border: none;
+    background: linear-gradient(135deg, var(--btn-gradient-start) 0%, var(--btn-gradient-end) 100%);
+    color: white;
+    padding: 0.95rem 1.3rem;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 180ms ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: var(--inventario-secondary);
+    padding: 0.95rem 1.2rem;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 180ms ease;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+    transform: translateY(-1px);      /* Efecto de elevación al pasar el cursor */
+}
+
+/* =============================================
+   SECCIÓN DE DETALLE
+   ============================================= */
+.detalle-card {
+    background: var(--inventario-card);
+    border: 1px solid var(--inventario-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+.detalle-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1.25rem;
+}
+
+.detalle-meta p {
+    margin: 0.35rem 0;
+    color: var(--inventario-muted);
+}
+
+/* =============================================
+   MEDIA QUERIES - DISEÑO RESPONSIVO
+   ============================================= */
+
+@media (max-width: 980px) {
+    .inventario-stats {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+    .inventario-toolbar {
+        grid-template-columns: 1fr;
+    }
+    .filter-field {
+        width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .inventario-header,
+    .detalle-grid {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .inline-row {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Diseño tipo tarjeta para tablas en móviles */
+    thead {
+        display: none;
+    }
+    tbody tr {
+        display: grid;
+        grid-template-columns: 1fr;
+        border: 1px solid var(--inventario-border);
+        border-radius: 16px;
+        margin-bottom: 0.85rem;
+    }
+    tbody td {
+        padding: 0.85rem 0.75rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--inventario-muted);
+        width: 40%;
+    }
+}
+.main-container {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 2rem;
+}

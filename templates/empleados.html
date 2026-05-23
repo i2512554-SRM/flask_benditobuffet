@@ -31,7 +31,13 @@
             <form method="POST" action="{{ url_for('nuevo_empleado') }}" class="form-grid">
                 <input type="text" name="nombres" placeholder="Nombres" required>
                 <input type="text" name="apellido" placeholder="Apellido">
-                <input type="text" name="dni" placeholder="DNI" required>
+                
+                <div class="dni-input-group">
+                    <input type="text" id="dniInput" name="dni" placeholder="DNI (8 dígitos)" maxlength="8" inputmode="numeric" required>
+                    <button type="button" id="btnConsultarDni">Consultar DNI <i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <div id="dniMessage" class="dni-message"></div>
+                
                 <input type="email" name="correo" placeholder="Correo electrónico" required>
                 <input type="text" name="telefono" placeholder="Teléfono">
                 <input type="password" name="clave" placeholder="Contraseña" required>
@@ -41,10 +47,10 @@
                         <option value="{{ rol.id_rol }}">{{ rol.nombre }}</option>
                     {% endfor %}
                 </select>
+                <div class="form-actions">
+                    <button class="btn-primary" type="submit" data-loading-text="Guardando...">Registrar Empleado</button>
+                </div>
             </form>
-            <div class="form-actions">
-                <button class="btn-primary" onclick="document.querySelector('form').submit()">Registrar Empleado</button>
-            </div>
         </div>
     </section>
     <section id="lista" class="contenido">
@@ -73,13 +79,13 @@
                         <td>{{ empleado.rol.nombre if empleado.rol else 'N/A' }}</td>
                         <td><span class="estado {{ 'activo' if empleado.estado == 1 else 'inactivo' }}">{{ 'activo' if empleado.estado == 1 else 'inactivo' }}</span></td>
                         <td>
-                            <a href="{{ url_for('editar_empleado', id=empleado.id_usuario) }}"><button class="btn-edit">Editar</button></a>
+                            <a href="{{ url_for('editar_empleado', id=empleado.id_usuario) }}"><button class="btn-edit" data-loading-text="Editando...">Editar</button></a>
                             <a href="{{ url_for('toggle_estado_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Cambiar estado del empleado?')">
-                                <button class="btn-state {{ 'btn-activar' if empleado.estado == 0 else 'btn-desactivar' }}">
+                                <button class="btn-state {{ 'btn-activar' if empleado.estado == 0 else 'btn-desactivar' }}" data-loading-text="{{ 'Activando...' if empleado.estado == 0 else 'Desactivando...' }}">
                                     {{ 'Activar' if empleado.estado == 0 else 'Desactivar' }}
                                 </button>
                             </a>
-                            <a href="{{ url_for('eliminar_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Eliminar empleado?')"><button class="btn-delete">Eliminar</button></a>
+                            <a href="{{ url_for('eliminar_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Eliminar empleado?')"><button class="btn-delete" data-loading-text="Eliminando...">Eliminar</button></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -110,4 +116,8 @@
         }
     }
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dni-lookup.js') }}"></script>
 {% endblock %}

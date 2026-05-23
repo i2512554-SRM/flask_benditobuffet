@@ -60,3 +60,31 @@ class CierreCaja(db.Model):
 
     def __repr__(self):
         return f"<CierreCaja {self.id_cierre} {self.fecha}>"
+
+
+class Producto(db.Model):
+    __tablename__ = 'productos'
+
+    id_producto = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(200), nullable=False)
+    precio = db.Column(db.Float, nullable=False)
+    stock = db.Column(db.Float, nullable=False)
+    categoria = db.Column(db.String(100), nullable=False)
+    fecha_registro = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<Producto {self.id_producto} {self.nombre}>"
+
+
+class Inversion(db.Model):
+    __tablename__ = 'inversiones'
+
+    id_inversion = db.Column(db.Integer, primary_key=True)
+    descripcion = db.Column(db.Text, nullable=False)
+    proveedor = db.Column(db.String(150), nullable=False)
+    notas = db.Column(db.Text, nullable=True)
+    monto = db.Column(db.Float, nullable=False)
+    fecha = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<Inversion {self.id_inversion} {self.monto}>"

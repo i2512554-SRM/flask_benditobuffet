@@ -16,31 +16,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    if (form) {
-        form.addEventListener("submit", async function(event) {
-            event.preventDefault();
-            const formData = new FormData(form);
-            const response = await fetch(form.action, {
-                method: "POST",
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                },
-                body: formData
-            });
-
-            const body = await response.json().catch(() => null);
-            if (!response.ok) {
-                alert(body?.message || "Ocurrió un error al registrar la transacción.");
-                return;
-            }
-
-            updateResumen(body);
-            form.reset();
-            alert(body?.message || "Transacción registrada correctamente.");
-            window.location.reload();
-        });
-    }
-
     if (btnOpenCerrarCaja) {
         btnOpenCerrarCaja.addEventListener("click", function() {
             modal.classList.add("active");
@@ -54,27 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     if (btnConfirmarCerrar) {
-        btnConfirmarCerrar.addEventListener("click", async function() {
-            const observaciones = document.getElementById("observaciones").value;
-            const payload = new FormData();
-            payload.append("observaciones", observaciones);
-
-            const response = await fetch("/caja/cerrar", {
-                method: "POST",
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                },
-                body: payload
-            });
-            const body = await response.json().catch(() => null);
-            if (!response.ok) {
-                alert(body?.message || "Error al cerrar la caja.");
-                return;
-            }
-            modal.classList.remove("active");
-            alert(body?.message || "Caja cerrada correctamente.");
-            window.location.reload();
-        });
+        // El envío del cierre de caja se maneja por el formulario HTML normal.
     }
 
     function updateResumen(data) {

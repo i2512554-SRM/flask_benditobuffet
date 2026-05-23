@@ -10,6 +10,7 @@
 </head>
 <body>
     {% block content %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

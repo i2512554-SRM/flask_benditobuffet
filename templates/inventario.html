@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Inventario e Inversión - Bendito Buffet{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+<header class="inventario-header">
+   <div>
+    <h1>
+        <a href="{{ url_for('panel') }}" class="btn-outline">
+            <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+        </a>
+        Inventario e Inversión
+    </h1>
+
+    <p>Monitorea stock, costos y compras</p>
+</div>
+    <div class="header-actions">
+        <button type="button" class="btn-secondary" id="btnNuevoArticulo">
+            <i class="fa-solid fa-plus"></i> Nuevo artículo
+        </button>
+        <button type="button" class="btn-primary" id="btnRegistrarCompra">
+            <i class="fa-solid fa-chart-line"></i> Registrar inversión
+        </button>
+    </div>
+</header>
+
+<section class="inventario-stats">
+    <div class="stat-card">
+        <span class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <div>
+            <h4>Valor Total Inventario</h4>
+            <strong>${{ "%.2f" | format(valor_total_inventario) }}</strong>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
+        <div>
+            <h4>Productos Este Mes</h4>
+            <strong>{{ productos_mes }}</strong>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-icon"><i class="fa-solid fa-boxes"></i></span>
+        <div>
+            <h4>Artículos Registrados</h4>
+            <strong>{{ articulos_registrados }}</strong>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-icon"><i class="fa-solid fa-tools"></i></span>
+        <div>
+            <h4>Equipamiento</h4>
+            <strong>${{ "%.2f" | format(equipamiento_valor) }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="inventario-toolbar">
+    <div class="search-field">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="inventarioSearch" type="search" placeholder="Buscar artículo o categoría" aria-label="Buscar artículo o categoría">
+    </div>
+    <div class="filter-field">
+        <label for="categoriaFilter">Categoría</label>
+        <select id="categoriaFilter" aria-label="Filtrar por categoría">
+            <option value="">Todas las categorías</option>
+            <option value="Ingredientes">Ingredientes</option>
+            <option value="Equipamiento">Equipamiento</option>
+            <option value="Suministro">Suministro</option>
+        </select>
+    </div>
+</section>
+
+<section class="tabs-container">
+    <div class="tabs-nav">
+        <button type="button" class="tab-button active" data-tab="tab-inventario">Inventario</button>
+        <button type="button" class="tab-button" data-tab="tab-compras">Inversiones</button>
+    </div>
+    <div class="tabs-content">
+        <section id="tab-inventario" class="tab-panel active">
+            <article class="panel-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Inventario de Productos</h2>
+                        <p>Stock, precios y valor total por artículo.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="productosTable">
+                        <thead>
+                            <tr>
+                                <th>Artículo</th>
+                                <th>Categoría</th>
+                                <th>Stock</th>
+                                <th>Precio Unitario</th>
+                                <th>Valor Total</th>
+                                <th class="sortable" data-sort="fecha">Registrado <i class="fa-solid fa-arrow-down"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if productos %}
+                                {% for producto in productos %}
+                                <tr data-nombre="{{ producto.nombre }}" data-categoria="{{ producto.categoria }}" data-fecha="{{ producto.fecha_registro.timestamp() if producto.fecha_registro else 0 }}">
+                                    <td>{{ producto.nombre }}</td>
+                                    <td>{{ producto.categoria }}</td>
+                                    <td>{{ "%.2f" | format(producto.stock) }}</td>
+                                    <td>${{ "%.2f" | format(producto.precio) }}</td>
+                                    <td>${{ "%.2f" | format(producto.precio * producto.stock) }}</td>
+                                    <td>{{ producto.fecha_registro.strftime('%d/%m/%Y %H:%M') if producto.fecha_registro else '' }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr id="noResultsRow" class="empty-state" style="display:none;">
+                                    <td colspan="6">No se encontraron artículos con esos filtros.</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="empty-state">No hay artículos registrados aún.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <section id="tab-compras" class="tab-panel">
+            <article class="panel-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Inversiones</h2>
+                        <p>Registros históricos y detalles de cada inversión.</p>
+                    </div>
+                </div>
+                <div class="compra-cards">
+                    {% if inversiones %}
+                        {% for inversion in inversiones %}
+                        <div class="inversion-card">
+                            <div class="compra-card-top">
+                                <div>
+                                    <h3>Inversión #{{ inversion.id_inversion }}</h3>
+                                    <p class="fecha"><strong>Proveedor:</strong> {{ inversion.proveedor }}</p>
+                                </div>
+                                <span class="fecha">{{ inversion.fecha.strftime('%d/%m/%Y') if inversion.fecha else '' }}</span>
+                            </div>
+                            <p class="compra-items">{{ inversion.descripcion[:110] }}{% if inversion.descripcion|length > 110 %}...{% endif %}</p>
+                            <div class="compra-card-bottom">
+                                <strong>${{ "%.2f" | format(inversion.monto) }}</strong>
+                                <a href="{{ url_for('inventario_compra_detalle', id=inversion.id_inversion) }}" class="btn-outline">Ver Detalles</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state-card">
+                            <p>No hay inversiones registradas aún.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+        </section>
+    </div>
+</section>
+
+<div class="modal" id="modalNuevoArticulo">
+    <div class="modal-content">
+        <button type="button" class="close-modal" aria-label="Cerrar">&times;</button>
+        <h3>Agregar artículo al inventario</h3>
+        <form action="{{ url_for('inventario_articulo_nuevo') }}" method="POST" class="modal-form">
+            <input type="text" name="nombre" placeholder="Nombre del artículo" required>
+            <select name="categoria" required>
+                <option value="">Seleccionar categoría</option>
+                <option value="Ingredientes">Ingredientes</option>
+                <option value="Equipamiento">Equipamiento</option>
+                <option value="Suministro">Suministro</option>
+            </select>
+            <div class="inline-row">
+                <input type="number" step="0.01" min="0" name="precio" placeholder="Precio unitario" required>
+                <input type="number" step="0.01" min="0" name="stock" placeholder="Stock" required>
+            </div>
+            <button class="btn-primary" type="submit" data-loading-text="Guardando...">Agregar artículo</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="modalRegistrarCompra">
+    <div class="modal-content">
+        <button type="button" class="close-modal" aria-label="Cerrar">&times;</button>
+        <h3>Registrar nueva inversión</h3>
+        <form action="{{ url_for('inventario_compra_nuevo') }}" method="POST" class="modal-form">
+            <textarea name="descripcion" rows="4" placeholder="Artículos comprados / Detalles de la compra" required></textarea>
+            <input type="number" step="0.01" min="0" name="monto" placeholder="Total de la compra" required>
+            <input type="text" name="proveedor" placeholder="Nombre del proveedor" required>
+            <textarea name="notas" rows="3" placeholder="Notas adicionales (opcional)"></textarea>
+            <button class="btn-primary" type="submit" data-loading-text="Registrando...">Registrar compra</button>
+        </form>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/inventario.js') }}"></script>
+{% endblock %}

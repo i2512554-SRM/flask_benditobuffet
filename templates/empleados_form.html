@@ -31,7 +31,11 @@
                 </div>
                 <div class="form-group">
                     <label>DNI</label>
-                    <input type="text" name="dni" placeholder="DNI" value="{% if empleado %}{{ empleado.dni }}{% endif %}" required>
+                    <div class="dni-input-group">
+                        <input type="text" id="dniInput" name="dni" placeholder="DNI (8 dígitos)" value="{% if empleado %}{{ empleado.dni }}{% endif %}" maxlength="8" inputmode="numeric" required>
+                        {% if not empleado %}<button type="button" id="btnConsultarDni">Consultar DNI <i class="fa-solid fa-magnifying-glass"></i></button>{% endif %}
+                    </div>
+                    <div id="dniMessage" class="dni-message"></div>
                 </div>
                 <div class="form-group">
                     <label>Correo electrónico</label>
@@ -50,7 +54,7 @@
                         <option value="{{ rol.id_rol }}" {% if empleado and empleado.id_rol == rol.id_rol %}selected{% endif %}>{{ rol.nombre }}</option>
                     {% endfor %}
                 </select>
-                <button class="btn-primary" onclick="document.querySelector('form').submit()">{% if empleado %}Actualizar{% else %}Registrar{% endif %} Empleado</button>
+                <button class="btn-primary" type="submit" data-loading-text="{% if empleado %}Actualizando...{% else %}Guardando...{% endif %}">{% if empleado %}Actualizar{% else %}Registrar{% endif %} Empleado</button>
             </form>
             
         </div>
@@ -64,4 +68,8 @@
         {% endfor %}
     {% endif %}
 {% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dni-lookup.js') }}"></script>
 {% endblock %}

@@ -12,6 +12,27 @@
     --color-error-text: #721c24;
     --color-success-bg: #d4edda;
     --color-success-text: #155724;
+
+    /* New global theme variables (mapped to existing palette for backwards compatibility) */
+    --bg-main: var(--color-gris-claro);
+    --bg-card: var(--color-blanco);
+    --bg-secondary: #f7f8fb;
+    --text-main: var(--color-negro-suave);
+    --text-muted: var(--color-gris);
+    --border-color: var(--color-gris-suave);
+    --hover-color: rgba(255,123,0,0.08);
+    --shadow-soft: 0 12px 28px rgba(15, 23, 42, 0.04);
+    --shadow-medium: 0 20px 60px rgba(15, 23, 42, 0.12);
+    --input-bg: var(--color-blanco);
+    --table-header: #f9fafb;
+    --modal-bg: var(--color-blanco);
+    --overlay-bg: rgba(15, 23, 42, 0.48);
+    --btn-gradient-start: #ff7a18;
+    --btn-gradient-end: #ffb259;
+    --stat-gradient-start: #ffe5d0;
+    --stat-gradient-end: var(--btn-gradient-start);
+    --table-row-alt: #fafafa;
+    --transition-fast: 180ms;
 }
 
 /* 🌙 Modo oscuro */
@@ -21,4 +42,29 @@
     --color-negro-suave: #f9fafb;
     --color-gris: #9ca3af;
     --color-gris-suave: #374151;
+
+    /* Dark theme mappings */
+    --bg-main: #0b1220; /* dark blue-gray */
+    --bg-card: #0f1724; /* slightly lighter card */
+    --bg-secondary: #0b1226;
+    --text-main: #e6eef8;
+    --text-muted: #9aa3b2;
+    --border-color: #1f2937;
+    --hover-color: rgba(255,123,0,0.12);
+    --shadow-soft: 0 10px 24px rgba(2,6,23,0.6);
+    --shadow-medium: 0 18px 48px rgba(2,6,23,0.7);
+    --input-bg: #0b1226;
+    --table-header: #0b1228;
+    --modal-bg: #0f1724;
+    --overlay-bg: rgba(2,6,23,0.65);
+    --btn-gradient-start: #ff7a18;
+    --btn-gradient-end: #ffb259;
+    --table-row-alt: #0b1320;
+    --transition-fast: 180ms;
+}
+
+/* Smooth theme transition helper (applied briefly on toggle) */
+.theme-transition,
+.theme-transition * {
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease, border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
 }

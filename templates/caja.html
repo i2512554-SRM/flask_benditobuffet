@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="main-container">
 <header class="caja-header">
     <div>
         <h1>
@@ -120,7 +121,7 @@
             </div>
 
             <div class="full-width">
-                <button class="btn-primary" type="submit">
+                <button class="btn-primary" type="submit" data-loading-text="Guardando...">
                     Registrar Transacción
                 </button>
             </div>
@@ -212,12 +213,15 @@
     <div class="modal-content">
         <h3>Cerrar Caja</h3>
         <p>Opcionalmente agrega una observación antes de cerrar el día.</p>
-        <textarea id="observaciones" placeholder="Escribe una nota... (opcional)"></textarea>
-        <div class="modal-actions">
-            <button class="btn-secondary" id="btnCancelarCerrar">Cancelar</button>
-            <button class="btn-primary" id="btnConfirmarCerrar">Confirmar Cierre</button>
-        </div>
+        <form id="formCerrarCaja" action="/caja/cerrar" method="POST">
+            <textarea id="observaciones" name="observaciones" placeholder="Escribe una nota... (opcional)"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="btnCancelarCerrar">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btnConfirmarCerrar" data-loading-text="Cerrando caja...">Confirmar Cierre</button>
+            </div>
+        </form>
     </div>
+</div>
 </div>
 {% endblock %}
 
