@@ -179,14 +179,14 @@ td {
     border-radius: 5px;
 }
 
-.flash.error {
-    background: #f8d7da;
-    color: #721c24;
+..flash.error {
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
 }
 
 .flash.success {
-    background: #d4edda;
-    color: #155724;
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
 }
 .form-group {
     display: flex;

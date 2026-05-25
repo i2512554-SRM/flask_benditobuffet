@@ -10,35 +10,29 @@
         <p>Gestión integral del restaurante</p>
     </div>
     <div class="header-buttons">
-        <button class="btn-outline">Mi Perfil</button>
+        <button class="btn-outline" onclick="location.href='{{ url_for('perfil') }}'">Mi Perfil</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
-        <button class="btn-outline" onclick="toggleDarkMode()">🌙</button>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
     </div>
 </header>
 
 <section class="stats">
     <div class="card">
-        <h3>Ventas del Día</h3>
-        <h2>$2,450.00</h2>
-        <span class="positive">+12.5% vs ayer</span>
+        <h3>Ventas del mes</h3>
+        <h2>$ {{ "%.2f"|format(ventas_mes) }}</h2>
+        <span class="positive">Mes actual</span>
     </div>
 
     <div class="card">
-        <h3>Egresos del Día</h3>
-        <h2>$580.00</h2>
-        <span class="negative">-5.2% vs ayer</span>
+        <h3>Egresos del mes</h3>
+        <h2>$ {{ "%.2f"|format(egresos_mes) }}</h2>
+        <span class="negative">Mes actual</span>
     </div>
 
     <div class="card">
-        <h3>Ganancia Neta</h3>
-        <h2>$1,870.00</h2>
-        <span class="positive">+18.3% vs ayer</span>
-    </div>
-
-    <div class="card">
-        <h3>Clientes Hoy</h3>
-        <h2>127</h2>
-        <span class="positive">+8.1% vs ayer</span>
+        <h3>Ganancia neta del mes</h3>
+        <h2>$ {{ "%.2f"|format(neto_mes) }}</h2>
+        <span class="{{ 'positive' if neto_mes >= 0 else 'negative' }}">Mes actual</span>
     </div>
 </section>
 
@@ -51,12 +45,7 @@
             <p>Registrar ventas, egresos y cierre diario</p>
         </div>
 
-        <div class="module-card" onclick="location.href='#'">
-            <h3>Clientes</h3>
-            <p>Registro y seguimiento de clientes</p>
-        </div>
-
-        <div class="module-card" onclick="location.href='#'">
+        <div class="module-card" onclick="location.href='{{ url_for('pagos_personal') }}'">
             <h3>Pagos a Personal</h3>
             <p>Salarios, adelantos e historial</p>
         </div>

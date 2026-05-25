@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Detalle Pagos Personal - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+{% endblock %}
+{% block content %}
+<header>
+    <div>
+        <h1>Detalle de {{ empleado.nombres }} {{ empleado.apellido }}</h1>
+        <p>Resumen de pagos, adelantos y movimientos personales.</p>
+    </div>
+    <div class="header-buttons">
+        <button class="btn-outline" onclick="location.href='{{ url_for('pagos_personal') }}'">Volver</button>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
+    </div>
+</header>
+
+<section class="stats">
+    <div class="card">
+        <h3>Total pagado</h3>
+        <h2>$ {{ "%.2f"|format(total_pagado) }}</h2>
+    </div>
+    <div class="card">
+        <h3>Total adelantos</h3>
+        <h2>$ {{ "%.2f"|format(total_adelantos) }}</h2>
+    </div>
+    <div class="card">
+        <h3>Neto</h3>
+        <h2>$ {{ "%.2f"|format(neto) }}</h2>
+    </div>
+</section>
+
+<section class="tables">
+    <div class="table-card">
+        <h2>Pagos registrados</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pago in pagos %}
+                <tr>
+                    <td>{{ pago.fecha_pago.strftime('%Y-%m-%d') }}</td>
+                    <td>$ {{ "%.2f"|format(pago.monto) }}</td>
+                    <td>{{ pago.estado }}</td>
+                    <td>{{ pago.descripcion or '-' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h2>Pagos de personal</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pago in pagos_personal %}
+                <tr>
+                    <td>{{ pago.fecha.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ pago.tipo or 'Pago' }}</td>
+                    <td>$ {{ "%.2f"|format(pago.monto) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h2>Adelantos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for adelanto in adelantos %}
+                <tr>
+                    <td>{{ adelanto.fecha.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ adelanto.motivo }}</td>
+                    <td>$ {{ "%.2f"|format(adelanto.monto) }}</td>
+                    <td>{{ adelanto.estado }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,40 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
-:root {
-    --color-primario-naranja: #ff7b00;
-    /*--color-primario-naranja: #d838ed;*/ 
-    --color-secundario-verde-petroleo: #0f3d3e; 
-    --color-gris-claro: #f5f6f8;
-    --color-blanco: #ffffff;
-    --color-negro-suave: #111827;
-    --color-gris: #6b7280;
-    --color-gris-suave: #e5e7eb;
-    --color-verde-fuerte: #16a34a;
-    --color-rojo: #dc2626;
-}
-/* 🌙 Variables Modo Oscuro */
-.dark-mode {
-    --color-gris-claro: #111827;
-    --color-blanco: #1f2937;
-    --color-negro-suave: #f9fafb;
-    --color-gris: #9ca3af;
-    --color-gris-suave: #374151;
-}
 
 body {
     margin: 0;
     font-family: 'Inter', sans-serif;
-    background-color: var(--color-gris-claro);
-    color: var(--color-negro-suave);
+    background-color: var(--bg-main);
+    color: var(--text-main);
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 header {
-    background: var(--color-blanco);
+    background: var(--bg-card);
     padding: 20px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--color-gris-suave);
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
@@ -56,11 +36,10 @@ header p {
 }
 
 .card {
-    background: var(--color-blanco);
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    
+    box-shadow: var(--shadow-soft);
 }
 .card, .module-card {
     transition: 0.3s ease;
@@ -90,10 +69,10 @@ header p {
 }
 
 .module-card {
-    background: var(--color-blanco);
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-soft);
     transition: 0.3s;
 }
 
@@ -120,17 +99,126 @@ button {
 }
 
 .btn-primary {
-    background-color: var(--color-primario-naranja);
-    color: var(--color-blanco);
+    background-color: var(--btn-primary);
+    color: var(--bg-card);
 }
 
 .btn-secondary {
-    background-color: var(--color-gris-suave);
-    color: var(--color-negro-suave);
+    background-color: var(--bg-secondary);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
 }
 
 .btn-outline {
-    background: none;
-    border: 1px solid var(--color-gris-suave);
-    color: var(--color-negro-suave);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.filters {
+    padding: 0 40px 20px;
+}
+
+.filters form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.filters label {
+    font-weight: 600;
+}
+
+.filters input[type="month"] {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+.tables {
+    padding: 0 40px 40px;
+    display: grid;
+    gap: 20px;
+}
+
+.table-card {
+    background: var(--bg-card);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+}
+
+.table-card h2 {
+    margin-top: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+
+th, td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+th {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-main);
+}
+
+tbody tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.forms {
+    padding: 0 40px 60px;
+    display: grid;
+    gap: 20px;
+}
+
+.form-card {
+    background: var(--bg-card);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+}
+
+.form-card form {
+    display: grid;
+    gap: 12px;
+}
+
+.form-card label {
+    font-weight: 600;
+}
+
+.form-card input,
+.form-card select,
+.form-card textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+.form-card textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+@media (min-width: 900px) {
+    .tables {
+        grid-template-columns: 1.5fr 1fr;
+    }
+    .forms {
+        grid-template-columns: 1fr 1fr;
+    }
 }

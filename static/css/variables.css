@@ -13,29 +13,46 @@
     --color-success-bg: #d4edda;
     --color-success-text: #155724;
 
-    /* New global theme variables (mapped to existing palette for backwards compatibility) */
     --bg-main: var(--color-gris-claro);
     --bg-card: var(--color-blanco);
     --bg-secondary: #f7f8fb;
     --text-main: var(--color-negro-suave);
     --text-muted: var(--color-gris);
     --border-color: var(--color-gris-suave);
-    --hover-color: rgba(255,123,0,0.08);
+    --hover-color: rgba(255, 123, 0, 0.08);
     --shadow-soft: 0 12px 28px rgba(15, 23, 42, 0.04);
     --shadow-medium: 0 20px 60px rgba(15, 23, 42, 0.12);
     --input-bg: var(--color-blanco);
     --table-header: #f9fafb;
     --modal-bg: var(--color-blanco);
     --overlay-bg: rgba(15, 23, 42, 0.48);
+    --btn-primary: #ff7a00;
     --btn-gradient-start: #ff7a18;
     --btn-gradient-end: #ffb259;
     --stat-gradient-start: #ffe5d0;
     --stat-gradient-end: var(--btn-gradient-start);
     --table-row-alt: #fafafa;
+    --scrollbar-track: #e5e7eb;
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-thumb-hover: #a1a9b8;
     --transition-fast: 180ms;
 }
 
-/* 🌙 Modo oscuro */
+body,
+html {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-main);
+    color: var(--text-main);
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body.dark-mode,
 .dark-mode {
     --color-gris-claro: #111827;
     --color-blanco: #1f2937;
@@ -43,27 +60,194 @@
     --color-gris: #9ca3af;
     --color-gris-suave: #374151;
 
-    /* Dark theme mappings */
-    --bg-main: #0b1220; /* dark blue-gray */
-    --bg-card: #0f1724; /* slightly lighter card */
+    --bg-main: #0b1220;
+    --bg-card: #0f1724;
     --bg-secondary: #0b1226;
     --text-main: #e6eef8;
     --text-muted: #9aa3b2;
     --border-color: #1f2937;
-    --hover-color: rgba(255,123,0,0.12);
-    --shadow-soft: 0 10px 24px rgba(2,6,23,0.6);
-    --shadow-medium: 0 18px 48px rgba(2,6,23,0.7);
+    --hover-color: rgba(255, 123, 0, 0.12);
+    --shadow-soft: 0 10px 24px rgba(2, 6, 23, 0.6);
+    --shadow-medium: 0 18px 48px rgba(2, 6, 23, 0.7);
     --input-bg: #0b1226;
     --table-header: #0b1228;
     --modal-bg: #0f1724;
-    --overlay-bg: rgba(2,6,23,0.65);
+    --overlay-bg: rgba(2, 6, 23, 0.65);
+    --btn-primary: #ff7a18;
     --btn-gradient-start: #ff7a18;
     --btn-gradient-end: #ffb259;
     --table-row-alt: #0b1320;
-    --transition-fast: 180ms;
+    --scrollbar-track: #1b2433;
+    --scrollbar-thumb: #334155;
+    --scrollbar-thumb-hover: #475569;
 }
 
-/* Smooth theme transition helper (applied briefly on toggle) */
+button,
+input,
+select,
+textarea,
+.card,
+.panel-card,
+.history-card,
+.module-card,
+.modal-content,
+.tab-button,
+th,
+td,
+.flash,
+.btn-primary,
+.btn-secondary,
+.btn-outline {
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease, border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button,
+.btn-primary,
+.btn-secondary,
+.btn-outline {
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid rgba(255, 123, 0, 0.3);
+    outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    background: var(--input-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+button.btn-primary,
+.btn-primary {
+    background: linear-gradient(135deg, var(--btn-gradient-start) 0%, var(--btn-gradient-end) 100%);
+    color: var(--bg-card);
+}
+
+button.btn-secondary,
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+button.btn-outline,
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.card,
+.panel-card,
+.history-card,
+.module-card,
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    box-shadow: var(--shadow-soft);
+}
+
+.tab-button {
+    background: var(--bg-secondary);
+    color: var(--text-main);
+}
+
+.tab-button.active {
+    background: var(--btn-primary);
+    color: var(--bg-card);
+}
+
+.tab-button:hover {
+    background: var(--hover-color);
+}
+
+.flash {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+.flash.success {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.flash.error {
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
+}
+
+.modal {
+    background: var(--overlay-bg);
+}
+
+.modal-content {
+    background: var(--modal-bg);
+}
+
+thead {
+    background: var(--table-header);
+}
+
+tbody tr:nth-child(even) {
+    background: var(--table-row-alt);
+}
+
+th,
+td {
+    border-color: var(--border-color);
+}
+
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
 .theme-transition,
 .theme-transition * {
     transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease, border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;

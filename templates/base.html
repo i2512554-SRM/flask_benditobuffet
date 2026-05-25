@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bendito Buffet{% endblock %}</title>
+    <script>
+        (function(){
+            const KEY = 'dark-mode';
+            try {
+                const stored = localStorage.getItem(KEY);
+                if (stored === 'true') {
+                    document.documentElement.classList.add('dark-mode');
+                    if (document.body) document.body.classList.add('dark-mode');
+                    else document.addEventListener('DOMContentLoaded', () => document.body.classList.add('dark-mode'));
+                }
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
     {% block extra_css %}{% endblock %}

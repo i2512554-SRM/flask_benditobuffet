@@ -47,7 +47,7 @@ button.loading {
     border: none;
     border-radius: 0.375rem;
     background: linear-gradient(135deg, var(--btn-gradient-start) 0%, var(--btn-gradient-end) 100%);
-    color: white;
+    color: var(--bg-card);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;

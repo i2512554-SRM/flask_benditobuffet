@@ -21,12 +21,19 @@
         <p>Registra ventas, gastos y cierra el corte diario.</p>
     </div>
 
-    <div class="header-actions">
-        <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
-        <button class="btn-primary" id="btnOpenCerrarCaja">
-            Cerrar Caja
+   <div class="header-actions">
+    <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+
+    <form action="{{ url_for('enviar_reporte') }}" method="POST" style="display:inline;">
+        <button type="submit" class="btn-primary">
+            📧 Enviar Reporte
         </button>
-    </div>
+    </form>
+
+    <button class="btn-primary" id="btnOpenCerrarCaja">
+        Cerrar Caja
+    </button>
+</div>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -211,6 +218,7 @@
 
 <div class="modal" id="modalCerrarCaja">
     <div class="modal-content">
+       
         <h3>Cerrar Caja</h3>
         <p>Opcionalmente agrega una observación antes de cerrar el día.</p>
         <form id="formCerrarCaja" action="/caja/cerrar" method="POST">
@@ -221,7 +229,7 @@
             </div>
         </form>
     </div>
-</div>
+</div> 
 </div>
 {% endblock %}
 

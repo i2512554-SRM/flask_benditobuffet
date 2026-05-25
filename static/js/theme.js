@@ -1,12 +1,24 @@
 (function(){
-    const KEY = 'bendito_dark_mode';
+    const KEY = 'dark-mode';
     const root = document.documentElement;
+    const body = document.body;
+
+    function setRootClass(dark) {
+        if (dark) {
+            root.classList.add('dark-mode');
+            if (document.body) document.body.classList.add('dark-mode');
+        } else {
+            root.classList.remove('dark-mode');
+            if (document.body) document.body.classList.remove('dark-mode');
+        }
+    }
+
     function apply(dark){
-        // add class to root for existing CSS .dark-mode selectors
-        if(dark) root.classList.add('dark-mode'); else root.classList.remove('dark-mode');
+        setRootClass(dark);
         // temporary transition class for smooth change
         root.classList.add('theme-transition');
         window.setTimeout(()=> root.classList.remove('theme-transition'), 250);
+        updateToggleButtons(dark);
     }
 
     function getStored(){
@@ -17,20 +29,30 @@
         try { localStorage.setItem(KEY, val); } catch(e) {}
     }
 
+    function updateToggleButtons(active) {
+        document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
     // public toggle
     function toggle(){
-        const active = root.classList.contains('dark-mode');
-        apply(!active);
-        setStored(!active ? '1' : '0');
+        const active = root.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+        const next = !active;
+        apply(next);
+        setStored(next ? 'true' : 'false');
     }
 
     // apply on load: priority -> stored preference -> system preference
     document.addEventListener('DOMContentLoaded', function(){
         const stored = getStored();
-        if(stored === '1' || stored === '0'){
-            apply(stored === '1');
+        if(stored === 'true' || stored === 'false'){
+            apply(stored === 'true');
         } else if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){
             apply(true);
+            setStored('true');
+        } else {
+            updateToggleButtons(false);
         }
 
         // auto-bind buttons with data-theme-toggle attribute

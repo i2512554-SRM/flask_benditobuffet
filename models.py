@@ -26,9 +26,84 @@ class Usuario(db.Model):
     estado = db.Column(db.Integer, default=1)
 
     rol = db.relationship('Rol', backref='usuarios')
+    perfil = db.relationship('UsuarioPerfil', back_populates='usuario', uselist=False, cascade='all, delete-orphan')
+    pagos_personal = db.relationship('PagoPersonal', back_populates='usuario', lazy='dynamic')
+    pagos_empleados = db.relationship('PagoEmpleado', backref='usuario_empleado', lazy='dynamic')
+    adelantos = db.relationship('Adelanto', backref='usuario_adelanto', lazy='dynamic')
 
     def __repr__(self):
         return f"<Usuario {self.id_usuario} {self.usuario}>"
+
+
+class UsuarioPerfil(db.Model):
+    __tablename__ = 'usuario_perfiles'
+
+    id_perfil = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'), unique=True)
+    foto_perfil = db.Column(db.String(255))
+    fecha_ingreso = db.Column(db.Date)
+    horario = db.Column(db.String(100))
+    salario = db.Column(db.Float)
+
+    usuario = db.relationship('Usuario', back_populates='perfil')
+
+    def __repr__(self):
+        return f"<UsuarioPerfil {self.id_perfil} usuario={self.id_usuario}>"
+
+
+class PagoEmpleado(db.Model):
+    __tablename__ = 'pagos_empleados'
+
+    id_pago = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    monto = db.Column(db.Float, nullable=False)
+    fecha_pago = db.Column(db.DateTime, nullable=False)
+    estado = db.Column(db.String(80), nullable=False)
+    descripcion = db.Column(db.String(255))
+
+    def __repr__(self):
+        return f"<PagoEmpleado {self.id_pago} usuario={self.id_usuario} monto={self.monto}>"
+
+
+class PagoPersonal(db.Model):
+    __tablename__ = 'pagos_personal'
+
+    id_pago = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    monto = db.Column(db.Float, nullable=False)
+    fecha = db.Column(db.Date, nullable=False)
+    tipo = db.Column(db.String(100))
+
+    usuario = db.relationship('Usuario', back_populates='pagos_personal')
+
+    def __repr__(self):
+        return f"<PagoPersonal {self.id_pago} usuario={self.id_usuario} monto={self.monto} tipo={self.tipo}>"
+
+
+class Adelanto(db.Model):
+    __tablename__ = 'adelantos'
+
+    id_adelanto = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    motivo = db.Column(db.String(255), nullable=False)
+    monto = db.Column(db.Float, nullable=False)
+    fecha = db.Column(db.DateTime, nullable=False)
+    estado = db.Column(db.String(80), nullable=False, default='Pendiente')
+
+    def __repr__(self):
+        return f"<Adelanto {self.id_adelanto} usuario={self.id_usuario} monto={self.monto}>"
+
+
+class ActividadUsuario(db.Model):
+    __tablename__ = 'actividad_usuario'
+
+    id = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
+    accion = db.Column(db.String(255), nullable=False)
+    fecha = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<ActividadUsuario {self.id} usuario={self.id_usuario} accion={self.accion}>"
 
 
 class TransaccionCaja(db.Model):

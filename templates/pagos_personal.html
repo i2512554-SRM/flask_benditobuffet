@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Pagos al Personal - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+{% endblock %}
+{% block content %}
+<header>
+    <div>
+        <h1>Pagos al Personal</h1>
+        <p>Control mensual de salarios, adelantos y netos.</p>
+    </div>
+    <div class="header-buttons">
+        <button class="btn-outline" onclick="location.href='{{ url_for('panel') }}'">Volver al Panel</button>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
+    </div>
+</header>
+
+<section class="stats">
+    <div class="card">
+        <h3>Total pagado</h3>
+        <h2>$ {{ "%.2f"|format(total_pagado_mes) }}</h2>
+        <span class="positive">Mes seleccionado</span>
+    </div>
+    <div class="card">
+        <h3>Total adelantos</h3>
+        <h2>$ {{ "%.2f"|format(total_adelantos_mes) }}</h2>
+        <span class="negative">Mes seleccionado</span>
+    </div>
+    <div class="card">
+        <h3>Neto del mes</h3>
+        <h2>$ {{ "%.2f"|format(neto_mes) }}</h2>
+        <span class="{{ 'positive' if neto_mes >= 0 else 'negative' }}">Mes seleccionado</span>
+    </div>
+</section>
+
+<section class="filters">
+    <form method="get" action="{{ url_for('pagos_personal') }}">
+        <label for="month">Mes</label>
+        <input type="month" id="month" name="month" value="{{ inicio.strftime('%Y-%m') }}">
+        <button class="btn-primary" type="submit">Filtrar</button>
+    </form>
+</section>
+
+<section class="modules">
+    <div class="module-grid">
+        <div class="module-card">
+            <h3>Empleados activos</h3>
+            <p>{{ empleados_activos }}</p>
+        </div>
+        <div class="module-card">
+            <h3>Próximo pago</h3>
+            <p>{{ proximo_pago_dias if proximo_pago_dias is not none else 'No hay pagos pendientes' }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="tables">
+    <div class="table-card">
+        <h2>Resumen por empleado</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Empleado</th>
+                    <th>Pagado</th>
+                    <th>Adelantos</th>
+                    <th>Neto</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in resumen_empleados %}
+                <tr>
+                    <td>{{ item.empleado.nombres }} {{ item.empleado.apellido }}</td>
+                    <td>$ {{ "%.2f"|format(item.total_pagado) }}</td>
+                    <td>$ {{ "%.2f"|format(item.total_adelantos) }}</td>
+                    <td>$ {{ "%.2f"|format(item.neto) }}</td>
+                    <td><a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=item.empleado.id_usuario) }}">Ver</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h2>Historial de pagos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Empleado</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pago in pagos_historial %}
+                <tr>
+                    <td>{{ pago.fecha_pago.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ pago.usuario_empleado.nombres }} {{ pago.usuario_empleado.apellido }}</td>
+                    <td>$ {{ "%.2f"|format(pago.monto) }}</td>
+                    <td>{{ pago.estado }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="forms">
+    <div class="form-card">
+        <h2>Registrar pago</h2>
+        <form method="post" action="{{ url_for('registrar_pago_personal') }}">
+            <label>Empleado</label>
+            <select name="id_usuario" required>
+                <option value="">Seleccione...</option>
+                {% for empleado in resumen_empleados %}
+                    <option value="{{ empleado.empleado.id_usuario }}">{{ empleado.empleado.nombres }} {{ empleado.empleado.apellido }}</option>
+                {% endfor %}
+            </select>
+            <label>Tipo</label>
+            <input type="text" name="tipo" placeholder="Salario, Bono, Extra" />
+            <label>Monto</label>
+            <input type="number" step="0.01" name="monto" required />
+            <label>Fecha</label>
+            <input type="date" name="fecha" value="{{ inicio.strftime('%Y-%m-%d') }}" required />
+            <label>Estado</label>
+            <select name="estado">
+                <option value="Pagado">Pagado</option>
+                <option value="Pendiente">Pendiente</option>
+            </select>
+            <label>Descripción</label>
+            <textarea name="descripcion"></textarea>
+            <button class="btn-primary" type="submit">Guardar pago</button>
+        </form>
+    </div>
+
+    <div class="form-card">
+        <h2>Registrar adelanto</h2>
+        <form method="post" action="{{ url_for('registrar_adelanto_personal') }}">
+            <label>Empleado</label>
+            <select name="id_usuario" required>
+                <option value="">Seleccione...</option>
+                {% for empleado in resumen_empleados %}
+                    <option value="{{ empleado.empleado.id_usuario }}">{{ empleado.empleado.nombres }} {{ empleado.empleado.apellido }}</option>
+                {% endfor %}
+            </select>
+            <label>Motivo</label>
+            <input type="text" name="motivo" required />
+            <label>Monto</label>
+            <input type="number" step="0.01" name="monto" required />
+            <label>Fecha</label>
+            <input type="date" name="fecha" value="{{ inicio.strftime('%Y-%m-%d') }}" required />
+            <label>Estado</label>
+            <select name="estado">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Pagado">Pagado</option>
+            </select>
+            <button class="btn-primary" type="submit">Guardar adelanto</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

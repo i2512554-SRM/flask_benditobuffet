@@ -38,7 +38,11 @@ function cambiarRol(rol, elemento){
 }
 
 function toggleDarkMode() {
-    document.body.classList.toggle("dark-mode");
+    if (window.benditoTheme && typeof window.benditoTheme.toggle === 'function') {
+        window.benditoTheme.toggle();
+    } else {
+        document.body.classList.toggle('dark-mode');
+    }
 }
 
 function getLoadingText(element) {

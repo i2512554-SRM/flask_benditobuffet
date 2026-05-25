@@ -2,15 +2,15 @@
    VARIABLES GLOBALES DEL TEMA (ROOT)
    ============================================= */
 :root {
-    --inventario-bg: #f7f8fb;           /* Color de fondo principal de toda la página */
-    --inventario-card: #ffffff;         /* Color de fondo de tarjetas, paneles y contenedores */
-    --inventario-border: #e5e7eb;       /* Color usado para bordes de elementos */
-    --inventario-primary: #ff7a18;      /* Color principal del sistema (naranja vibrante) */
-    --inventario-secondary: #374151;    /* Color principal para textos y encabezados */
-    --inventario-muted: #6b7280;        /* Color para textos secundarios y descripciones */
-    --inventario-success: #10b981;      /* Color verde para indicar éxito o positivo */
-    --inventario-warning: #f59e0b;      /* Color para advertencias */
-    --inventario-danger: #ef4444;       /* Color rojo para errores o acciones peligrosas */
+    --inventario-bg: var(--bg-main);
+    --inventario-card: var(--bg-card);
+    --inventario-border: var(--border-color);
+    --inventario-primary: var(--btn-primary);
+    --inventario-secondary: var(--text-main);
+    --inventario-muted: var(--text-muted);
+    --inventario-success: var(--color-verde-fuerte);
+    --inventario-warning: var(--btn-gradient-start);
+    --inventario-danger: var(--color-rojo);
 }
 
 /* Fondo general de la aplicación */
@@ -94,7 +94,7 @@ body {
     height: 52px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--stat-gradient-start), var(--stat-gradient-end));
-    color: white;
+    color: var(--bg-card);
     font-size: 1.2rem;
 }
 
@@ -193,7 +193,7 @@ body {
 
 .tab-button.active {
     background: var(--inventario-primary);
-    color: white;
+    color: var(--bg-card);
 }
 
 /* =============================================
@@ -371,7 +371,7 @@ tbody tr:nth-child(even) {
 .btn-primary {
     border: none;
     background: linear-gradient(135deg, var(--btn-gradient-start) 0%, var(--btn-gradient-end) 100%);
-    color: white;
+    color: var(--bg-card);
     padding: 0.95rem 1.3rem;
     border-radius: 14px;
     cursor: pointer;
@@ -382,9 +382,9 @@ tbody tr:nth-child(even) {
 }
 
 .btn-secondary {
-    border: 1px solid #cbd5e1;
-    background: white;
-    color: var(--inventario-secondary);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-main);
     padding: 0.95rem 1.2rem;
     border-radius: 14px;
     cursor: pointer;
