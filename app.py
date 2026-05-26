@@ -256,6 +256,15 @@ def pagos_personal():
             'neto': neto,
         })
 
+    empleado_filtrado = None
+    empleado_busqueda = request.args.get('empleado', '').strip()
+    if empleado_busqueda:
+        busqueda_lower = empleado_busqueda.lower()
+        empleado_filtrado = next(
+            (item for item in resumen_empleados if busqueda_lower in f"{item['empleado'].nombres} {item['empleado'].apellido}".lower()),
+            None
+        )
+
     pagos_historial = PagoEmpleado.query.filter(PagoEmpleado.estado == 'Pagado', db.func.date(PagoEmpleado.fecha_pago) >= inicio, db.func.date(PagoEmpleado.fecha_pago) <= fin).order_by(PagoEmpleado.fecha_pago.desc()).all()
     return render_template(
         'pagos_personal.html',
@@ -267,6 +276,7 @@ def pagos_personal():
         empleados_activos=empleados_activos,
         proximo_pago_dias=proximo_pago_dias,
         resumen_empleados=resumen_empleados,
+        empleado_filtrado=empleado_filtrado,
         pagos_historial=pagos_historial,
     )
 

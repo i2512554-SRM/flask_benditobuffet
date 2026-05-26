@@ -47,6 +47,54 @@ body{
     color: var(--login-text);
 }
 
+.card{
+    width:min(100%,600px);
+    margin:auto;
+    background: var(--login-card);
+    padding:40px;
+    border-radius:20px;
+    border:1px solid var(--login-primary-soft);
+    text-align:center;
+}
+
+@media (max-width: 800px) {
+    .login {
+        padding:20px 14px;
+    }
+
+    .card {
+        padding:30px 20px;
+    }
+
+    .roles {
+        flex-direction: column;
+    }
+
+    .info {
+        flex-direction: column;
+        text-align: left;
+    }
+
+    .info i {
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 540px) {
+    .card {
+        padding: 24px 16px;
+    }
+
+    .roles {
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 12px;
+    }
+}
+
+
 .brand-text p{
     margin:5px 0 0;
     color: var(--login-muted);
@@ -58,16 +106,6 @@ body{
     color: var(--login-muted);
     display:inline-block;
     margin-bottom:20px;
-}
-
-.card{
-    width:600px;
-    margin:auto;
-    background: var(--login-card);
-    padding:40px;
-    border-radius:20px;
-    border:1px solid var(--login-primary-soft);
-    text-align:center;
 }
 
 .logo{

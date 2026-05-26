@@ -117,3 +117,71 @@ button.loading {
         transform: translateY(0);
     }
 }
+
+/* Responsive helper rules for all pages */
+img,
+svg,
+video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+button,
+input,
+select,
+textarea {
+    min-width: 0;
+}
+
+.table-overflow {
+    width: 100%;
+    overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+    body {
+        font-size: 0.95rem;
+    }
+
+    .actions-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stats,
+    .modules,
+    .actions,
+    .filters,
+    .tables,
+    .forms {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    table th,
+    table td {
+        padding: 12px 10px;
+    }
+}
+
+@media (max-width: 640px) {
+    header,
+    .filters form,
+    .actions-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    header {
+        padding: 16px 16px;
+    }
+
+    .form-card,
+    .table-card,
+    .card,
+    .module-card {
+        padding: 18px;
+    }
+}
+

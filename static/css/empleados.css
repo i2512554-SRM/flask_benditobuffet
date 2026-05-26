@@ -179,7 +179,7 @@ td {
     border-radius: 5px;
 }
 
-..flash.error {
+.flash.error {
     background: var(--color-error-bg);
     color: var(--color-error-text);
 }
@@ -203,4 +203,54 @@ input:focus, select:focus {
     border-color: var(--color-primario-naranja);
     box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
     outline: none;
+}
+
+@media (max-width: 900px) {
+    .header-empleados,
+    .tabs,
+    .contenido,
+    .card,
+    .form-grid {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .header-empleados {
+        padding: 20px;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-empleados h1 {
+        font-size: 1.6rem;
+    }
+
+    .tabs {
+        padding: 0 10px;
+    }
+
+    .btn-primary,
+    .btn-edit,
+    .btn-state,
+    .btn-delete {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+
+    th,
+    td {
+        padding: 10px 8px;
+    }
 }

@@ -235,9 +235,131 @@ td { color: var(--caja-text); font-size: 0.95rem; }
     .full-width { width: 100%; }
 }
 
-@media (max-width: 640px) {
-    .caja-header { flex-direction: column; align-items: stretch; gap: 14px; }
-    .header-actions { justify-content: flex-start; }
+@media (max-width: 900px) {
+    .main-container {
+        padding: 1.5rem;
+    }
+
+    .caja-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .header-actions {
+        justify-content: flex-start;
+    }
+
+    .tabs-container,
+    .main-grid,
+    .stats,
+    .panel-card,
+    .history-card,
+    .card-header,
+    .form-grid {
+        width: 100%;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
 }
+
+@media (max-width: 640px) {
+    .tabs-nav {
+        justify-content: flex-start;
+    }
+
+    .tab-button {
+        flex: 1 1 auto;
+        min-width: 120px;
+    }
+
+    .main-grid {
+        padding: 0;
+    }
+
+    .panel-card,
+    .history-card {
+        padding: 18px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        max-width: 100%;
+    }
+
+    .form-group,
+    .form-grid {
+        width: 100%;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+    }
+
+    .header-actions {
+        width: 100%;
+        gap: 10px;
+    }
+
+    .header-actions a,
+    .header-actions button,
+    .modal-actions button,
+    .panel-card button,
+    .history-card button {
+        width: 100%;
+    }
+
+    table {
+        min-width: auto;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .table-wrapper table,
+    .table-wrapper thead,
+    .table-wrapper tbody,
+    .table-wrapper tr,
+    .table-wrapper th,
+    .table-wrapper td {
+        display: block;
+        width: 100%;
+    }
+
+    .table-wrapper thead {
+        display: none;
+    }
+
+    .table-wrapper tr {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--caja-border);
+        border-radius: 16px;
+        background: var(--caja-card);
+    }
+
+    .table-wrapper td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.85rem 0;
+        border-bottom: none;
+        flex-wrap: wrap;
+    }
+
+    .table-wrapper td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--caja-muted);
+        width: 100%;
+        margin-bottom: 0.35rem;
+    }
+}
+
 
 /* End of file */

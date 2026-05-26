@@ -22,7 +22,7 @@
     </div>
 
    <div class="header-actions">
-    <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+    
 
     <form action="{{ url_for('enviar_reporte') }}" method="POST" style="display:inline;">
         <button type="submit" class="btn-primary">
@@ -159,12 +159,12 @@
                         <tbody>
                             {% for transaccion in transacciones %}
                                 <tr>
-                                    <td>{{ transaccion.fecha.strftime('%d/%m/%Y %H:%M') if transaccion.fecha else '' }}</td>
-                                    <td>{{ transaccion.tipo }}</td>
-                                    <td>{{ transaccion.descripcion or '-' }}</td>
-                                    <td>{{ transaccion.categoria }}</td>
-                                    <td>{{ transaccion.metodo_pago }}</td>
-                                    <td class="{{ 'positive' if transaccion.tipo == 'Venta' else 'negative' }}">${{ "%.2f" | format(transaccion.monto) }}</td>
+                                    <td data-label="Fecha">{{ transaccion.fecha.strftime('%d/%m/%Y %H:%M') if transaccion.fecha else '' }}</td>
+                                    <td data-label="Tipo">{{ transaccion.tipo }}</td>
+                                    <td data-label="Descripción">{{ transaccion.descripcion or '-' }}</td>
+                                    <td data-label="Categoría">{{ transaccion.categoria }}</td>
+                                    <td data-label="Método">{{ transaccion.metodo_pago }}</td>
+                                    <td data-label="Monto" class="{{ 'positive' if transaccion.tipo == 'Venta' else 'negative' }}">${{ "%.2f" | format(transaccion.monto) }}</td>
                                 </tr>
                             {% else %}
                                 <tr>
@@ -197,11 +197,11 @@
                         <tbody>
                             {% for cierre in cierres %}
                                 <tr>
-                                    <td>{{ cierre.fecha.strftime('%d/%m/%Y %H:%M') if cierre.fecha else '' }}</td>
-                                    <td>${{ "%.2f" | format(cierre.total_ventas) }}</td>
-                                    <td>${{ "%.2f" | format(cierre.total_gastos) }}</td>
-                                    <td class="{{ 'positive' if cierre.neto >= 0 else 'negative' }}">${{ "%.2f" | format(cierre.neto) }}</td>
-                                    <td>{{ cierre.observaciones or 'Sin anotaciones' }}</td>
+                                    <td data-label="Fecha">{{ cierre.fecha.strftime('%d/%m/%Y %H:%M') if cierre.fecha else '' }}</td>
+                                    <td data-label="Ventas">${{ "%.2f" | format(cierre.total_ventas) }}</td>
+                                    <td data-label="Gastos">${{ "%.2f" | format(cierre.total_gastos) }}</td>
+                                    <td data-label="Neto" class="{{ 'positive' if cierre.neto >= 0 else 'negative' }}">${{ "%.2f" | format(cierre.neto) }}</td>
+                                    <td data-label="Observaciones">{{ cierre.observaciones or 'Sin anotaciones' }}</td>
                                 </tr>
                             {% else %}
                                 <tr>

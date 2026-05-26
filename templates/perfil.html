@@ -21,7 +21,6 @@
     </p>
 </div>
         <div class="header-actions">
-            <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar sesión</a>
             <button type="button" class="btn-secondary" id="toggleEditProfile">Editar perfil</button>
         </div>
     </section>
@@ -36,47 +35,57 @@
         {% endif %}
     {% endwith %}
 
-    <section class="perfil-grid">
-        <article class="perfil-card">
-            <div class="profile-card-top">
-                <div class="profile-avatar">
-                    {% set initials = (usuario.nombres[:1] if usuario.nombres else '') + (usuario.apellido[:1] if usuario.apellido else '') %}
-                    {% if perfil and perfil.foto_perfil %}
-                        <img src="{{ url_for('static', filename='uploads/perfiles/' + perfil.foto_perfil) }}" alt="Foto de perfil">
-                    {% else %}
-                        <span class="avatar-fallback">{{ initials|upper }}</span>
-                    {% endif %}
+    <div id="profileView">
+        <section class="perfil-grid">
+            <article id="profileBlock" class="perfil-card profile-summary">
+                <div class="profile-card-top">
+                    <div class="profile-avatar">
+                        {% set initials = (usuario.nombres[:1] if usuario.nombres else '') + (usuario.apellido[:1] if usuario.apellido else '') %}
+                        {% if perfil and perfil.foto_perfil %}
+                            <img src="{{ url_for('static', filename='uploads/perfiles/' + perfil.foto_perfil) }}" alt="Foto de perfil">
+                        {% else %}
+                            <span class="avatar-fallback">{{ initials|upper }}</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2>{{ usuario.nombres }} {{ usuario.apellido }}</h2>
+                        <span class="badge">{{ usuario.rol.nombre if usuario.rol else 'Sin rol asignado' }}</span>
+                    </div>
                 </div>
-                <div>
-                    <h2>{{ usuario.nombres }} {{ usuario.apellido }}</h2>
-                    <span class="badge">{{ usuario.rol.nombre if usuario.rol else 'Sin rol asignado' }}</span>
-                </div>
-            </div>
 
-            <div class="profile-keyinfo">
-                <div class="info-block">
-                    <span>Correo</span>
-                    <strong>{{ usuario.correo or 'No registrado' }}</strong>
+                <div class="profile-keyinfo">
+                    <div class="info-block">
+                        <span>Correo</span>
+                        <strong>{{ usuario.correo or 'No registrado' }}</strong>
+                    </div>
+                    <div class="info-block">
+                        <span>Teléfono</span>
+                        <strong>{{ usuario.telefono or 'No registrado' }}</strong>
+                    </div>
+                    <div class="info-block">
+                        <span>Fecha de ingreso</span>
+                        <strong>{{ perfil.fecha_ingreso.strftime('%d/%m/%Y') if perfil and perfil.fecha_ingreso else 'No registrado' }}</strong>
+                    </div>
+                    <div class="info-block">
+                        <span>Horario</span>
+                        <strong>{{ perfil.horario or 'No registrado' }}</strong>
+                    </div>
+                    <div class="info-block">
+                        <span>Salario mensual</span>
+                        <strong>{{ ('S/.' ~ '%.2f'|format(perfil.salario)) if perfil and perfil.salario else 'No registrado' }}</strong>
+                    </div>
                 </div>
-                <div class="info-block">
-                    <span>Teléfono</span>
-                    <strong>{{ usuario.telefono or 'No registrado' }}</strong>
-                </div>
-                <div class="info-block">
-                    <span>Fecha de ingreso</span>
-                    <strong>{{ perfil.fecha_ingreso.strftime('%d/%m/%Y') if perfil and perfil.fecha_ingreso else 'No registrado' }}</strong>
-                </div>
-                <div class="info-block">
-                    <span>Horario</span>
-                    <strong>{{ perfil.horario or 'No registrado' }}</strong>
-                </div>
-                <div class="info-block">
-                    <span>Salario mensual</span>
-                    <strong>{{ ('S/.' ~ '%.2f'|format(perfil.salario)) if perfil and perfil.salario else 'No registrado' }}</strong>
-                </div>
-            </div>
+            </article>
 
-            <div class="card footer-card">
+            <section class="profile-actions">
+                <button type="button" class="btn-secondary" data-target="pagosBlock">Pagos</button>
+                <button type="button" class="btn-secondary" data-target="adelantosBlock">Adelantos</button>
+                <button type="button" class="btn-secondary" data-target="resumenBlock">Resumen</button>
+            </section>
+        </section>
+
+        <section class="content-blocks">
+            <article id="resumenBlock" class="card footer-card hidden">
                 <h3>Resumen rápido</h3>
                 <div class="summary-grid">
                     <div>
@@ -88,160 +97,180 @@
                         <strong>{{ adelantos|length }}</strong>
                     </div>
                 </div>
-            </div>
-        </article>
+            </article>
 
-        <article class="profile-editor card hidden" id="editProfilePanel">
-            <div class="section-header">
-                <h2>Editar perfil</h2>
-                <p>Modifica tu correo, teléfono, contraseña y foto de perfil.</p>
-            </div>
-            <form action="{{ url_for('editar_perfil') }}" method="post" enctype="multipart/form-data" class="edit-form">
-                <div class="form-row">
-                    <label>Correo</label>
-                    <input type="email" name="correo" value="{{ usuario.correo or '' }}" required>
+            <article id="pagosBlock" class="card hidden">
+                <div class="section-header">
+                    <h2>Pagos recientes</h2>
+                    <p>Revisa los últimos ingresos del mes.</p>
                 </div>
-                <div class="form-row">
-                    <label>Teléfono</label>
-                    <input type="text" name="telefono" value="{{ usuario.telefono or '' }}" placeholder="Ej. 987654321">
-                </div>
-                <div class="form-row">
-                    <label>Contraseña nueva</label>
-                    <input type="password" name="clave" placeholder="Dejar vacío para no cambiar">
-                </div>
-                <div class="form-row">
-                    <label>Foto de perfil</label>
-                    <input type="file" name="foto_perfil" accept="image/png,image/jpeg,image/webp">
-                </div>
-                <div class="form-actions">
-                    <button class="btn-primary" type="submit">Guardar cambios</button>
-                </div>
-            </form>
-        </article>
-    </section>
-
-    <section class="history-grid">
-        <article class="card">
-            <div class="section-header">
-                <h2>Pagos recientes</h2>
-                <p>Revisa los últimos ingresos del mes.</p>
-            </div>
-            <div class="table-overflow">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Monto</th>
-                            <th>Descripción</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if pagos %}
-                            {% for pago in pagos %}
-                                <tr>
-                                    <td>{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</td>
-                                    <td>S/. {{ '%.2f'|format(pago.monto) }}</td>
-                                    <td>{{ pago.descripcion or 'Pago registrado' }}</td>
-                                    <td><span class="badge badge-paid">{{ pago.estado }}</span></td>
-                                </tr>
-                            {% endfor %}
-                        {% else %}
+                <div class="table-overflow">
+                    <table>
+                        <thead>
                             <tr>
-                                <td colspan="4">Aún no tienes pagos registrados.</td>
+                                <th>Fecha</th>
+                                <th>Monto</th>
+                                <th>Descripción</th>
+                                <th>Estado</th>
                             </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </article>
-
-        <article class="card">
-            <div class="section-header space-between">
-                <div>
-                    <h2>Adelantos</h2>
-                    <p>Solicita un adelanto rápido y sencillo.</p>
-                </div>
-                <button type="button" class="btn-primary" id="toggleAdelanto">Solicitar adelanto</button>
-            </div>
-            <div class="adelanto-form hidden" id="adelantoForm">
-                <form action="{{ url_for('solicitar_adelanto') }}" method="post" class="edit-form">
-                    <div class="form-row">
-                        <label>Motivo</label>
-                        <input type="text" name="motivo" placeholder="Motivo del adelanto" required>
-                    </div>
-                    <div class="form-row">
-                        <label>Monto</label>
-                        <input type="text" name="monto" placeholder="Ej. 150.00" required>
-                    </div>
-                    <div class="form-actions">
-                        <button class="btn-primary" type="submit">Enviar solicitud</button>
-                    </div>
-                </form>
-            </div>
-            <div class="table-overflow">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Motivo</th>
-                            <th>Monto</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if adelantos %}
-                            {% for adelanto in adelantos %}
+                        </thead>
+                        <tbody>
+                            {% if pagos %}
+                                {% for pago in pagos %}
+                                    <tr>
+                                        <td>{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</td>
+                                        <td>S/. {{ '%.2f'|format(pago.monto) }}</td>
+                                        <td>{{ pago.descripcion or 'Pago registrado' }}</td>
+                                        <td><span class="badge badge-paid">{{ pago.estado }}</span></td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
                                 <tr>
-                                    <td>{{ adelanto.fecha.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ adelanto.motivo }}</td>
-                                    <td>S/. {{ '%.2f'|format(adelanto.monto) }}</td>
-                                    <td><span class="badge badge-{{ 'paid' if adelanto.estado == 'Pagado' else 'pending' }}">{{ adelanto.estado }}</span></td>
+                                    <td colspan="4">Aún no tienes pagos registrados.</td>
                                 </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="4">No hay adelantos registrados.</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </article>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
 
-        <article class="card activity-card">
-            <div class="section-header">
-                <h2>Actividad reciente</h2>
-                <p>Los últimos registros de tus acciones.</p>
+            <article id="adelantosBlock" class="card hidden">
+                <div class="section-header space-between">
+                    <div>
+                        <h2>Adelantos</h2>
+                        <p>Solicita un adelanto rápido y sencillo.</p>
+                    </div>
+                    <button type="button" class="btn-primary" id="toggleAdelanto">Solicitar adelanto</button>
+                </div>
+                <div class="adelanto-form hidden" id="adelantoForm">
+                    <form action="{{ url_for('solicitar_adelanto') }}" method="post" class="edit-form">
+                        <div class="form-row">
+                            <label>Motivo</label>
+                            <input type="text" name="motivo" placeholder="Motivo del adelanto" required>
+                        </div>
+                        <div class="form-row">
+                            <label>Monto</label>
+                            <input type="text" name="monto" placeholder="Ej. 150.00" required>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn-primary" type="submit">Enviar solicitud</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-overflow">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Motivo</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if adelantos %}
+                                {% for adelanto in adelantos %}
+                                    <tr>
+                                        <td>{{ adelanto.fecha.strftime('%d/%m/%Y') }}</td>
+                                        <td>{{ adelanto.motivo }}</td>
+                                        <td>S/. {{ '%.2f'|format(adelanto.monto) }}</td>
+                                        <td><span class="badge badge-{{ 'paid' if adelanto.estado == 'Pagado' else 'pending' }}">{{ adelanto.estado }}</span></td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4">No hay adelantos registrados.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <article class="profile-editor card hidden" id="editProfilePanel">
+        <div class="section-header">
+            <h2>Editar perfil</h2>
+            <p>Modifica tu correo, teléfono, contraseña y foto de perfil.</p>
+        </div>
+        <form action="{{ url_for('editar_perfil') }}" method="post" enctype="multipart/form-data" class="edit-form">
+            <div class="form-row">
+                <label>Correo</label>
+                <input type="email" name="correo" value="{{ usuario.correo or '' }}" required>
             </div>
-            <ul class="timeline-list">
-                {% if actividades %}
-                    {% for item in actividades %}
-                        <li>
-                            <span class="timeline-date">{{ item.fecha.strftime('%d/%m/%Y %H:%M') }}</span>
-                            <p>{{ item.accion }}</p>
-                        </li>
-                    {% endfor %}
-                {% else %}
-                    <li>No se encontraron actividades recientes.</li>
-                {% endif %}
-            </ul>
-        </article>
-    </section>
+            <div class="form-row">
+                <label>Teléfono</label>
+                <input type="text" name="telefono" value="{{ usuario.telefono or '' }}" placeholder="Ej. 987654321">
+            </div>
+            <div class="form-row">
+                <label>Contraseña nueva</label>
+                <input type="password" name="clave" placeholder="Dejar vacío para no cambiar">
+            </div>
+            <div class="form-row">
+                <label>Foto de perfil</label>
+                <input type="file" name="foto_perfil" accept="image/png,image/jpeg,image/webp">
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" type="submit">Guardar cambios</button>
+                <button type="button" class="btn-outline" id="cancelEditProfile">Cancelar</button>
+            </div>
+        </form>
+    </article>
 </div>
 
 <script>
     const editButton = document.getElementById('toggleEditProfile');
     const editPanel = document.getElementById('editProfilePanel');
+    const cancelEditButton = document.getElementById('cancelEditProfile');
+    const profileView = document.getElementById('profileView');
+    const tabButtons = document.querySelectorAll('.profile-actions button[data-target]');
+    const contentSections = document.querySelectorAll('#pagosBlock, #adelantosBlock, #resumenBlock');
     const adelantoToggle = document.getElementById('toggleAdelanto');
     const adelantoForm = document.getElementById('adelantoForm');
 
-    if (editButton && editPanel) {
+    const activateSection = (targetId) => {
+        contentSections.forEach((section) => {
+            if (section.id === targetId) {
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+            }
+        });
+
+        tabButtons.forEach((button) => {
+            button.classList.toggle('active', button.dataset.target === targetId);
+        });
+
+        if (editPanel && !editPanel.classList.contains('hidden')) {
+            editPanel.classList.add('hidden');
+            if (editButton) {
+                editButton.textContent = 'Editar perfil';
+            }
+        }
+    };
+
+    if (editButton && editPanel && profileView) {
         editButton.addEventListener('click', () => {
-            editPanel.classList.toggle('hidden');
-            editButton.textContent = editPanel.classList.contains('hidden') ? 'Editar perfil' : 'Ocultar edición';
+            const isEditing = editPanel.classList.toggle('hidden');
+            profileView.classList.toggle('hidden');
+            editButton.textContent = isEditing ? 'Volver al perfil' : 'Editar perfil';
         });
     }
+
+    if (cancelEditButton && editPanel && profileView && editButton) {
+        cancelEditButton.addEventListener('click', () => {
+            editPanel.classList.add('hidden');
+            profileView.classList.remove('hidden');
+            editButton.textContent = 'Editar perfil';
+        });
+    }
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            activateSection(button.dataset.target);
+        });
+    });
 
     if (adelantoToggle && adelantoForm) {
         adelantoToggle.addEventListener('click', () => {

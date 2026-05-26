@@ -430,43 +430,51 @@ tbody tr:nth-child(even) {
     }
     .inventario-toolbar {
         grid-template-columns: 1fr;
+        gap: 1rem;
     }
     .filter-field {
+        width: 100%;
+        min-width: auto;
+    }
+    .search-field {
         width: 100%;
     }
 }
 
 @media (max-width: 700px) {
     .inventario-header,
-    .detalle-grid {
+    .detalle-grid,
+    .compra-card-bottom,
+    .header-actions {
         flex-direction: column;
         align-items: stretch;
     }
     .inline-row {
         grid-template-columns: 1fr;
     }
-    
-    /* Diseño tipo tarjeta para tablas en móviles */
-    thead {
-        display: none;
+    .stat-card {
+        padding: 1rem;
     }
-    tbody tr {
-        display: grid;
-        grid-template-columns: 1fr;
-        border: 1px solid var(--inventario-border);
-        border-radius: 16px;
-        margin-bottom: 0.85rem;
+    .search-field,
+    .filter-field,
+    .modal-form input,
+    .modal-form textarea,
+    .modal-form select {
+        width: 100%;
     }
-    tbody td {
-        padding: 0.85rem 0.75rem;
-        display: flex;
-        justify-content: space-between;
+    .modal-content {
+        width: min(100%, 95%);
+        padding: 1.4rem;
     }
-    tbody td::before {
-        content: attr(data-label);
-        font-weight: 700;
-        color: var(--inventario-muted);
-        width: 40%;
+    .table-wrapper {
+        overflow-x: auto;
+    }
+    table {
+        min-width: auto;
+    }
+    th,
+    td {
+        padding: 0.85rem 0.7rem;
     }
 }
 .main-container {
