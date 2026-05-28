@@ -217,7 +217,7 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 720px;                 /* Ancho mínimo para que no se rompa */
+    min-width: auto;
 }
 
 thead th {
@@ -477,6 +477,12 @@ tbody tr:nth-child(even) {
         padding: 0.85rem 0.7rem;
     }
 }
+@media (max-width: 400px) {
+    .inventario-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
 .main-container {
     max-width: 1500px;
     margin: 0 auto;

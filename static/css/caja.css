@@ -154,7 +154,7 @@ label { display: block; margin-bottom: 8px; color: var(--caja-text); font-weight
     padding: 12px;
     border-radius: 10px;
     border: 1px solid var(--caja-border);
-    font-size: 14px;
+    font-size: 16px;
     transition: 0.2s ease;
     max-width: 850px;
     background: var(--input-bg);
@@ -187,12 +187,14 @@ a.btn-outline {
 button.btn-primary { background: var(--caja-primary); color: var(--bg-card); }
 button.btn-secondary { background: var(--bg-secondary); color: var(--text-main); }
 a.btn-outline { background: transparent; border: 1px solid var(--caja-border); color: var(--caja-text); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+a.btn-outline:hover,
+a.btn-outline:focus { background: transparent; color: var(--caja-text); border-color: var(--caja-border); }
 
 /* ==========================
    Tables
    ========================== */
 .table-wrapper { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+table { width: 100%; border-collapse: collapse; min-width: auto; }
 thead { background: var(--table-header); }
 th, td { padding: 16px 14px; text-align: left; border-bottom: 1px solid var(--caja-border); }
 th { color: var(--caja-muted); font-size: 0.9rem; }

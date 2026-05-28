@@ -264,7 +264,6 @@ header .header-buttons button.btn-outline {
     box-shadow: var(--shadow-soft);
     overflow-x: auto;
     width: min(100%, 1200px);
-    min-width: 840px;
 }
 
 .table-card h2 {
@@ -272,7 +271,7 @@ header .header-buttons button.btn-outline {
 }
 
 .table-card table {
-    min-width: 720px;
+    min-width: auto;
 }
 
 table {

@@ -57,6 +57,7 @@
         <div class="card">
             <h2>Empleados Registrados</h2>
             {% if empleados %}
+            <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -72,13 +73,13 @@
                 <tbody>
                     {% for empleado in empleados %}
                     <tr>
-                        <td>{{ empleado.nombres }} {{ empleado.apellido }}</td>
-                        <td>{{ empleado.dni }}</td>
-                        <td>{{ empleado.correo }}</td>
-                        <td>{{ empleado.telefono }}</td>
-                        <td>{{ empleado.rol.nombre if empleado.rol else 'N/A' }}</td>
-                        <td><span class="estado {{ 'activo' if empleado.estado == 1 else 'inactivo' }}">{{ 'activo' if empleado.estado == 1 else 'inactivo' }}</span></td>
-                        <td>
+                        <td data-label="Nombre">{{ empleado.nombres }} {{ empleado.apellido }}</td>
+                        <td data-label="DNI">{{ empleado.dni }}</td>
+                        <td data-label="Email">{{ empleado.correo }}</td>
+                        <td data-label="Teléfono">{{ empleado.telefono }}</td>
+                        <td data-label="Rol">{{ empleado.rol.nombre if empleado.rol else 'N/A' }}</td>
+                        <td data-label="Estado"><span class="estado {{ 'activo' if empleado.estado == 1 else 'inactivo' }}">{{ 'activo' if empleado.estado == 1 else 'inactivo' }}</span></td>
+                        <td data-label="Acciones">
                             <a href="{{ url_for('editar_empleado', id=empleado.id_usuario) }}"><button class="btn-edit" data-loading-text="Editando...">Editar</button></a>
                             <a href="{{ url_for('toggle_estado_empleado', id=empleado.id_usuario) }}" onclick="return confirm('¿Cambiar estado del empleado?')">
                                 <button class="btn-state {{ 'btn-activar' if empleado.estado == 0 else 'btn-desactivar' }}" data-loading-text="{{ 'Activando...' if empleado.estado == 0 else 'Desactivando...' }}">
@@ -91,6 +92,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}
             <p>No hay empleados registrados.</p>
             {% endif %}

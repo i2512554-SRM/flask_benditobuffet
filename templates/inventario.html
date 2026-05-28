@@ -110,12 +110,12 @@
                             {% if productos %}
                                 {% for producto in productos %}
                                 <tr data-nombre="{{ producto.nombre }}" data-categoria="{{ producto.categoria }}" data-fecha="{{ producto.fecha_registro.timestamp() if producto.fecha_registro else 0 }}">
-                                    <td>{{ producto.nombre }}</td>
-                                    <td>{{ producto.categoria }}</td>
-                                    <td>{{ "%.2f" | format(producto.stock) }}</td>
-                                    <td>${{ "%.2f" | format(producto.precio) }}</td>
-                                    <td>${{ "%.2f" | format(producto.precio * producto.stock) }}</td>
-                                    <td>{{ producto.fecha_registro.strftime('%d/%m/%Y %H:%M') if producto.fecha_registro else '' }}</td>
+                                    <td data-label="Artículo">{{ producto.nombre }}</td>
+                                    <td data-label="Categoría">{{ producto.categoria }}</td>
+                                    <td data-label="Stock">{{ "%.2f" | format(producto.stock) }}</td>
+                                    <td data-label="Precio Unitario">${{ "%.2f" | format(producto.precio) }}</td>
+                                    <td data-label="Valor Total">${{ "%.2f" | format(producto.precio * producto.stock) }}</td>
+                                    <td data-label="Registrado">{{ producto.fecha_registro.strftime('%d/%m/%Y %H:%M') if producto.fecha_registro else '' }}</td>
                                 </tr>
                                 {% endfor %}
                                 <tr id="noResultsRow" class="empty-state" style="display:none;">

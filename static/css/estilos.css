@@ -183,5 +183,57 @@ textarea {
     .module-card {
         padding: 18px;
     }
+
+    /* Card-conversion universal */
+    table td[data-label]::before {
+        content: attr(data-label);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    thead {
+        display: none;
+    }
+
+    tbody tr {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: var(--bg-card);
+    }
+
+    td {
+        display: flex;
+        flex-direction: column;
+        border: none;
+        padding: 6px 0;
+    }
+
+    button, .btn-*, a.btn-* {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 380px) {
+    .form-card,
+    .table-card,
+    .card,
+    .module-card {
+        padding: 8px;
+    }
+    h1 {
+        font-size: 1.25rem;
+    }
+    h2 {
+        font-size: 1.1rem;
+    }
 }
 

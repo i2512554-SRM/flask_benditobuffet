@@ -5,10 +5,22 @@
 {% endblock %}
 {% block content %}
 <header>
-    <div><button class="btn-outline" onclick="location.href='{{ url_for('pagos_personal') }}'">Volver</button>
-        <h1>Detalle de {{ empleado.nombres }} {{ empleado.apellido }}</h1>
-        <p>Resumen de pagos, adelantos y movimientos personales.</p>
-    </div>
+    <div>
+    <a href="{{ url_for('panel') }}" class="btn-back" aria-label="Volver al panel">#sebas
+       <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <h1>Pagos Personal</h1>
+
+    <p>Resumen de pagos, adelantos y movimientos personales.</p>
+</div>
+
+<div class="header-actions">
+
+</div>
+
+<div class="header-actions">
+
+</div>
     <div class="header-buttons">
         
         <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>

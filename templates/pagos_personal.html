@@ -2,12 +2,18 @@
 {% block title %}Pagos al Personal - Bendito Buffet{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/caja.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 {% endblock %}
 {% block content %}
 <header>
     <div>
-        <button class="btn-outline" onclick="location.href='{{ url_for('panel') }}'">Volver al Panel</button>
-        <h1>Pagos al Personal</h1>
+        <h1>
+            <a href="{{ url_for('panel') }}" class="btn-outline">
+                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            </a>
+            Pagos al Personal
+        </h1>
         <p>Control mensual de salarios, adelantos y netos.</p>
     </div>
     <div class="header-buttons">

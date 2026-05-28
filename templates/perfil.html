@@ -118,10 +118,10 @@
                             {% if pagos %}
                                 {% for pago in pagos %}
                                     <tr>
-                                        <td>{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</td>
-                                        <td>S/. {{ '%.2f'|format(pago.monto) }}</td>
-                                        <td>{{ pago.descripcion or 'Pago registrado' }}</td>
-                                        <td><span class="badge badge-paid">{{ pago.estado }}</span></td>
+                                        <td data-label="Fecha">{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</td>
+                                        <td data-label="Monto">S/. {{ '%.2f'|format(pago.monto) }}</td>
+                                        <td data-label="Descripción">{{ pago.descripcion or 'Pago registrado' }}</td>
+                                        <td data-label="Estado"><span class="badge badge-paid">{{ pago.estado }}</span></td>
                                     </tr>
                                 {% endfor %}
                             {% else %}
@@ -171,10 +171,10 @@
                             {% if adelantos %}
                                 {% for adelanto in adelantos %}
                                     <tr>
-                                        <td>{{ adelanto.fecha.strftime('%d/%m/%Y') }}</td>
-                                        <td>{{ adelanto.motivo }}</td>
-                                        <td>S/. {{ '%.2f'|format(adelanto.monto) }}</td>
-                                        <td><span class="badge badge-{{ 'paid' if adelanto.estado == 'Pagado' else 'pending' }}">{{ adelanto.estado }}</span></td>
+                                        <td data-label="Fecha">{{ adelanto.fecha.strftime('%d/%m/%Y') }}</td>
+                                        <td data-label="Motivo">{{ adelanto.motivo }}</td>
+                                        <td data-label="Monto">S/. {{ '%.2f'|format(adelanto.monto) }}</td>
+                                        <td data-label="Estado"><span class="badge badge-{{ 'paid' if adelanto.estado == 'Pagado' else 'pending' }}">{{ adelanto.estado }}</span></td>
                                     </tr>
                                 {% endfor %}
                             {% else %}

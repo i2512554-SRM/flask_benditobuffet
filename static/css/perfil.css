@@ -269,7 +269,7 @@
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 520px;
+    min-width: auto;
 }
 
 thead {
@@ -353,6 +353,13 @@ tbody tr:hover {
     .section-header.space-between {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+@media (max-width: 400px) {
+    .profile-actions button {
+        min-width: auto;
+        width: 100%;
     }
 }
 
