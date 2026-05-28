@@ -94,3 +94,96 @@ smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepte
 2026-05-24 23:52:55 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-24_Sebas.xlsx
 2026-05-24 23:52:59 [INFO] mail_sender: Correo enviado exitosamente a i2512554@continental.edu.pe
 2026-05-24 23:52:59 [INFO] __main__: Proceso completado exitosamente
+2026-05-27 17:29:10 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-27_Sebas.xlsx
+2026-05-27 17:29:14 [ERROR] mail_sender: Error al enviar el correo
+Traceback (most recent call last):
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\mail_sender.py", line 70, in enviar_correo
+    servidor.login(gmail_user, gmail_password)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 750, in login
+    raise last_exception
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+                   ~~~~~~~~~^
+        authmethod, getattr(self, method_name),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        initial_response_ok=initial_response_ok)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30452230f1bsm13707878eec.14 - gsmtp')
+2026-05-27 17:29:14 [ERROR] __main__: Error durante la ejecucion
+Traceback (most recent call last):
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\enviar_cierre.py", line 100, in main
+    enviar_correo(
+    ~~~~~~~~~~~~~^
+        archivo_excel=ruta_excel,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        cajero=args.cajero,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\mail_sender.py", line 70, in enviar_correo
+    servidor.login(gmail_user, gmail_password)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 750, in login
+    raise last_exception
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+                   ~~~~~~~~~^
+        authmethod, getattr(self, method_name),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        initial_response_ok=initial_response_ok)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30452230f1bsm13707878eec.14 - gsmtp')
+2026-05-27 17:31:34 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-27_Sebas.xlsx
+2026-05-27 17:31:37 [ERROR] mail_sender: Error al enviar el correo
+Traceback (most recent call last):
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\mail_sender.py", line 70, in enviar_correo
+    servidor.login(gmail_user, gmail_password)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 750, in login
+    raise last_exception
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+                   ~~~~~~~~~^
+        authmethod, getattr(self, method_name),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        initial_response_ok=initial_response_ok)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30452255234sm17497411eec.20 - gsmtp')
+2026-05-27 17:31:37 [ERROR] __main__: Error durante la ejecucion
+Traceback (most recent call last):
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\enviar_cierre.py", line 100, in main
+    enviar_correo(
+    ~~~~~~~~~~~~~^
+        archivo_excel=ruta_excel,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        cajero=args.cajero,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Usuario\Documents\web_bb\flask_benditobuffet\automatizacion_caja\mail_sender.py", line 70, in enviar_correo
+    servidor.login(gmail_user, gmail_password)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 750, in login
+    raise last_exception
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+                   ~~~~~~~~~^
+        authmethod, getattr(self, method_name),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        initial_response_ok=initial_response_ok)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuario\AppData\Local\Programs\Python\Python313\Lib\smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30452255234sm17497411eec.20 - gsmtp')
+2026-05-27 17:33:39 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-27_Sebas.xlsx
+2026-05-27 17:33:44 [INFO] mail_sender: Correo enviado exitosamente a i2512554@continental.edu.pe
+2026-05-27 17:33:44 [INFO] __main__: Proceso completado exitosamente
