@@ -14,27 +14,37 @@
         <p>Información completa de la inversión seleccionada.</p>
     </div>
     <div class="header-actions">
-        <a href="{{ url_for('inventario') }}" class="btn-secondary">Volver al Inventario</a>
+        <a href="{{ url_for('inventario') }}" class="btn-primary">Volver al Inventario</a>
     </div>
 </header>
 
 <section class="detalle-card">
+    <span class="detalle-badge">Inversión #{{ inversion.id_inversion }}</span>
+
     <div class="detalle-grid">
-        <div>
-            <h2>Inversión #{{ inversion.id_inversion }}</h2>
+        <div class="detalle-field">
+            <span class="detalle-label">Monto</span>
+            <span class="detalle-value">${{ "%.2f" | format(inversion.monto) }}</span>
         </div>
-        <div class="detalle-meta">
-            <p><strong>Monto:</strong> ${{ "%.2f" | format(inversion.monto) }}</p>
-            <p><strong>Proveedor:</strong> {{ inversion.proveedor }}</p>
-            <p><strong>Fecha:</strong> {{ inversion.fecha.strftime('%d/%m/%Y %H:%M') if inversion.fecha else '' }}</p>
+        <div class="detalle-field">
+            <span class="detalle-label">Proveedor</span>
+            <span class="detalle-value">{{ inversion.proveedor }}</span>
+        </div>
+        <div class="detalle-field">
+            <span class="detalle-label">Fecha</span>
+            <span class="detalle-value">{{ inversion.fecha.strftime('%d/%m/%Y %H:%M') if inversion.fecha else '' }}</span>
         </div>
     </div>
+
+    <hr class="detalle-divider">
 
     <div class="detalle-section">
         <h3>Descripción</h3>
         <p>{{ inversion.descripcion }}</p>
     </div>
+
     {% if inversion.notas %}
+    <hr class="detalle-divider">
     <div class="detalle-section">
         <h3>Notas</h3>
         <p>{{ inversion.notas }}</p>

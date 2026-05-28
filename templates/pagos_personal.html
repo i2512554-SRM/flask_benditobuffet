@@ -18,6 +18,7 @@
     </div>
     <div class="header-buttons">
         <button type="button" class="btn-outline" id="openRegisterPayment">+ registrar pago</button>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
     </div>
 </header>
@@ -155,7 +156,7 @@
     <button class="btn-secondary" id="showHistorial">Historial</button>
 </section>
 
-<section class="tables">
+<section class="tables tables--single">
     <div class="table-card hidden" id="empleadosCard">
         <h2>Resumen por empleado</h2>
         <table>
@@ -175,7 +176,7 @@
                     <td data-label="Pagado">$ {{ "%.2f"|format(item.total_pagado) }}</td>
                     <td data-label="Adelantos">$ {{ "%.2f"|format(item.total_adelantos) }}</td>
                     <td data-label="Neto">$ {{ "%.2f"|format(item.neto) }}</td>
-                    <td data-label="Acción"><a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=item.empleado.id_usuario) }}">Ver</a></td>
+                    <td data-label="Acción"><a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=item.empleado.id_usuario) }}">Historial</a></td>
                 </tr>
             {% endfor %}
             </tbody>

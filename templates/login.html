@@ -37,6 +37,7 @@
             </div>
 
             <form method="POST" class="form" autocomplete="off">
+                <input type="hidden" id="rolInput" name="rol" value="administrador">
                 <label>Usuario / Correo electrónico</label>
                 <input type="text" id="usuario" name="correo" autocomplete="off" placeholder="correo@ejemplo.com" required>
 
@@ -69,6 +70,22 @@
 
 {% block extra_js %}
 <script>
+    function cambiarRol(rol, el) {
+        document.querySelectorAll('.rol').forEach(r => r.classList.remove('activo'));
+        el.classList.add('activo');
+        document.getElementById('rolInput').value = rol;
+
+        const info = {
+            administrador: { titulo: 'Administrador', desc: 'Acceso completo a todos los módulos del sistema.', icono: 'fa-shield' },
+            cajero: { titulo: 'Cajero', desc: 'Acceso a módulo de caja e inventario.', icono: 'fa-dollar-sign' }
+        };
+
+        document.getElementById('tituloRol').textContent = info[rol].titulo;
+        document.getElementById('descRol').textContent = info[rol].desc;
+        document.querySelector('.info i').className = 'fa-solid ' + info[rol].icono;
+        document.getElementById('btnLogin').textContent = 'Entrar como ' + info[rol].titulo;
+    }
+
     function clearLoginFields() {
         const usuario = document.getElementById('usuario');
         const password = document.getElementById('password');

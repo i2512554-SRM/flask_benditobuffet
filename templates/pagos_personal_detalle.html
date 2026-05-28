@@ -6,24 +6,15 @@
 {% block content %}
 <header>
     <div>
-    <a href="{{ url_for('panel') }}" class="btn-back" aria-label="Volver al panel">#sebas
-       <i class="fa-solid fa-arrow-left"></i>
-    </a>
-    <h1>Pagos Personal</h1>
+    <h1>Historial de {{ empleado.nombres }} {{ empleado.apellido }}</h1>
 
-    <p>Resumen de pagos, adelantos y movimientos personales.</p>
-</div>
-
-<div class="header-actions">
-
-</div>
-
-<div class="header-actions">
-
+    <p>Historial de pagos, adelantos y movimientos</p>
 </div>
     <div class="header-buttons">
-        
-        <a href="{{ url_for('logout') }}" class="btn-outline">Salir</a>
+        <a href="{{ url_for('pagos_personal') }}" class="btn-outline">
+            <i class="fa-solid fa-arrow-left" style="font-size:16px"></i>
+            Volver
+        </a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
     </div>
 </header>
@@ -43,8 +34,14 @@
     </div>
 </section>
 
+<section class="view-toggle">
+    <button class="btn-secondary active" id="showPagosRegistrados">Pagos Registrados</button>
+    <button class="btn-secondary" id="showPagosPersonal">Pagos Personal</button>
+    <button class="btn-secondary" id="showAdelantos">Adelantos</button>
+</section>
+
 <section class="tables">
-    <div class="table-card">
+    <div class="table-card" id="pagosRegistradosCard">
         <h2>Pagos registrados</h2>
         <table>
             <thead>
@@ -68,7 +65,7 @@
         </table>
     </div>
 
-    <div class="table-card">
+    <div class="table-card hidden" id="pagosPersonalCard">
         <h2>Pagos de personal</h2>
         <table>
             <thead>
@@ -90,7 +87,7 @@
         </table>
     </div>
 
-    <div class="table-card">
+    <div class="table-card hidden" id="adelantosCard">
         <h2>Adelantos</h2>
         <table>
             <thead>
@@ -114,4 +111,29 @@
         </table>
     </div>
 </section>
+
+<script>
+    const toggleButtons = [
+        { btn: document.getElementById('showPagosRegistrados'), card: document.getElementById('pagosRegistradosCard') },
+        { btn: document.getElementById('showPagosPersonal'), card: document.getElementById('pagosPersonalCard') },
+        { btn: document.getElementById('showAdelantos'), card: document.getElementById('adelantosCard') },
+    ];
+
+    const resetToggle = () => {
+        toggleButtons.forEach(({ btn }) => btn.classList.remove('active'));
+    };
+
+    const hideAllCards = () => {
+        toggleButtons.forEach(({ card }) => card.classList.add('hidden'));
+    };
+
+    toggleButtons.forEach(({ btn, card }) => {
+        btn.addEventListener('click', () => {
+            hideAllCards();
+            resetToggle();
+            card.classList.remove('hidden');
+            btn.classList.add('active');
+        });
+    });
+</script>
 {% endblock %}

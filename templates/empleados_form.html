@@ -15,6 +15,7 @@
         </h1>
         <p>{% if empleado %}Modificar datos del empleado{% else %}Registro de nuevo empleado{% endif %}</p>
     </div>
+    <a href="{{ url_for('logout') }}" class="btn-outline" style="align-self:center;">Cerrar Sesión</a>
 </header>
 <main>
     <section class="contenido active">

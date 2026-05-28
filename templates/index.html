@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bendito Buffet — Fusión Peruano-Asiática</title>
+    <meta name="description" content="Bendito Buffet: la fusión perfecta entre la cocina peruana, asiática, criolla y selvática. Una experiencia gastronómica única.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='imgs/logo.png') }}" type="image/png">
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+    <div class="hero-bg">
+        <img src="{{ url_for('static', filename='imgs/cocina-criolla-peruana-arroz-chaufa.jpg') }}" alt="Fusión peruano-asiática" fetchpriority="high">
+    </div>
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fa-solid fa-star"></i>
+            Desde 2018
+        </div>
+        <img src="{{ url_for('static', filename='imgs/logo.png') }}" alt="Bendito Buffet" class="hero-logo">
+        <h1>Bendito Buffet</h1>
+        <p class="hero-sub">
+            Donde el mar peruano encuentra la selva, el criollo abraza al asiático
+            y cada plato cuenta una historia de fusión sin límites.
+        </p>
+        <div class="hero-cta-group">
+            <a href="{{ url_for('login') }}" class="hero-cta">
+                Acceso Empleados
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <a href="#about" class="hero-scroll">
+        Descubrir
+        <div class="scroll-line"></div>
+    </a>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section class="section section-dark" id="about">
+    <div class="section-inner">
+        <div class="about-grid">
+            <div class="about-media fade-in">
+                <img src="{{ url_for('static', filename='imgs/comida criolla.jpg') }}" alt="Cocina criolla peruana" loading="lazy">
+                <div class="about-tag">
+                    <i class="fa-solid fa-utensils"></i>
+                    Fusión sin fronteras
+                </div>
+            </div>
+            <div class="about-text">
+                <span class="section-label">Nuestra Historia</span>
+                <h3>Cuatro mundos en un solo bocado</h3>
+                <p>
+                    Bendito Buffet nace de la convicción de que la mejor cocina
+                    no conoce límites. Fusionamos la riqueza del mar peruano con
+                    técnicas asiáticas milenarias, el alma de la cocina criolla
+                    y los ingredientes indómitos de la selva.
+                </p>
+                <p>
+                    Cada plato es un viaje: desde un chaufa crocante con toques
+                    de ají amarillo hasta un anticucho glaseado con miso, pasando
+                    por la frescura de un cebiche nikkei y la potencia de un
+                    juane con infusión de sacha culantro.
+                </p>
+                <div class="about-flavors">
+                    <div class="flavor-card">
+                        <span class="icon">🌊</span>
+                        <h4>Mar</h4>
+                        <p>Cebiches, tiraditos & más</p>
+                    </div>
+                    <div class="flavor-card">
+                        <span class="icon">🥟</span>
+                        <h4>Asia</h4>
+                        <p>Nikkei, chifa & fusión</p>
+                    </div>
+                    <div class="flavor-card">
+                        <span class="icon">🌿</span>
+                        <h4>Selva</h4>
+                        <p>Ingredientes amazónicos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CUISINE ═══ -->
+<section class="section section-teal">
+    <div class="section-inner">
+        <span class="section-label">Nuestra Cocina</span>
+        <h2>Cuatro <span>tradiciones</span>, un solo destino</h2>
+        <p>Cada plato es una exploración de sabores que cruzan océanos y cordilleras.</p>
+
+        <div class="cuisine-grid">
+            <div class="cuisine-card fade-in fade-in-delay-1">
+                <div class="cuisine-card-tag">Mar &amp; Tradición</div>
+                <img src="{{ url_for('static', filename='imgs/comida criolla.jpg') }}" alt="Cocina criolla" loading="lazy">
+                <div class="cuisine-card-overlay">
+                    <h3>Cocina Criolla</h3>
+                    <p>La esencia del Perú en cada bocado</p>
+                </div>
+            </div>
+            <div class="cuisine-card fade-in fade-in-delay-2">
+                <div class="cuisine-card-tag">Fusión Oriental</div>
+                <img src="{{ url_for('static', filename='imgs/cocina-criolla-peruana-arroz-chaufa.jpg') }}" alt="Arroz chaufa fusión" loading="lazy">
+                <div class="cuisine-card-overlay">
+                    <h3>Peruano-Asiática</h3>
+                    <p>Chifa, nikkei y la mejor fusión del Pacífico</p>
+                </div>
+            </div>
+            <div class="cuisine-card fade-in fade-in-delay-3">
+                <div class="cuisine-card-tag">Amazonía Viva</div>
+                <img src="{{ url_for('static', filename='imgs/selvatico.jpg') }}" alt="Cocina selvática" loading="lazy">
+                <div class="cuisine-card-overlay">
+                    <h3>Cocina Selvática</h3>
+                    <p>Ingredientes amazónicos que sorprenden</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ STATS ═══ -->
+<section class="section section-dark">
+    <div class="section-inner">
+        <span class="section-label">Trayectoria</span>
+        <h2>Hechos que <span>nos respaldan</span></h2>
+        <p>Más que un buffet, somos una experiencia que crece cada día.</p>
+
+        <div class="stats-grid">
+            <div class="stat-item fade-in fade-in-delay-1">
+                <div class="stat-number">7+</div>
+                <div class="stat-label">Años de experiencia</div>
+            </div>
+            <div class="stat-item fade-in fade-in-delay-2">
+                <div class="stat-number">150+</div>
+                <div class="stat-label">Platos en carta</div>
+            </div>
+            <div class="stat-item fade-in fade-in-delay-3">
+                <div class="stat-number">50+</div>
+                <div class="stat-label">Colaboradores</div>
+            </div>
+            <div class="stat-item fade-in fade-in-delay-4">
+                <div class="stat-number">15k+</div>
+                <div class="stat-label">Clientes al mes</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="section section-teal">
+    <div class="section-inner cta-banner">
+        <h2>¿Formas parte del <span>equipo</span>?</h2>
+        <p>Accede al sistema de gestión para administrar pedidos, inventario y más.</p>
+        <a href="{{ url_for('login') }}" class="hero-cta">
+            <i class="fa-solid fa-lock-open"></i>
+            Ingresar al Sistema
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+    <div class="footer-inner">
+        <img src="{{ url_for('static', filename='imgs/logo.png') }}" alt="Bendito Buffet" class="footer-logo" loading="lazy">
+        <p>&copy; 2018—2026 Bendito Buffet. Todos los derechos reservados.</p>
+        <p>Sistema de Gestión Integral — <a href="{{ url_for('login') }}">Acceso Empleados</a></p>
+    </div>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    });
+</script>
+</body>
+</html>

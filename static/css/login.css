@@ -110,7 +110,8 @@ body{
 
 .logo{
     width:120px;
-    margin-bottom:10px;
+    margin:0 auto 10px;
+    display:block;
 }
 
 .sub{
