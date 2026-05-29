@@ -12,7 +12,7 @@
     <div class="header-buttons">
         <button class="btn-outline" onclick="location.href='{{ url_for('perfil') }}'">Mi Perfil</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
-        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
     </div>
 </header>
 
@@ -58,6 +58,14 @@
         <div class="module-card" onclick="location.href='#'">
             <h3>IA Predictiva</h3>
             <p>Análisis y predicciones inteligentes</p>
+        </div>
+        <div class="module-card" onclick="location.href='{{ url_for('listar_adelantos') }}'">
+            <h3>Solicitudes</h3>
+            <p>Adelantos y aprobaciones del personal</p>
+        </div>
+        <div class="module-card" onclick="location.href='{{ url_for('turnos') }}'">
+            <h3>Turnos</h3>
+            <p>Asignación de turnos al personal</p>
         </div>
         <div class="module-card" onclick="location.href='{{ url_for('empleados') }}'">
             <h3>Empleados</h3>

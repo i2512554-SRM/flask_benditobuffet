@@ -190,3 +190,6 @@ smtplib.SMTPAuthenticationError: (535, b'5.7.8 Username and Password not accepte
 2026-05-28 17:14:54 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-28_Sebas.xlsx
 2026-05-28 17:15:00 [INFO] mail_sender: Correo enviado exitosamente a i2512554@continental.edu.pe
 2026-05-28 17:15:00 [INFO] __main__: Proceso completado exitosamente
+2026-05-29 01:33:44 [INFO] excel_generator: Excel generado exitosamente: cierres\cierre_2026-05-29_Sebas.xlsx
+2026-05-29 01:33:47 [INFO] mail_sender: Correo enviado exitosamente a i2512554@continental.edu.pe
+2026-05-29 01:33:47 [INFO] __main__: Proceso completado exitosamente

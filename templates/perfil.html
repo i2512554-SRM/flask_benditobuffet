@@ -2,7 +2,6 @@
 {% block title %}Mi Perfil - Bendito Buffet{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/perfil.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 {% endblock %}
 {% block content %}
 <div class="perfil-page">
@@ -25,6 +24,17 @@
             <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         </div>
     </section>
+
+    {% if notificaciones_frescas %}
+        {% for n in notificaciones_frescas %}
+        <div class="flash success notif-adelanto notif-fresh" data-id="{{ n.id_adelanto }}">
+            <i class="fa-solid fa-bell"></i>
+            Tu solicitud de adelanto por <strong>S/. {{ '%.2f'|format(n.monto) }}</strong>
+            fue <strong>{{ 'aprobada' if n.estado == 'Pagado' else 'rechazada' }}</strong>
+            {% if n.respuesta_admin %}: {{ n.respuesta_admin }}{% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -68,8 +78,16 @@
                         <strong>{{ perfil.fecha_ingreso.strftime('%d/%m/%Y') if perfil and perfil.fecha_ingreso else 'No registrado' }}</strong>
                     </div>
                     <div class="info-block">
-                        <span>Horario</span>
-                        <strong>{{ perfil.horario or 'No registrado' }}</strong>
+                        <span>Turnos</span>
+                        <strong>
+                            {% if turnos_usuario %}
+                                {% for t in turnos_usuario %}
+                                    <span class="turno-badge">{{ t }}</span>
+                                {% endfor %}
+                            {% else %}
+                                No registrado
+                            {% endif %}
+                        </strong>
                     </div>
                     <div class="info-block">
                         <span>Salario mensual</span>
@@ -166,6 +184,8 @@
                                 <th>Motivo</th>
                                 <th>Monto</th>
                                 <th>Estado</th>
+                                <th>Respuesta</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -176,11 +196,17 @@
                                         <td data-label="Motivo">{{ adelanto.motivo }}</td>
                                         <td data-label="Monto">S/. {{ '%.2f'|format(adelanto.monto) }}</td>
                                         <td data-label="Estado"><span class="badge badge-{{ 'paid' if adelanto.estado == 'Pagado' else 'pending' }}">{{ adelanto.estado }}</span></td>
+                                        <td data-label="Respuesta">{{ adelanto.respuesta_admin or '—' }}</td>
+                                        <td data-label="Acción">
+                                            {% if adelanto.estado == 'Pendiente' %}
+                                                <a href="{{ url_for('cancelar_adelanto', id_adelanto=adelanto.id_adelanto) }}" onclick="return confirm('¿Cancelar esta solicitud?')" class="btn-outline btn-sm">Cancelar</a>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="4">No hay adelantos registrados.</td>
+                                    <td colspan="6">No hay adelantos registrados.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -279,5 +305,13 @@
             adelantoToggle.textContent = adelantoForm.classList.contains('hidden') ? 'Solicitar adelanto' : 'Cerrar formulario';
         });
     }
+
+    // Dismiss notification on click
+    document.querySelectorAll('.notif-adelanto').forEach(el => {
+        el.addEventListener('click', function() {
+            this.style.opacity = '0';
+            setTimeout(() => this.remove(), 300);
+        });
+    });
 </script>
 {% endblock %}

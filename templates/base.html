@@ -17,6 +17,7 @@
             } catch (e) {}
         })();
     </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
     {% block extra_css %}{% endblock %}
@@ -25,6 +26,16 @@
     {% block content %}{% endblock %}
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.flash').forEach(function(el) {
+            setTimeout(function() {
+                el.style.opacity = '0';
+                setTimeout(function() { el.remove(); }, 300);
+            }, 30000);
+        });
+    });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

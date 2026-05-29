@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Autocompletar campos
             autocompletarCampos(data);
-            mostrarMensaje('Datos cargados correctamente ✓', 'success');
+            mostrarMensaje('Datos cargados correctamente', 'success');
 
         } catch (error) {
             console.error('Error consultando DNI:', error);

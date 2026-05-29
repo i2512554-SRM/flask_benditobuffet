@@ -3,7 +3,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/caja.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 {% endblock %}
 {% block content %}
 <header>
@@ -19,7 +18,7 @@
     <div class="header-buttons">
         <button type="button" class="btn-outline" id="openRegisterPayment">+ registrar pago</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
-        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche">🌙</button>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
     </div>
 </header>
 
@@ -125,29 +124,33 @@
     </form>
 </section>
 
-{% if empleado_filtrado %}
-<section class="selected-employee-card" id="employeeSummaryCard">
-    <div class="summary-card-header">
-        <div>
-            <h2>{{ empleado_filtrado.empleado.nombres }} {{ empleado_filtrado.empleado.apellido }}</h2>
-            <p>Empleado encontrado</p>
+{% if empleados_filtrados %}
+<section class="results-grid" id="employeeSummaryCard">
+    {% for emp in empleados_filtrados %}
+    <div class="selected-employee-card">
+        <div class="summary-card-header">
+            <div>
+                <h2>{{ emp.empleado.nombres }} {{ emp.empleado.apellido }}</h2>
+                <p>Empleado encontrado</p>
+            </div>
+            <a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=emp.empleado.id_usuario) }}">Historial</a>
         </div>
-        <a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=empleado_filtrado.empleado.id_usuario) }}">Ver</a>
+        <div class="summary-values">
+            <div>
+                <span>Pagado</span>
+                <strong>$ {{ "%.2f"|format(emp.total_pagado) }}</strong>
+            </div>
+            <div>
+                <span>Adelantos</span>
+                <strong>$ {{ "%.2f"|format(emp.total_adelantos) }}</strong>
+            </div>
+            <div>
+                <span>Neto</span>
+                <strong>$ {{ "%.2f"|format(emp.neto) }}</strong>
+            </div>
+        </div>
     </div>
-    <div class="summary-values">
-        <div>
-            <span>Pagado</span>
-            <strong>$ {{ "%.2f"|format(empleado_filtrado.total_pagado) }}</strong>
-        </div>
-        <div>
-            <span>Adelantos</span>
-            <strong>$ {{ "%.2f"|format(empleado_filtrado.total_adelantos) }}</strong>
-        </div>
-        <div>
-            <span>Neto</span>
-            <strong>$ {{ "%.2f"|format(empleado_filtrado.neto) }}</strong>
-        </div>
-    </div>
+    {% endfor %}
 </section>
 {% endif %}
 

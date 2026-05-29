@@ -176,6 +176,23 @@ def _allowed_image(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
+_MAGIC_BYTES = {
+    b'\xff\xd8\xff': 'jpg',
+    b'\x89PNG\r\n\x1a\n': 'png',
+    b'RIFF': 'webp',
+}
+
+
+def _validar_imagen_por_contenido(foto):
+    source = foto.stream if hasattr(foto, 'stream') else foto
+    header = source.read(12)
+    source.seek(0)
+    for magic in _MAGIC_BYTES:
+        if header[:len(magic)] == magic:
+            return True
+    return False
+
+
 def _secure_profile_filename(usuario_id, filename):
     extension = filename.rsplit('.', 1)[1].lower()
     return secure_filename(f"perfil_{usuario_id}_{uuid.uuid4().hex}.{extension}")
@@ -260,14 +277,14 @@ def pagos_personal():
             'neto': neto,
         })
 
-    empleado_filtrado = None
+    empleados_filtrados = []
     empleado_busqueda = request.args.get('empleado', '').strip()
     if empleado_busqueda:
         busqueda_lower = empleado_busqueda.lower()
-        empleado_filtrado = next(
-            (item for item in resumen_empleados if busqueda_lower in f"{item['empleado'].nombres} {item['empleado'].apellido}".lower()),
-            None
-        )
+        empleados_filtrados = [
+            item for item in resumen_empleados
+            if busqueda_lower in f"{item['empleado'].nombres} {item['empleado'].apellido}".lower()
+        ]
 
     pagos_historial = PagoEmpleado.query.filter(PagoEmpleado.estado == 'Pagado', db.func.date(PagoEmpleado.fecha_pago) >= inicio, db.func.date(PagoEmpleado.fecha_pago) <= fin).order_by(PagoEmpleado.fecha_pago.desc()).all()
     return render_template(
@@ -280,7 +297,7 @@ def pagos_personal():
         empleados_activos=empleados_activos,
         proximo_pago_dias=proximo_pago_dias,
         resumen_empleados=resumen_empleados,
-        empleado_filtrado=empleado_filtrado,
+        empleados_filtrados=empleados_filtrados,
         pagos_historial=pagos_historial,
     )
 
@@ -433,6 +450,14 @@ def perfil():
     pagos = PagoEmpleado.query.filter_by(id_usuario=usuario.id_usuario).order_by(PagoEmpleado.fecha_pago.desc()).limit(6).all()
     adelantos = Adelanto.query.filter_by(id_usuario=usuario.id_usuario).order_by(Adelanto.fecha.desc()).limit(6).all()
     actividades = ActividadUsuario.query.filter_by(id_usuario=usuario.id_usuario).order_by(ActividadUsuario.fecha.desc()).limit(8).all()
+    turnos_usuario = [t.strip() for t in (usuario.turno or "").split(",") if t.strip()]
+    notificaciones_frescas = Adelanto.query.filter_by(
+        id_usuario=usuario.id_usuario, notificacion_vista=False
+    ).filter(Adelanto.respuesta_admin.isnot(None)).all()
+    if notificaciones_frescas:
+        for n in notificaciones_frescas:
+            n.notificacion_vista = True
+        db.session.commit()
     return render_template(
         "perfil.html",
         usuario=usuario,
@@ -440,6 +465,8 @@ def perfil():
         pagos=pagos,
         adelantos=adelantos,
         actividades=actividades,
+        turnos_usuario=turnos_usuario,
+        notificaciones_frescas=notificaciones_frescas,
     )
 
 
@@ -475,6 +502,9 @@ def editar_perfil():
     if foto and foto.filename:
         if not _allowed_image(foto.filename):
             flash("Formato de imagen no válido. Usa jpg, jpeg, png o webp", "error")
+            return redirect(url_for("perfil"))
+        if not _validar_imagen_por_contenido(foto):
+            flash("El archivo seleccionado no es una imagen válida", "error")
             return redirect(url_for("perfil"))
         nombre_archivo = _secure_profile_filename(usuario.id_usuario, foto.filename)
         ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
@@ -539,6 +569,55 @@ def cancelar_adelanto(id_adelanto):
     db.session.commit()
     flash("Solicitud de adelanto cancelada", "success")
     return redirect(url_for("perfil"))
+
+
+# -------------------------------
+# GESTIÓN DE SOLICITUDES (admin)
+# -------------------------------
+
+@app.route("/adelantos")
+@login_required
+@admin_required
+def listar_adelantos():
+    solicitudes = Adelanto.query.order_by(Adelanto.fecha.desc()).all()
+    return render_template("adelantos.html", solicitudes=solicitudes)
+
+
+@app.route("/adelantos/gestionar/<int:id_adelanto>", methods=["POST"])
+@login_required
+@admin_required
+def gestionar_adelanto(id_adelanto):
+    adelanto = Adelanto.query.get_or_404(id_adelanto)
+    accion = request.form.get("accion", "").strip()
+    respuesta = request.form.get("respuesta_admin", "").strip()
+
+    if accion == "aprobar":
+        adelanto.estado = "Pagado"
+        flash("Adelanto aprobado", "success")
+    elif accion == "rechazar":
+        adelanto.estado = "Rechazado"
+        flash("Adelanto rechazado", "success")
+    else:
+        flash("Acción no válida", "error")
+        return redirect(url_for("listar_adelantos"))
+
+    adelanto.respuesta_admin = respuesta if respuesta else None
+    adelanto.fecha_gestion = datetime.now()
+    adelanto.notificacion_vista = False
+    db.session.commit()
+    _log_actividad(session.get("usuario_id"), f"{accion.capitalize()} adelanto #{id_adelanto}")
+    return redirect(url_for("listar_adelantos"))
+
+
+@app.route("/perfil/notificaciones/leer", methods=["POST"])
+@login_required
+def leer_notificaciones():
+    Adelanto.query.filter_by(
+        id_usuario=session["usuario_id"],
+        notificacion_vista=False
+    ).update({"notificacion_vista": True})
+    db.session.commit()
+    return ("", 204)
 
 
 @app.route("/caja/registrar", methods=["POST"])
@@ -802,6 +881,51 @@ def eliminar_empleado(id):
     db.session.commit()
     flash("Empleado eliminado", "success")
     return redirect(url_for("empleados"))
+
+# -------------------------------
+# TURNOS (solo admin)
+# -------------------------------
+
+def _toggle_turno_usuario(usuario, turno_nombre):
+    actual = usuario.turno or ""
+    turnos_list = [t.strip() for t in actual.split(",") if t.strip()]
+    if turno_nombre in turnos_list:
+        turnos_list.remove(turno_nombre)
+    else:
+        turnos_list.append(turno_nombre)
+    usuario.turno = ", ".join(turnos_list) if turnos_list else None
+    return "asignado" if turno_nombre in (usuario.turno or "") else "desasignado"
+
+
+@app.route("/turnos")
+@login_required
+@admin_required
+def turnos():
+    empleados = Usuario.query.all()
+    return render_template("turnos.html", empleados=empleados)
+
+
+@app.route("/turnos/asignar", methods=["POST"])
+@login_required
+@admin_required
+def asignar_turno():
+    id_usuario = request.form.get("id_usuario", type=int)
+    turno_nombre = request.form.get("turno_nombre", "").strip()
+
+    if not id_usuario or turno_nombre not in ("Tarde", "Noche"):
+        flash("Datos inválidos", "error")
+        return redirect(url_for("turnos"))
+
+    usuario = Usuario.query.get(id_usuario)
+    if not usuario:
+        flash("Usuario no encontrado", "error")
+        return redirect(url_for("turnos"))
+
+    accion = _toggle_turno_usuario(usuario, turno_nombre)
+    db.session.commit()
+    flash(f"Turno {turno_nombre} {accion}", "success")
+    return redirect(url_for("turnos"))
+
 
 # -------------------------------
 # INVENTARIO E INVERSIÓN

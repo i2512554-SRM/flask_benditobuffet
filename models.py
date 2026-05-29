@@ -24,6 +24,7 @@ class Usuario(db.Model):
     clave = db.Column(db.String(255), nullable=False)
     id_rol = db.Column(db.Integer, db.ForeignKey('roles.id_rol'))
     estado = db.Column(db.Integer, default=1)
+    turno = db.Column(db.String(50), nullable=True)
 
     rol = db.relationship('Rol', backref='usuarios')
     perfil = db.relationship('UsuarioPerfil', back_populates='usuario', uselist=False, cascade='all, delete-orphan')
@@ -89,6 +90,9 @@ class Adelanto(db.Model):
     monto = db.Column(db.Float, nullable=False)
     fecha = db.Column(db.DateTime, nullable=False)
     estado = db.Column(db.String(80), nullable=False, default='Pendiente')
+    respuesta_admin = db.Column(db.Text, nullable=True)
+    fecha_gestion = db.Column(db.DateTime, nullable=True)
+    notificacion_vista = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f"<Adelanto {self.id_adelanto} usuario={self.id_usuario} monto={self.monto}>"
@@ -163,3 +167,5 @@ class Inversion(db.Model):
 
     def __repr__(self):
         return f"<Inversion {self.id_inversion} {self.monto}>"
+
+
