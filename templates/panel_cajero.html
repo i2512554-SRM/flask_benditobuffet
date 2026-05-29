@@ -45,7 +45,7 @@
             <p>Registrar ventas, egresos y cierre diario</p>
         </div>
 
-        <div class="module-card" onclick="location.href='#'">
+        <div class="module-card" onclick="location.href='{{ url_for('inventario') }}'">
             <h3>Inventario</h3>
             <p>Ver productos disponibles</p>
         </div>
@@ -57,7 +57,7 @@
     <div class="actions-buttons">
         <button class="btn-primary" onclick="location.href='{{ url_for('caja') }}'">Ir a Caja</button>
         <button class="btn-secondary" onclick="location.href='{{ url_for('caja') }}'">Registrar Egreso</button>
-        <button class="btn-secondary">Ver Inventario</button>
+        <button class="btn-secondary" onclick="location.href='{{ url_for('inventario') }}'">Ver Inventario</button>
         <button class="btn-secondary" onclick="location.href='{{ url_for('caja') }}'">Cerrar Caja</button>
     </div>
 </section>

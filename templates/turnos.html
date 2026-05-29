@@ -94,7 +94,7 @@
                         <form method="POST" action="{{ url_for('asignar_turno') }}" class="toggle-turno-form">
                             <input type="hidden" name="id_usuario" value="{{ emp.id_usuario }}">
                             <input type="hidden" name="turno_nombre" value="Tarde">
-                            <button type="submit" class="btn-turno {{ 'activo' if 'Tarde' in turnos_emp else 'inactivo' }}">
+                            <button type="submit" class="btn-turno {{ 'activo' if 'Tarde' in turnos_emp else 'inactivo' }}" data-loading-text="Asignando...">
                                 {% if 'Tarde' in turnos_emp %}<i class="fa-solid fa-check-circle"></i>{% else %}<i class="fa-solid fa-circle"></i>{% endif %}
                             </button>
                         </form>
@@ -103,7 +103,7 @@
                         <form method="POST" action="{{ url_for('asignar_turno') }}" class="toggle-turno-form">
                             <input type="hidden" name="id_usuario" value="{{ emp.id_usuario }}">
                             <input type="hidden" name="turno_nombre" value="Noche">
-                            <button type="submit" class="btn-turno {{ 'activo' if 'Noche' in turnos_emp else 'inactivo' }}">
+                            <button type="submit" class="btn-turno {{ 'activo' if 'Noche' in turnos_emp else 'inactivo' }}" data-loading-text="Asignando...">
                                 {% if 'Noche' in turnos_emp %}<i class="fa-solid fa-check-circle"></i>{% else %}<i class="fa-solid fa-circle"></i>{% endif %}
                             </button>
                         </form>

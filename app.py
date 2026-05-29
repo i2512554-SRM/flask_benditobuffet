@@ -965,7 +965,7 @@ def _productos_registrados_mes():
 
 @app.route("/inventario")
 @login_required
-@admin_required
+@role_required("administrador", "cajera", "cajero")
 def inventario():
     valor_total_inventario, equipamiento_valor = _calcular_resumen_inventario()
     inversiones_mes = _inversiones_del_mes()
@@ -987,7 +987,7 @@ def inventario():
 
 @app.route("/inventario/articulo/nuevo", methods=["POST"])
 @login_required
-@admin_required
+@role_required("administrador", "cajera", "cajero")
 def inventario_articulo_nuevo():
     nombre = request.form.get("nombre", "").strip()
     categoria = request.form.get("categoria", "").strip()
@@ -1031,7 +1031,7 @@ def inventario_articulo_nuevo():
 
 @app.route("/inventario/compra/nuevo", methods=["POST"])
 @login_required
-@admin_required
+@role_required("administrador", "cajera", "cajero")
 def inventario_compra_nuevo():
     descripcion = request.form.get("descripcion", "").strip()
     proveedor = request.form.get("proveedor", "").strip()
@@ -1070,7 +1070,7 @@ def inventario_compra_nuevo():
 
 @app.route("/inventario/compra/<int:id>")
 @login_required
-@admin_required
+@role_required("administrador", "cajera", "cajero")
 def inventario_compra_detalle(id):
     inversion = Inversion.query.get_or_404(id)
     return render_template("inventario_compra_detalle.html", inversion=inversion)
