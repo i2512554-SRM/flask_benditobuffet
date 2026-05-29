@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Salarios - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+{% endblock %}
+{% block content %}
+<header>
+    <div>
+        <h1>
+            <a href="{{ url_for('gestion_personal') }}" class="btn-outline">
+                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            </a>
+            Salarios
+        </h1>
+        <p>Asignación y edición de salarios del personal</p>
+    </div>
+    <div class="header-buttons">
+        <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
+    </div>
+</header>
+
+<section class="tables tables--single">
+    <div class="table-card">
+        <h2><i class="fa-solid fa-coins" style="color: var(--btn-primary); margin-right: 8px;"></i> Lista de Empleados</h2>
+        {% if empleados %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>DNI</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Salario Actual</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in empleados %}
+                <tr>
+                    <td data-label="Nombre">{{ emp.nombres }} {{ emp.apellido }}</td>
+                    <td data-label="DNI">{{ emp.dni or '—' }}</td>
+                    <td data-label="Rol">{{ emp.rol.nombre if emp.rol else 'N/A' }}</td>
+                    <td data-label="Estado"><span class="estado {{ 'activo' if emp.estado == 1 else 'inactivo' }}">{{ 'Activo' if emp.estado == 1 else 'Inactivo' }}</span></td>
+                    <td data-label="Salario Actual">
+                        {% if emp.perfil and emp.perfil.salario is not none %}
+                            S/. {{ '%.2f'|format(emp.perfil.salario) }}
+                        {% else %}
+                            <span style="color: var(--text-muted);">No asignado</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Acciones">
+                        <button class="btn-primary btn-sm btn-asignar-salario"
+                                data-id="{{ emp.id_usuario }}"
+                                data-nombre="{{ emp.nombres }} {{ emp.apellido }}"
+                                data-salario="{{ emp.perfil.salario if emp.perfil and emp.perfil.salario is not none else '' }}">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            {{ 'Editar' if emp.perfil and emp.perfil.salario is not none else 'Asignar' }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay empleados registrados.</p>
+        {% endif %}
+    </div>
+</section>
+
+<div class="overlay hidden" id="modalSalario">
+    <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="modalSalarioTitulo">
+        <button type="button" class="close-overlay" id="closeModalSalario" aria-label="Cerrar">×</button>
+        <h2 id="modalSalarioTitulo">Asignar Salario</h2>
+        <form method="POST" action="{{ url_for('gestionar_salarios') }}" id="formSalario">
+            <label for="modalEmpleado">Empleado</label>
+            <input type="text" id="modalEmpleado" readonly style="opacity: 0.7; cursor: default;">
+            <input type="hidden" name="id_usuario" id="modalIdUsuario">
+
+            <label for="modalSalarioInput">Salario mensual (S/.)</label>
+            <input type="number" step="0.01" min="0" name="salario" id="modalSalarioInput" placeholder="0.00" required>
+
+            <button class="btn-primary" type="submit" data-loading-text="Guardando...">Guardar Salario</button>
+        </form>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<script>
+(function(){
+    var modal = document.getElementById('modalSalario');
+    var closeBtn = document.getElementById('closeModalSalario');
+    var form = document.getElementById('formSalario');
+    var idInput = document.getElementById('modalIdUsuario');
+    var nombreInput = document.getElementById('modalEmpleado');
+    var salarioInput = document.getElementById('modalSalarioInput');
+    var titulo = document.getElementById('modalSalarioTitulo');
+
+    document.querySelectorAll('.btn-asignar-salario').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            var nombre = this.getAttribute('data-nombre');
+            var salario = this.getAttribute('data-salario');
+
+            idInput.value = id;
+            nombreInput.value = nombre;
+            titulo.textContent = salario ? 'Editar Salario' : 'Asignar Salario';
+
+            if (salario) {
+                salarioInput.value = salario;
+            } else {
+                salarioInput.value = '';
+            }
+
+            modal.classList.remove('hidden');
+        });
+    });
+
+    closeBtn.addEventListener('click', function() {
+        modal.classList.add('hidden');
+    });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+})();
+</script>
+{% endblock %}

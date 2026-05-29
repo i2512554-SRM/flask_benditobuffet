@@ -21,6 +21,7 @@ from models import (
     CierreCaja,
     Producto,
     Inversion,
+    Categoria,
 )
 
 # Creamos una instancia de la aplicación Flask
@@ -118,6 +119,14 @@ def logout():
 def index():
     return render_template("index.html")
 
+
+@app.route("/ia-predictiva")
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def ia_predictiva():
+    return render_template("ia_predictiva.html")
+
+
 @app.route("/panel")
 @login_required
 def panel():
@@ -140,6 +149,14 @@ def panel():
     else:
         flash("Rol no reconocido", "error")
         return redirect(url_for("login"))
+
+
+@app.route("/personal")
+@login_required
+@admin_required
+def gestion_personal():
+    return render_template("gestion_personal.html")
+
 
 # -------------------------------
 # GESTIÓN DE CAJA
@@ -528,6 +545,41 @@ def editar_perfil():
     return redirect(url_for("perfil"))
 
 
+@app.route("/perfil/cambiar-contrasena", methods=["POST"])
+@login_required
+def cambiar_contrasena():
+    usuario = Usuario.query.get_or_404(session["usuario_id"])
+    actual = request.form.get("contrasena_actual", "")
+    nueva = request.form.get("contrasena_nueva", "")
+    verificar = request.form.get("contrasena_verificar", "")
+
+    if not actual or not nueva or not verificar:
+        flash("Todos los campos son obligatorios", "error")
+        return redirect(url_for("perfil"))
+
+    if not bcrypt.check_password_hash(usuario.clave, actual):
+        flash("La contraseña actual no es correcta", "error")
+        return redirect(url_for("perfil"))
+
+    if nueva != verificar:
+        flash("Las contraseñas nuevas no coinciden", "error")
+        return redirect(url_for("perfil"))
+
+    if nueva == actual:
+        flash("La nueva contraseña no puede ser igual a la actual", "error")
+        return redirect(url_for("perfil"))
+
+    try:
+        usuario.clave = bcrypt.generate_password_hash(nueva).decode('utf-8')
+        db.session.commit()
+        flash("Contraseña actualizada correctamente", "success")
+    except Exception:
+        db.session.rollback()
+        flash("No se pudo cambiar la contraseña. Intente de nuevo.", "error")
+
+    return redirect(url_for("perfil"))
+
+
 @app.route("/perfil/adelanto", methods=["POST"])
 @login_required
 def solicitar_adelanto():
@@ -778,14 +830,77 @@ def caja():
     ventas_dia, gastos_dia, neto_dia = _calcular_resumen_caja()
     transacciones = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).all()
     cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).all()
+    categorias = Categoria.query.order_by(Categoria.nombre.asc()).all()
     return render_template(
         "caja.html",
         ventas_dia=ventas_dia,
         gastos_dia=gastos_dia,
         neto_dia=neto_dia,
         transacciones=transacciones,
-        cierres=cierres
+        cierres=cierres,
+        categorias=categorias,
     )
+
+
+@app.route("/caja/categorias/nuevo", methods=["POST"])
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def crear_categoria():
+    nombre = request.form.get("nombre", "").strip()
+    if not nombre or not _validar_categoria(nombre):
+        return jsonify({"success": False, "message": "Nombre de categoría inválido"}), 400
+    existe = Categoria.query.filter(db.func.lower(Categoria.nombre) == nombre.lower()).first()
+    if existe:
+        return jsonify({"success": False, "message": "La categoría ya existe"}), 400
+    categoria = Categoria(nombre=nombre, fecha_creacion=datetime.now())
+    db.session.add(categoria)
+    db.session.commit()
+    return jsonify({"success": True, "id": categoria.id_categoria, "nombre": categoria.nombre})
+
+
+# -------------------------------
+# SALARIOS (solo admin)
+# -------------------------------
+
+@app.route("/salarios", methods=["GET", "POST"])
+@login_required
+@admin_required
+def gestionar_salarios():
+    if request.method == "POST":
+        id_usuario = request.form.get("id_usuario")
+        salario = request.form.get("salario")
+
+        if not id_usuario or salario is None or salario == "":
+            flash("Debe seleccionar un empleado y asignar un salario", "error")
+            return redirect(url_for("gestionar_salarios"))
+
+        try:
+            salario = float(salario)
+            if salario < 0:
+                raise ValueError
+        except ValueError:
+            flash("El salario debe ser un número válido mayor o igual a 0", "error")
+            return redirect(url_for("gestionar_salarios"))
+
+        usuario = Usuario.query.get_or_404(int(id_usuario))
+        perfil = usuario.perfil
+        if not perfil:
+            perfil = UsuarioPerfil(id_usuario=usuario.id_usuario)
+            db.session.add(perfil)
+
+        perfil.salario = salario
+
+        try:
+            db.session.commit()
+            flash(f"Salario asignado a {usuario.nombres} {usuario.apellido or ''} correctamente", "success")
+        except Exception:
+            db.session.rollback()
+            flash("No se pudo guardar el salario. Intente de nuevo.", "error")
+
+        return redirect(url_for("gestionar_salarios"))
+
+    empleados = Usuario.query.order_by(Usuario.estado.desc(), Usuario.nombres).all()
+    return render_template("salarios.html", empleados=empleados)
 
 # -------------------------------
 # EMPLEADOS (solo admin)
@@ -839,6 +954,10 @@ def nuevo_empleado():
             estado=1
         )
         db.session.add(nuevo_usuario)
+        db.session.commit()
+
+        perfil = UsuarioPerfil(id_usuario=nuevo_usuario.id_usuario, fecha_ingreso=date.today())
+        db.session.add(perfil)
         db.session.commit()
 
         flash("Empleado registrado exitosamente", "success")
@@ -1074,6 +1193,37 @@ def inventario_compra_nuevo():
 def inventario_compra_detalle(id):
     inversion = Inversion.query.get_or_404(id)
     return render_template("inventario_compra_detalle.html", inversion=inversion)
+
+
+@app.route("/inventario/articulo/editar/<int:id>", methods=["POST"])
+@login_required
+@role_required("administrador", "cajera", "cajero")
+def inventario_articulo_editar(id):
+    producto = Producto.query.get_or_404(id)
+    precio_text = request.form.get("precio", "").strip().replace(',', '.')
+    stock_text = request.form.get("stock", "").strip().replace(',', '.')
+    try:
+        precio = float(precio_text)
+        if precio < 0:
+            raise ValueError
+    except ValueError:
+        flash("El precio debe ser un número válido mayor o igual a cero", "error")
+        return redirect(url_for("inventario"))
+    try:
+        stock = float(stock_text)
+        if stock < 0:
+            raise ValueError
+    except ValueError:
+        flash("El stock debe ser un número válido mayor o igual a cero", "error")
+        return redirect(url_for("inventario"))
+    producto.precio = precio
+    producto.stock = stock
+    producto.fecha_edicion = datetime.now()
+    db.session.commit()
+    _log_actividad(session.get("usuario_id"), f"Editó artículo {producto.nombre}")
+    flash("Artículo actualizado correctamente", "success")
+    return redirect(url_for("inventario"))
+
 
 # -------------------------------
 # AUTOMATIZACION DE CAJA 

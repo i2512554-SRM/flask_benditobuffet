@@ -105,26 +105,30 @@
                                 <th>Precio Unitario</th>
                                 <th>Valor Total</th>
                                 <th class="sortable" data-sort="fecha">Registrado <i class="fa-solid fa-arrow-down"></i></th>
+                                <th>Última Edición</th>
+                                <th>Acción</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if productos %}
                                 {% for producto in productos %}
-                                <tr data-nombre="{{ producto.nombre }}" data-categoria="{{ producto.categoria }}" data-fecha="{{ producto.fecha_registro.timestamp() if producto.fecha_registro else 0 }}">
+                                <tr data-nombre="{{ producto.nombre }}" data-categoria="{{ producto.categoria }}" data-fecha="{{ producto.fecha_registro.timestamp() if producto.fecha_registro else 0 }}" data-id="{{ producto.id_producto }}" data-precio="{{ producto.precio }}" data-stock="{{ producto.stock }}">
                                     <td data-label="Artículo">{{ producto.nombre }}</td>
                                     <td data-label="Categoría">{{ producto.categoria }}</td>
                                     <td data-label="Stock">{{ "%.2f" | format(producto.stock) }}</td>
                                     <td data-label="Precio Unitario">${{ "%.2f" | format(producto.precio) }}</td>
                                     <td data-label="Valor Total">${{ "%.2f" | format(producto.precio * producto.stock) }}</td>
                                     <td data-label="Registrado">{{ producto.fecha_registro.strftime('%d/%m/%Y %H:%M') if producto.fecha_registro else '' }}</td>
+                                    <td data-label="Última Edición">{{ producto.fecha_edicion.strftime('%d/%m/%Y %H:%M') if producto.fecha_edicion else '—' }}</td>
+                                    <td data-label="Acción"><button type="button" class="btn-outline btn-sm btn-editar-articulo" data-id="{{ producto.id_producto }}" data-nombre="{{ producto.nombre }}" data-precio="{{ producto.precio }}" data-stock="{{ producto.stock }}"><i class="fa-solid fa-pen"></i> Editar</button></td>
                                 </tr>
                                 {% endfor %}
                                 <tr id="noResultsRow" class="empty-state" style="display:none;">
-                                    <td colspan="6">No se encontraron artículos con esos filtros.</td>
+                                    <td colspan="8">No se encontraron artículos con esos filtros.</td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="empty-state">No hay artículos registrados aún.</td>
+                                    <td colspan="8" class="empty-state">No hay artículos registrados aún.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -201,6 +205,27 @@
             <input type="text" name="proveedor" placeholder="Nombre del proveedor" required>
             <textarea name="notas" rows="3" placeholder="Notas adicionales (opcional)"></textarea>
             <button class="btn-primary" type="submit" data-loading-text="Registrando...">Registrar compra</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="modalEditarArticulo">
+    <div class="modal-content">
+        <button type="button" class="close-modal" aria-label="Cerrar">&times;</button>
+        <h3 id="editModalTitle">Editar artículo</h3>
+        <form method="POST" class="modal-form" id="editForm">
+            <p id="editNombreDisplay" style="font-weight: 600; margin: 0; font-size: 1.1rem;"></p>
+            <div class="inline-row">
+                <div>
+                    <label style="display:block;font-size:0.85rem;margin-bottom:4px;color:var(--inventario-muted)">Precio unitario</label>
+                    <input type="number" step="0.01" min="0" name="precio" id="editPrecio" placeholder="Precio unitario" required>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.85rem;margin-bottom:4px;color:var(--inventario-muted)">Stock</label>
+                    <input type="number" step="0.01" min="0" name="stock" id="editStock" placeholder="Stock" required>
+                </div>
+            </div>
+            <button class="btn-primary" type="submit" data-loading-text="Guardando...">Guardar cambios</button>
         </form>
     </div>
 </div>

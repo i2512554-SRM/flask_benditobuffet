@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Gestión del Personal - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
+{% endblock %}
+{% block content %}
+<header>
+    <div>
+        <h1>Gestión del Personal</h1>
+        <p>Administración de empleados, pagos, solicitudes y turnos</p>
+    </div>
+    <div class="header-buttons">
+        <a href="{{ url_for('panel') }}" class="btn-outline">
+            <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i> Volver al Panel
+        </a>
+        <button class="btn-outline" onclick="location.href='{{ url_for('perfil') }}'">Mi Perfil</button>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
+        <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
+    </div>
+</header>
+
+<section class="modules">
+    <h2>Módulos de Personal</h2>
+    <div class="module-grid">
+        <div class="module-card" onclick="location.href='{{ url_for('empleados') }}'">
+            <i class="fa-solid fa-users" style="font-size: 2rem; color: var(--btn-primary); margin-bottom: 12px;"></i>
+            <h3>Empleados</h3>
+            <p>Registro, edición y administración del personal activo</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='{{ url_for('pagos_personal') }}'">
+            <i class="fa-solid fa-money-bill-wave" style="font-size: 2rem; color: var(--btn-primary); margin-bottom: 12px;"></i>
+            <h3>Pagos al Personal</h3>
+            <p>Salarios, adelantos, historial de pagos y resumen mensual</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='{{ url_for('listar_adelantos') }}'">
+            <i class="fa-solid fa-file-pen" style="font-size: 2rem; color: var(--btn-primary); margin-bottom: 12px;"></i>
+            <h3>Solicitudes</h3>
+            <p>Adelantos y aprobaciones del personal</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='{{ url_for('turnos') }}'">
+            <i class="fa-solid fa-calendar-days" style="font-size: 2rem; color: var(--btn-primary); margin-bottom: 12px;"></i>
+            <h3>Turnos</h3>
+            <p>Asignación y gestión de turnos del personal</p>
+        </div>
+
+        <div class="module-card" onclick="location.href='{{ url_for('gestionar_salarios') }}'">
+            <i class="fa-solid fa-coins" style="font-size: 2rem; color: var(--btn-primary); margin-bottom: 12px;"></i>
+            <h3>Salarios</h3>
+            <p>Asignación y edición de salarios del personal</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

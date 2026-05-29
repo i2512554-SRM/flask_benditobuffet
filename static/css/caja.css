@@ -364,4 +364,32 @@ td { color: var(--caja-text); font-size: 0.95rem; }
 }
 
 
+/* Form error */
+.form-error {
+    color: var(--caja-danger);
+    font-size: 0.85rem;
+    margin: 0;
+}
+.form-error.hidden {
+    display: none;
+}
+
+/* Category inline group */
+.categoria-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.categoria-wrapper select {
+    flex: 1;
+    min-width: 0;
+}
+.categoria-wrapper .btn-sm {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* End of file */

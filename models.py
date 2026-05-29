@@ -150,6 +150,7 @@ class Producto(db.Model):
     stock = db.Column(db.Float, nullable=False)
     categoria = db.Column(db.String(100), nullable=False)
     fecha_registro = db.Column(db.DateTime, nullable=False)
+    fecha_edicion = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f"<Producto {self.id_producto} {self.nombre}>"
@@ -167,5 +168,16 @@ class Inversion(db.Model):
 
     def __repr__(self):
         return f"<Inversion {self.id_inversion} {self.monto}>"
+
+
+class Categoria(db.Model):
+    __tablename__ = 'categorias'
+
+    id_categoria = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False, unique=True)
+    fecha_creacion = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<Categoria {self.id_categoria} {self.nombre}>"
 
 

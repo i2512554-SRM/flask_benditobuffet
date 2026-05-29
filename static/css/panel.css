@@ -140,6 +140,13 @@ header .header-buttons button.btn-outline {
     color: var(--text-main);
 }
 
+.btn-sm {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
 .hidden {
     display: none !important;
 }

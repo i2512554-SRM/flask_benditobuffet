@@ -41,4 +41,78 @@ document.addEventListener("DOMContentLoaded", function() {
         if (gastos) gastos.textContent = `$${data.gastos_dia.toFixed(2)}`;
         if (neto) neto.textContent = `$${data.neto_dia.toFixed(2)}`;
     }
+
+    // Nueva categoría
+    const btnNuevaCategoria = document.getElementById("btnNuevaCategoria");
+    const modalCategoria = document.getElementById("modalNuevaCategoria");
+    const formCategoria = document.getElementById("formNuevaCategoria");
+    const inputCategoria = document.getElementById("nuevaCategoriaNombre");
+    const errorCategoria = document.getElementById("categoriaError");
+    const selectCategoria = document.getElementById("categoria");
+
+    function openModal(modal) {
+        if (!modal) return;
+        modal.classList.add("active");
+    }
+
+    function closeModal(modal) {
+        if (!modal) return;
+        modal.classList.remove("active");
+    }
+
+    if (btnNuevaCategoria) {
+        btnNuevaCategoria.addEventListener("click", function() {
+            inputCategoria.value = "";
+            errorCategoria.classList.add("hidden");
+            openModal(modalCategoria);
+            inputCategoria.focus();
+        });
+    }
+
+    if (formCategoria) {
+        formCategoria.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const nombre = inputCategoria.value.trim();
+            if (!nombre) {
+                errorCategoria.textContent = "El nombre es obligatorio";
+                errorCategoria.classList.remove("hidden");
+                return;
+            }
+            errorCategoria.classList.add("hidden");
+            const btnSubmit = formCategoria.querySelector('button[type="submit"]');
+            window.setLoadingState(btnSubmit);
+            fetch("/caja/categorias/nuevo", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ nombre: nombre })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                window.restoreLoadingState(btnSubmit);
+                if (data.success) {
+                    var opt = document.createElement("option");
+                    opt.value = data.nombre;
+                    opt.textContent = data.nombre;
+                    selectCategoria.appendChild(opt);
+                    selectCategoria.value = data.nombre;
+                    closeModal(modalCategoria);
+                } else {
+                    errorCategoria.textContent = data.message || "Error al crear categoría";
+                    errorCategoria.classList.remove("hidden");
+                }
+            })
+            .catch(function() {
+                window.restoreLoadingState(btnSubmit);
+                errorCategoria.textContent = "Error de conexión";
+                errorCategoria.classList.remove("hidden");
+            });
+        });
+    }
+
+    // Cerrar modales al hacer clic fuera
+    document.addEventListener("click", function(e) {
+        if (e.target.classList.contains("modal")) {
+            closeModal(e.target);
+        }
+    });
 });

@@ -121,4 +121,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     filterProductos();
+
+    // Edit article modal
+    const modalEditar = document.getElementById('modalEditarArticulo');
+    const editForm = document.getElementById('editForm');
+    const editNombre = document.getElementById('editNombreDisplay');
+    const editPrecio = document.getElementById('editPrecio');
+    const editStock = document.getElementById('editStock');
+
+    document.querySelectorAll('.btn-editar-articulo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nombre = this.dataset.nombre;
+            const precio = this.dataset.precio;
+            const stock = this.dataset.stock;
+            editNombre.textContent = nombre;
+            editPrecio.value = precio;
+            editStock.value = stock;
+            editForm.action = '/inventario/articulo/editar/' + id;
+            openModal(modalEditar);
+        });
+    });
 });

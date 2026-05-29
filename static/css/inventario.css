@@ -396,6 +396,13 @@ tbody tr:nth-child(even) {
     transform: translateY(-1px);      /* Efecto de elevación al pasar el cursor */
 }
 
+.btn-sm {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
 /* =============================================
    SECCIÓN DE DETALLE
    ============================================= */

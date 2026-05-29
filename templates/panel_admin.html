@@ -45,9 +45,9 @@
             <p>Registrar ventas, egresos y cierre diario</p>
         </div>
 
-        <div class="module-card" onclick="location.href='{{ url_for('pagos_personal') }}'">
-            <h3>Pagos a Personal</h3>
-            <p>Salarios, adelantos e historial</p>
+        <div class="module-card" onclick="location.href='{{ url_for('gestion_personal') }}'">
+            <h3>Gestión del Personal</h3>
+            <p>Empleados, pagos, solicitudes y turnos</p>
         </div>
 
         <div class="module-card" onclick="location.href='{{ url_for('inventario') }}'">
@@ -55,21 +55,9 @@
             <p>Compras, equipamiento y costos</p>
         </div>
 
-        <div class="module-card" onclick="location.href='#'">
+        <div class="module-card" onclick="location.href='{{ url_for('ia_predictiva') }}'">
             <h3>IA Predictiva</h3>
             <p>Análisis y predicciones inteligentes</p>
-        </div>
-        <div class="module-card" onclick="location.href='{{ url_for('listar_adelantos') }}'">
-            <h3>Solicitudes</h3>
-            <p>Adelantos y aprobaciones del personal</p>
-        </div>
-        <div class="module-card" onclick="location.href='{{ url_for('turnos') }}'">
-            <h3>Turnos</h3>
-            <p>Asignación de turnos al personal</p>
-        </div>
-        <div class="module-card" onclick="location.href='{{ url_for('empleados') }}'">
-            <h3>Empleados</h3>
-            <p>Registro y administración del personal</p>
         </div>
     </div>
 </section>

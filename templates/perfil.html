@@ -74,7 +74,7 @@
                         <strong>{{ usuario.telefono or 'No registrado' }}</strong>
                     </div>
                     <div class="info-block">
-                        <span>Fecha de ingreso</span>
+                        <span>Fecha de registro</span>
                         <strong>{{ perfil.fecha_ingreso.strftime('%d/%m/%Y') if perfil and perfil.fecha_ingreso else 'No registrado' }}</strong>
                     </div>
                     <div class="info-block">
@@ -219,7 +219,7 @@
     <article class="profile-editor card hidden" id="editProfilePanel">
         <div class="section-header">
             <h2>Editar perfil</h2>
-            <p>Modifica tu correo, teléfono, contraseña y foto de perfil.</p>
+            <p>Modifica tu correo, teléfono y foto de perfil.</p>
         </div>
         <form action="{{ url_for('editar_perfil') }}" method="post" enctype="multipart/form-data" class="edit-form">
             <div class="form-row">
@@ -231,10 +231,6 @@
                 <input type="text" name="telefono" value="{{ usuario.telefono or '' }}" placeholder="Ej. 987654321">
             </div>
             <div class="form-row">
-                <label>Contraseña nueva</label>
-                <input type="password" name="clave" placeholder="Dejar vacío para no cambiar">
-            </div>
-            <div class="form-row">
                 <label>Foto de perfil</label>
                 <input type="file" name="foto_perfil" accept="image/png,image/jpeg,image/webp">
             </div>
@@ -242,8 +238,31 @@
                 <button class="btn-primary" type="submit" data-loading-text="Guardando...">Guardar cambios</button>
                 <button type="button" class="btn-outline" id="cancelEditProfile">Cancelar</button>
             </div>
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                <button type="button" class="btn-outline" id="toggleCambiarContrasena" style="align-self: flex-start;"><i class="fa-solid fa-key"></i> Cambiar contraseña</button>
+            </div>
         </form>
     </article>
+</div>
+
+<div class="overlay hidden" id="modalCambiarContrasena">
+    <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="modalContrasenaTitulo">
+        <button type="button" class="close-overlay" id="closeModalContrasena" aria-label="Cerrar">×</button>
+        <h2 id="modalContrasenaTitulo">Cambiar contraseña</h2>
+        <form method="POST" action="{{ url_for('cambiar_contrasena') }}" id="formCambiarContrasena">
+            <label for="contrasenaActual">Contraseña actual</label>
+            <input type="password" name="contrasena_actual" id="contrasenaActual" placeholder="Ingresa tu contraseña actual" required>
+
+            <label for="contrasenaNueva">Contraseña nueva</label>
+            <input type="password" name="contrasena_nueva" id="contrasenaNueva" placeholder="Ingresa tu nueva contraseña" required>
+
+            <label for="contrasenaVerificar">Verificar contraseña nueva</label>
+            <input type="password" name="contrasena_verificar" id="contrasenaVerificar" placeholder="Repite tu nueva contraseña" required>
+
+            <button class="btn-primary" type="submit" data-loading-text="Cambiando...">Cambiar contraseña</button>
+        </form>
+    </div>
 </div>
 
 <script>
@@ -303,6 +322,33 @@
         adelantoToggle.addEventListener('click', () => {
             adelantoForm.classList.toggle('hidden');
             adelantoToggle.textContent = adelantoForm.classList.contains('hidden') ? 'Solicitar adelanto' : 'Cerrar formulario';
+        });
+    }
+
+    // ── Cambiar contraseña modal ──
+    const modalContrasena = document.getElementById('modalCambiarContrasena');
+    const btnContrasena = document.getElementById('toggleCambiarContrasena');
+    const closeContrasena = document.getElementById('closeModalContrasena');
+
+    if (btnContrasena && modalContrasena) {
+        btnContrasena.addEventListener('click', () => {
+            if (editPanel && !editPanel.classList.contains('hidden')) {
+                editPanel.classList.add('hidden');
+                profileView.classList.remove('hidden');
+                editButton.textContent = 'Editar perfil';
+            }
+            modalContrasena.classList.remove('hidden');
+        });
+    }
+
+    if (closeContrasena && modalContrasena) {
+        closeContrasena.addEventListener('click', () => {
+            modalContrasena.classList.add('hidden');
+        });
+        modalContrasena.addEventListener('click', (e) => {
+            if (e.target === modalContrasena) {
+                modalContrasena.classList.add('hidden');
+            }
         });
     }
 
