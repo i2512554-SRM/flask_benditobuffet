@@ -6,10 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalNuevoArticulo = document.getElementById('modalNuevoArticulo');
     const modalRegistrarCompra = document.getElementById('modalRegistrarCompra');
     const closeButtons = document.querySelectorAll('.close-modal');
-    const searchInput = document.getElementById('inventarioSearch');
-    const categoryFilter = document.getElementById('categoriaFilter');
-    const productRows = document.querySelectorAll('#productosTable tbody tr[data-nombre]');
-    const noResultsRow = document.getElementById('noResultsRow');
     const sortHeaders = document.querySelectorAll('th.sortable');
     let sortOrder = { fecha: 'desc' };
 
@@ -62,26 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function filterProductos() {
-        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-        const category = categoryFilter ? categoryFilter.value.toLowerCase() : '';
-        let visibleCount = 0;
-
-        productRows.forEach(row => {
-            const nombre = row.dataset.nombre.toLowerCase();
-            const categoria = row.dataset.categoria.toLowerCase();
-            const matchesQuery = !query || nombre.includes(query) || categoria.includes(query);
-            const matchesCategory = !category || categoria === category;
-            const visible = matchesQuery && matchesCategory;
-            row.style.display = visible ? '' : 'none';
-            if (visible) visibleCount += 1;
-        });
-
-        if (noResultsRow) {
-            noResultsRow.style.display = visibleCount ? 'none' : 'table-row';
-        }
-    }
-
     if (btnNuevoArticulo) {
         btnNuevoArticulo.addEventListener('click', function() {
             openModal(modalNuevoArticulo);
@@ -112,15 +88,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sortTable(this.dataset.sort);
         });
     });
-
-    if (searchInput) {
-        searchInput.addEventListener('input', filterProductos);
-    }
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', filterProductos);
-    }
-
-    filterProductos();
 
     // Edit article modal
     const modalEditar = document.getElementById('modalEditarArticulo');

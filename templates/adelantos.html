@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_paginacion.html" import paginacion %}
 {% block title %}Solicitudes de Adelantos - Bendito Buffet{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
@@ -99,7 +100,7 @@
 
 <section class="table-card">
     <h2>Solicitudes recibidas</h2>
-    {% if solicitudes %}
+    {% if solicitudes.items %}
     <div class="table-wrapper">
         <table>
             <thead>
@@ -114,7 +115,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for s in solicitudes %}
+                {% for s in solicitudes.items %}
                 <tr>
                     <td data-label="Empleado">{{ s.usuario_adelanto.nombres }} {{ s.usuario_adelanto.apellido }}</td>
                     <td data-label="Fecha">{{ s.fecha.strftime('%d/%m/%Y') }}</td>
@@ -143,6 +144,7 @@
             </tbody>
         </table>
     </div>
+    {{ paginacion(solicitudes, 'listar_adelantos') }}
     {% else %}
     <p>No hay solicitudes de adelanto.</p>
     {% endif %}

@@ -97,6 +97,7 @@ def admin_required(f):
 # -------------------------------
 INTENTOS_MAXIMOS = 5
 VENTANA_BLOQUEO_MINUTOS = 15
+PAGINACION_POR_PAGINA = 20
 
 
 def _clave_intentos(correo=None, ip=None):
@@ -251,10 +252,12 @@ def gestion_personal():
 
 def _calcular_resumen_caja():
     hoy = date.today()
+    inicio = datetime.combine(hoy, datetime.min.time())
+    fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
     ventas = db.session.query(db.func.coalesce(db.func.sum(TransaccionCaja.monto), 0))
-    ventas = ventas.filter(TransaccionCaja.tipo == "Venta", db.func.date(TransaccionCaja.fecha) == hoy).scalar() or 0
+    ventas = ventas.filter(TransaccionCaja.tipo == "Venta", TransaccionCaja.fecha >= inicio, TransaccionCaja.fecha < fin).scalar() or 0
     gastos = db.session.query(db.func.coalesce(db.func.sum(TransaccionCaja.monto), 0))
-    gastos = gastos.filter(TransaccionCaja.tipo == "Gasto", db.func.date(TransaccionCaja.fecha) == hoy).scalar() or 0
+    gastos = gastos.filter(TransaccionCaja.tipo == "Gasto", TransaccionCaja.fecha >= inicio, TransaccionCaja.fecha < fin).scalar() or 0
     neto = float(ventas) - float(gastos)
     return float(ventas), float(gastos), float(neto)
 
@@ -262,10 +265,12 @@ def _calcular_resumen_caja():
 def _calcular_resumen_mensual_cierres():
     hoy = date.today()
     primer_dia = date(hoy.year, hoy.month, 1)
+    inicio = datetime.combine(primer_dia, datetime.min.time())
+    fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
     ventas_mes = db.session.query(db.func.coalesce(db.func.sum(CierreCaja.total_ventas), 0))
-    ventas_mes = ventas_mes.filter(db.func.date(CierreCaja.fecha) >= primer_dia, db.func.date(CierreCaja.fecha) <= hoy).scalar() or 0
+    ventas_mes = ventas_mes.filter(CierreCaja.fecha >= inicio, CierreCaja.fecha < fin).scalar() or 0
     egresos_mes = db.session.query(db.func.coalesce(db.func.sum(CierreCaja.total_gastos), 0))
-    egresos_mes = egresos_mes.filter(db.func.date(CierreCaja.fecha) >= primer_dia, db.func.date(CierreCaja.fecha) <= hoy).scalar() or 0
+    egresos_mes = egresos_mes.filter(CierreCaja.fecha >= inicio, CierreCaja.fecha < fin).scalar() or 0
     neto_mes = float(ventas_mes) - float(egresos_mes)
     return float(ventas_mes), float(egresos_mes), float(neto_mes)
 
@@ -336,21 +341,48 @@ def _parse_filtro_mes():
 
 
 def _obtener_totales_pagos(start_date, end_date, id_usuario=None):
+    inicio = datetime.combine(start_date, datetime.min.time())
+    fin = datetime.combine(end_date, datetime.max.time())
     pagos_query = db.session.query(db.func.coalesce(db.func.sum(PagoEmpleado.monto), 0))
     pagos_query = pagos_query.filter(PagoEmpleado.estado == 'Pagado')
-    pagos_query = pagos_query.filter(db.func.date(PagoEmpleado.fecha_pago) >= start_date, db.func.date(PagoEmpleado.fecha_pago) <= end_date)
+    pagos_query = pagos_query.filter(PagoEmpleado.fecha_pago >= inicio, PagoEmpleado.fecha_pago <= fin)
     if id_usuario:
         pagos_query = pagos_query.filter(PagoEmpleado.id_usuario == id_usuario)
     total_pagos = pagos_query.scalar() or 0
 
     adelantos_query = db.session.query(db.func.coalesce(db.func.sum(Adelanto.monto), 0))
-    adelantos_query = adelantos_query.filter(db.func.date(Adelanto.fecha) >= start_date, db.func.date(Adelanto.fecha) <= end_date)
+    adelantos_query = adelantos_query.filter(Adelanto.fecha >= inicio, Adelanto.fecha <= fin)
     adelantos_query = adelantos_query.filter(Adelanto.estado != 'Cancelado')
     if id_usuario:
         adelantos_query = adelantos_query.filter(Adelanto.id_usuario == id_usuario)
     total_adelantos = adelantos_query.scalar() or 0
 
     return float(total_pagos), float(total_adelantos), float(total_pagos) - float(total_adelantos)
+
+
+def _totales_pagos_por_empleado(start_date, end_date):
+    inicio = datetime.combine(start_date, datetime.min.time())
+    fin = datetime.combine(end_date, datetime.max.time())
+
+    pagos = db.session.query(
+        PagoEmpleado.id_usuario,
+        db.func.coalesce(db.func.sum(PagoEmpleado.monto), 0)
+    ).filter(
+        PagoEmpleado.estado == 'Pagado',
+        PagoEmpleado.fecha_pago >= inicio,
+        PagoEmpleado.fecha_pago <= fin
+    ).group_by(PagoEmpleado.id_usuario).all()
+
+    adelantos = db.session.query(
+        Adelanto.id_usuario,
+        db.func.coalesce(db.func.sum(Adelanto.monto), 0)
+    ).filter(
+        Adelanto.fecha >= inicio,
+        Adelanto.fecha <= fin,
+        Adelanto.estado != 'Cancelado'
+    ).group_by(Adelanto.id_usuario).all()
+
+    return dict(pagos), dict(adelantos)
 
 
 def _obtener_proximo_pago():
@@ -371,14 +403,16 @@ def pagos_personal():
     proximo_pago_dias = _obtener_proximo_pago()
 
     empleados = Usuario.query.filter_by(estado=1).order_by(Usuario.nombres.asc()).all()
+    pagos_map, adelantos_map = _totales_pagos_por_empleado(inicio, fin)
     resumen_empleados = []
     for empleado in empleados:
-        pagos, adelantos, neto = _obtener_totales_pagos(inicio, fin, empleado.id_usuario)
+        pagos = float(pagos_map.get(empleado.id_usuario, 0))
+        adelantos = float(adelantos_map.get(empleado.id_usuario, 0))
         resumen_empleados.append({
             'empleado': empleado,
             'total_pagado': pagos,
             'total_adelantos': adelantos,
-            'neto': neto,
+            'neto': pagos - adelantos,
         })
 
     empleados_filtrados = []
@@ -390,7 +424,14 @@ def pagos_personal():
             if busqueda_lower in f"{item['empleado'].nombres} {item['empleado'].apellido}".lower()
         ]
 
-    pagos_historial = PagoEmpleado.query.filter(PagoEmpleado.estado == 'Pagado', db.func.date(PagoEmpleado.fecha_pago) >= inicio, db.func.date(PagoEmpleado.fecha_pago) <= fin).order_by(PagoEmpleado.fecha_pago.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    pagos_historial = PagoEmpleado.query.options(
+        db.joinedload(PagoEmpleado.usuario_empleado)
+    ).filter(
+        PagoEmpleado.estado == 'Pagado',
+        PagoEmpleado.fecha_pago >= datetime.combine(inicio, datetime.min.time()),
+        PagoEmpleado.fecha_pago <= datetime.combine(fin, datetime.max.time())
+    ).order_by(PagoEmpleado.fecha_pago.desc()).paginate(page=page, per_page=PAGINACION_POR_PAGINA, error_out=False)
     return render_template(
         'pagos_personal.html',
         inicio=inicio,
@@ -459,9 +500,12 @@ def registrar_pago_personal():
         flash('Fecha de pago inválida.', 'error')
         return redirect(url_for('pagos_personal'))
 
+    pago_inicio = datetime.combine(pago_fecha, datetime.min.time())
+    pago_fin = datetime.combine(pago_fecha, datetime.max.time())
     existe_pago = PagoEmpleado.query.filter(
         PagoEmpleado.id_usuario == id_usuario,
-        db.func.date(PagoEmpleado.fecha_pago) == pago_fecha,
+        PagoEmpleado.fecha_pago >= pago_inicio,
+        PagoEmpleado.fecha_pago <= pago_fin,
         PagoEmpleado.monto == monto,
         PagoEmpleado.estado == estado
     ).first()
@@ -522,9 +566,12 @@ def registrar_adelanto_personal():
         flash('Fecha de adelanto inválida.', 'error')
         return redirect(url_for('pagos_personal'))
 
+    adelanto_inicio = datetime.combine(adelanto_fecha.date(), datetime.min.time())
+    adelanto_fin = datetime.combine(adelanto_fecha.date(), datetime.max.time())
     existe_adelanto = Adelanto.query.filter(
         Adelanto.id_usuario == id_usuario,
-        db.func.date(Adelanto.fecha) == adelanto_fecha.date(),
+        Adelanto.fecha >= adelanto_inicio,
+        Adelanto.fecha <= adelanto_fin,
         Adelanto.monto == monto,
         Adelanto.motivo == motivo
     ).first()
@@ -718,7 +765,10 @@ def cancelar_adelanto(id_adelanto):
 @login_required
 @admin_required
 def listar_adelantos():
-    solicitudes = Adelanto.query.order_by(Adelanto.fecha.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    solicitudes = Adelanto.query.options(
+        db.joinedload(Adelanto.usuario_adelanto)
+    ).order_by(Adelanto.fecha.desc()).paginate(page=page, per_page=PAGINACION_POR_PAGINA, error_out=False)
     return render_template("adelantos.html", solicitudes=solicitudes)
 
 
@@ -860,8 +910,11 @@ def enviar_reporte():
 
     cajero = session.get("nombre")
 
+    inicio = datetime.combine(hoy, datetime.min.time())
+    fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
     transacciones = TransaccionCaja.query.filter(
-        db.func.date(TransaccionCaja.fecha) == hoy
+        TransaccionCaja.fecha >= inicio,
+        TransaccionCaja.fecha < fin
     ).all()
 
     total = sum(
@@ -915,8 +968,10 @@ def enviar_reporte():
 @role_required("administrador", "cajera", "cajero")
 def caja():
     ventas_dia, gastos_dia, neto_dia = _calcular_resumen_caja()
-    transacciones = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).all()
-    cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    page_cierres = request.args.get('pagina_cierres', 1, type=int)
+    transacciones = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).paginate(page=page, per_page=PAGINACION_POR_PAGINA, error_out=False)
+    cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).paginate(page=page_cierres, per_page=PAGINACION_POR_PAGINA, error_out=False)
     categorias = Categoria.query.order_by(Categoria.nombre.asc()).all()
     return render_template(
         "caja.html",
@@ -986,7 +1041,7 @@ def gestionar_salarios():
 
         return redirect(url_for("gestionar_salarios"))
 
-    empleados = Usuario.query.order_by(Usuario.estado.desc(), Usuario.nombres).all()
+    empleados = Usuario.query.options(db.joinedload(Usuario.rol), db.joinedload(Usuario.perfil)).order_by(Usuario.estado.desc(), Usuario.nombres).all()
     return render_template("salarios.html", empleados=empleados)
 
 # -------------------------------
@@ -997,7 +1052,7 @@ def gestionar_salarios():
 @login_required
 @admin_required
 def empleados():
-    empleados_list = Usuario.query.all()
+    empleados_list = Usuario.query.options(db.joinedload(Usuario.rol)).all()
     roles = Rol.query.all()
     return render_template("empleados.html", empleados=empleados_list, roles=roles)
 
@@ -1107,7 +1162,7 @@ def _toggle_turno_usuario(usuario, turno_nombre):
 @login_required
 @admin_required
 def turnos():
-    empleados = Usuario.query.all()
+    empleados = Usuario.query.options(db.joinedload(Usuario.rol)).all()
     return render_template("turnos.html", empleados=empleados)
 
 
@@ -1177,20 +1232,24 @@ def _calcular_resumen_inventario():
 def _inversiones_del_mes():
     hoy = date.today()
     primer_dia = date(hoy.year, hoy.month, 1)
+    inicio = datetime.combine(primer_dia, datetime.min.time())
+    fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
     return db.session.query(
         db.func.coalesce(db.func.sum(Inversion.monto), 0)
     ).filter(
-        db.func.date(Inversion.fecha) >= primer_dia,
-        db.func.date(Inversion.fecha) <= hoy
+        Inversion.fecha >= inicio,
+        Inversion.fecha < fin
     ).scalar() or 0
 
 
 def _productos_registrados_mes():
     hoy = date.today()
     primer_dia = date(hoy.year, hoy.month, 1)
+    inicio = datetime.combine(primer_dia, datetime.min.time())
+    fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
     return Producto.query.filter(
-        db.func.date(Producto.fecha_registro) >= primer_dia,
-        db.func.date(Producto.fecha_registro) <= hoy
+        Producto.fecha_registro >= inicio,
+        Producto.fecha_registro < fin
     ).count()
 
 
@@ -1202,8 +1261,27 @@ def inventario():
     inversiones_mes = _inversiones_del_mes()
     articulos_registrados = Producto.query.count()
     productos_mes = _productos_registrados_mes()
-    productos = Producto.query.order_by(Producto.fecha_registro.desc()).all()
-    inversiones = Inversion.query.order_by(Inversion.fecha.desc()).all()
+
+    q = request.args.get('q', '').strip()
+    cat = request.args.get('cat', '').strip()
+    page = request.args.get('page', 1, type=int)
+    page_inversiones = request.args.get('pagina_inversiones', 1, type=int)
+
+    query_productos = Producto.query
+    if cat:
+        query_productos = query_productos.filter(db.func.lower(Producto.categoria) == cat.lower())
+    if q:
+        like = f"%{q.lower()}%"
+        query_productos = query_productos.filter(db.or_(
+            db.func.lower(Producto.nombre).like(like),
+            db.func.lower(Producto.categoria).like(like),
+        ))
+    productos = query_productos.order_by(Producto.fecha_registro.desc()).paginate(
+        page=page, per_page=PAGINACION_POR_PAGINA, error_out=False
+    )
+    inversiones = Inversion.query.order_by(Inversion.fecha.desc()).paginate(
+        page=page_inversiones, per_page=PAGINACION_POR_PAGINA, error_out=False
+    )
     return render_template(
         "inventario.html",
         valor_total_inventario=valor_total_inventario,
@@ -1212,7 +1290,9 @@ def inventario():
         productos_mes=productos_mes,
         equipamiento_valor=equipamiento_valor,
         productos=productos,
-        inversiones=inversiones
+        inversiones=inversiones,
+        q=q,
+        cat=cat,
     )
 
 

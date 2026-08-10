@@ -556,3 +556,51 @@ tbody tr:hover {
         width: 45%;
     }
 }
+
+/* =============================================
+   PAGINACIÓN
+   ============================================= */
+.paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1.25rem;
+    padding-bottom: 0.25rem;
+}
+.paginacion .btn-pagina {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease, border-color var(--transition-fast) ease;
+}
+.paginacion .btn-pagina:hover:not(.disabled):not(.active) {
+    background: var(--hover-color);
+}
+.paginacion .btn-pagina.active {
+    background: var(--btn-primary);
+    color: var(--bg-card);
+    border-color: var(--btn-primary);
+    font-weight: 600;
+    cursor: default;
+}
+.paginacion .btn-pagina.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+.paginacion .btn-pagina.puntos {
+    border: none;
+    background: transparent;
+    cursor: default;
+    min-width: auto;
+}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_paginacion.html" import paginacion %}
 
 {% block title %}Inventario e Inversión - Bendito Buffet{% endblock %}
 
@@ -66,19 +67,21 @@
 </section>
 
 <section class="inventario-toolbar">
-    <div class="search-field">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input id="inventarioSearch" type="search" placeholder="Buscar artículo o categoría" aria-label="Buscar artículo o categoría">
-    </div>
-    <div class="filter-field">
-        <label for="categoriaFilter">Categoría</label>
-        <select id="categoriaFilter" aria-label="Filtrar por categoría">
-            <option value="">Todas las categorías</option>
-            <option value="Ingredientes">Ingredientes</option>
-            <option value="Equipamiento">Equipamiento</option>
-            <option value="Suministro">Suministro</option>
-        </select>
-    </div>
+    <form method="get" action="{{ url_for('inventario') }}" class="inventario-toolbar__form">
+        <div class="search-field">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="inventarioSearch" type="search" name="q" placeholder="Buscar artículo o categoría" aria-label="Buscar artículo o categoría" value="{{ q }}">
+        </div>
+        <div class="filter-field">
+            <label for="categoriaFilter">Categoría</label>
+            <select id="categoriaFilter" name="cat" aria-label="Filtrar por categoría" onchange="this.form.submit()">
+                <option value="">Todas las categorías</option>
+                <option value="Ingredientes" {{ 'selected' if cat == 'Ingredientes' }}>Ingredientes</option>
+                <option value="Equipamiento" {{ 'selected' if cat == 'Equipamiento' }}>Equipamiento</option>
+                <option value="Suministro" {{ 'selected' if cat == 'Suministro' }}>Suministro</option>
+            </select>
+        </div>
+    </form>
 </section>
 
 <section class="tabs-container">
@@ -110,8 +113,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if productos %}
-                                {% for producto in productos %}
+                            {% if productos.items %}
+                                {% for producto in productos.items %}
                                 <tr data-nombre="{{ producto.nombre }}" data-categoria="{{ producto.categoria }}" data-fecha="{{ producto.fecha_registro.timestamp() if producto.fecha_registro else 0 }}" data-id="{{ producto.id_producto }}" data-precio="{{ producto.precio }}" data-stock="{{ producto.stock }}">
                                     <td data-label="Artículo">{{ producto.nombre }}</td>
                                     <td data-label="Categoría">{{ producto.categoria }}</td>
@@ -123,17 +126,15 @@
                                     <td data-label="Acción"><button type="button" class="btn-outline btn-sm btn-editar-articulo" data-id="{{ producto.id_producto }}" data-nombre="{{ producto.nombre }}" data-precio="{{ producto.precio }}" data-stock="{{ producto.stock }}"><i class="fa-solid fa-pen"></i> Editar</button></td>
                                 </tr>
                                 {% endfor %}
-                                <tr id="noResultsRow" class="empty-state" style="display:none;">
-                                    <td colspan="8">No se encontraron artículos con esos filtros.</td>
-                                </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="empty-state">No hay artículos registrados aún.</td>
+                                    <td colspan="8" class="empty-state">No hay artículos registrados.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
+                {{ paginacion(productos, 'inventario') }}
             </article>
         </section>
 
@@ -146,8 +147,8 @@
                     </div>
                 </div>
                 <div class="compra-cards">
-                    {% if inversiones %}
-                        {% for inversion in inversiones %}
+                    {% if inversiones.items %}
+                        {% for inversion in inversiones.items %}
                         <div class="inversion-card">
                             <div class="compra-card-top">
                                 <div>
@@ -165,10 +166,11 @@
                         {% endfor %}
                     {% else %}
                         <div class="empty-state-card">
-                            <p>No hay inversiones registradas aún.</p>
+                            <p>No hay inversiones registradas.</p>
                         </div>
                     {% endif %}
                 </div>
+                {{ paginacion(inversiones, 'inventario', 'pagina_inversiones') }}
             </article>
         </section>
     </div>

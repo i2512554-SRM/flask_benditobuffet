@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_paginacion.html" import paginacion %}
 
 {% block title %}Gestión de Caja - Bendito Buffet{% endblock %}
 
@@ -164,7 +165,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for transaccion in transacciones %}
+                            {% for transaccion in transacciones.items %}
                                 <tr>
                                     <td data-label="Fecha">{{ transaccion.fecha.strftime('%d/%m/%Y %H:%M') if transaccion.fecha else '' }}</td>
                                     <td data-label="Tipo">{{ transaccion.tipo }}</td>
@@ -181,6 +182,7 @@
                         </tbody>
                     </table>
                 </div>
+                {{ paginacion(transacciones, 'caja') }}
             </article>
         </section>
 
@@ -202,7 +204,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for cierre in cierres %}
+                            {% for cierre in cierres.items %}
                                 <tr>
                                     <td data-label="Fecha">{{ cierre.fecha.strftime('%d/%m/%Y %H:%M') if cierre.fecha else '' }}</td>
                                     <td data-label="Ventas">S/.{{ "%.2f" | format(cierre.total_ventas) }}</td>
@@ -218,6 +220,7 @@
                         </tbody>
                     </table>
                 </div>
+                {{ paginacion(cierres, 'caja', 'pagina_cierres') }}
             </article>
         </section>
     </div>

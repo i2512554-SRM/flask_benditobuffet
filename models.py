@@ -54,6 +54,10 @@ class UsuarioPerfil(db.Model):
 
 class PagoEmpleado(db.Model):
     __tablename__ = 'pagos_empleados'
+    __table_args__ = (
+        db.Index('ix_pagos_empleados_usuario', 'id_usuario'),
+        db.Index('ix_pagos_empleados_fecha', 'fecha_pago'),
+    )
 
     id_pago = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -68,6 +72,10 @@ class PagoEmpleado(db.Model):
 
 class PagoPersonal(db.Model):
     __tablename__ = 'pagos_personal'
+    __table_args__ = (
+        db.Index('ix_pagos_personal_usuario', 'id_usuario'),
+        db.Index('ix_pagos_personal_fecha', 'fecha'),
+    )
 
     id_pago = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -83,6 +91,11 @@ class PagoPersonal(db.Model):
 
 class Adelanto(db.Model):
     __tablename__ = 'adelantos'
+    __table_args__ = (
+        db.Index('ix_adelantos_usuario', 'id_usuario'),
+        db.Index('ix_adelantos_fecha', 'fecha'),
+        db.Index('ix_adelantos_estado', 'estado'),
+    )
 
     id_adelanto = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -100,6 +113,10 @@ class Adelanto(db.Model):
 
 class ActividadUsuario(db.Model):
     __tablename__ = 'actividad_usuario'
+    __table_args__ = (
+        db.Index('ix_actividad_usuario_usuario', 'id_usuario'),
+        db.Index('ix_actividad_usuario_fecha', 'fecha'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -112,6 +129,9 @@ class ActividadUsuario(db.Model):
 
 class IntentoLogin(db.Model):
     __tablename__ = 'intentos_login'
+    __table_args__ = (
+        db.Index('ix_intentos_login_fecha', 'fecha'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     identificador = db.Column(db.String(255), nullable=False, index=True)
@@ -123,6 +143,10 @@ class IntentoLogin(db.Model):
 
 class TransaccionCaja(db.Model):
     __tablename__ = 'transacciones_caja'
+    __table_args__ = (
+        db.Index('ix_transacciones_caja_usuario', 'id_usuario'),
+        db.Index('ix_transacciones_caja_fecha', 'fecha'),
+    )
 
     id_transaccion = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -139,6 +163,9 @@ class TransaccionCaja(db.Model):
 
 class CierreCaja(db.Model):
     __tablename__ = 'cierres_caja'
+    __table_args__ = (
+        db.Index('ix_cierres_caja_fecha', 'fecha'),
+    )
 
     id_cierre = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'))
@@ -154,6 +181,9 @@ class CierreCaja(db.Model):
 
 class Producto(db.Model):
     __tablename__ = 'productos'
+    __table_args__ = (
+        db.Index('ix_productos_fecha_registro', 'fecha_registro'),
+    )
 
     id_producto = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(200), nullable=False)
@@ -169,6 +199,9 @@ class Producto(db.Model):
 
 class Inversion(db.Model):
     __tablename__ = 'inversiones'
+    __table_args__ = (
+        db.Index('ix_inversiones_fecha', 'fecha'),
+    )
 
     id_inversion = db.Column(db.Integer, primary_key=True)
     descripcion = db.Column(db.Text, nullable=False)
