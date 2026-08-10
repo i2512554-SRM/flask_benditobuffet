@@ -1,6 +1,7 @@
 /**
- * Sistema de Consulta DNI - APIs Perú
- * Consulta automática de datos DNI sin recargar página
+ * Sistema de Consulta DNI - API RENIEC (proxied por el servidor)
+ * Consulta automática de datos DNI sin recargar página.
+ * El token de la API se mantiene en el servidor (variable de entorno DNI_API_TOKEN).
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,10 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Token de API (IMPORTANTE: Configurar con tu token válido)
-    // IMPORTANTE: Reemplaza 'tu_token_aqui' con tu token real de APIs Perú
-    const API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImkyNTEyNTU0QGNvbnRpbmVudGFsLmVkdS5wZSJ9.atmlR91JznkCYGLaL5wQg7BW1vYo6aMC5YIkHg40-Zo';
-    const API_URL = 'https://dniruc.apisperu.com/api/v1/dni';
+    // La consulta se hace a través del servidor Flask, que guarda el token
+    const API_URL = '/api/dni';
 
     // Listener para botón de consultar DNI
     btnConsultarDni.addEventListener('click', async function(e) {
@@ -56,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarMensaje('Consultando DNI...', 'loading');
 
         try {
-            const response = await fetch(`${API_URL}/${dni}?token=${API_TOKEN}`);
+            const response = await fetch(`${API_URL}/${dni}`);
 
             if (!response.ok) {
                 if (response.status === 404) {

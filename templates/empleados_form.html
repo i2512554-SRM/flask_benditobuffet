@@ -22,6 +22,7 @@
         <div class="card">
             <h2>{% if empleado %}Editar{% else %}Nuevo{% endif %} Empleado</h2>
             <form method="POST" action="{% if empleado %}{{ url_for('editar_empleado', id=empleado.id_usuario) }}{% else %}{{ url_for('nuevo_empleado') }}{% endif %}" class="form-grid">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Nombres</label>
                     <input type="text" name="nombres" placeholder="Nombres" value="{% if empleado %}{{ empleado.nombres }}{% endif %}" required>

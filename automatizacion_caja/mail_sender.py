@@ -10,7 +10,9 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+# Cargamos el .env de la raíz del proyecto (no importa desde dónde se ejecute)
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 
 def enviar_correo(archivo_excel, destinatario, fecha, cajero):

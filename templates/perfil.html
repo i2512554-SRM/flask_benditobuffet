@@ -163,6 +163,7 @@
                 </div>
                 <div class="adelanto-form hidden" id="adelantoForm">
                     <form action="{{ url_for('solicitar_adelanto') }}" method="post" class="edit-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-row">
                             <label>Motivo</label>
                             <input type="text" name="motivo" placeholder="Motivo del adelanto" required>
@@ -222,6 +223,7 @@
             <p>Modifica tu correo, teléfono y foto de perfil.</p>
         </div>
         <form action="{{ url_for('editar_perfil') }}" method="post" enctype="multipart/form-data" class="edit-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-row">
                 <label>Correo</label>
                 <input type="email" name="correo" value="{{ usuario.correo or '' }}" required>
@@ -251,6 +253,7 @@
         <button type="button" class="close-overlay" id="closeModalContrasena" aria-label="Cerrar">×</button>
         <h2 id="modalContrasenaTitulo">Cambiar contraseña</h2>
         <form method="POST" action="{{ url_for('cambiar_contrasena') }}" id="formCambiarContrasena">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="contrasenaActual">Contraseña actual</label>
             <input type="password" name="contrasena_actual" id="contrasenaActual" placeholder="Ingresa tu contraseña actual" required>
 

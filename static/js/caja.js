@@ -37,9 +37,9 @@ document.addEventListener("DOMContentLoaded", function() {
         const ventas = document.querySelector(".stats .card:nth-child(1) h2");
         const gastos = document.querySelector(".stats .card:nth-child(2) h2");
         const neto = document.querySelector(".stats .card:nth-child(3) h2");
-        if (ventas) ventas.textContent = `$${data.ventas_dia.toFixed(2)}`;
-        if (gastos) gastos.textContent = `$${data.gastos_dia.toFixed(2)}`;
-        if (neto) neto.textContent = `$${data.neto_dia.toFixed(2)}`;
+        if (ventas) ventas.textContent = `S/.${data.ventas_dia.toFixed(2)}`;
+        if (gastos) gastos.textContent = `S/.${data.gastos_dia.toFixed(2)}`;
+        if (neto) neto.textContent = `S/.${data.neto_dia.toFixed(2)}`;
     }
 
     // Nueva categoría
@@ -81,10 +81,11 @@ document.addEventListener("DOMContentLoaded", function() {
             errorCategoria.classList.add("hidden");
             const btnSubmit = formCategoria.querySelector('button[type="submit"]');
             window.setLoadingState(btnSubmit);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             fetch("/caja/categorias/nuevo", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ nombre: nombre })
+                body: new URLSearchParams({ nombre: nombre, csrf_token: csrfToken })
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {

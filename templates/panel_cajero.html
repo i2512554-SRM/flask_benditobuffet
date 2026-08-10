@@ -19,19 +19,19 @@
 <section class="stats">
     <div class="card">
         <h3>Ventas del mes</h3>
-        <h2>$ {{ "%.2f"|format(ventas_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(ventas_mes) }}</h2>
         <span class="positive">Mes actual</span>
     </div>
 
     <div class="card">
         <h3>Egresos del mes</h3>
-        <h2>$ {{ "%.2f"|format(egresos_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(egresos_mes) }}</h2>
         <span class="negative">Mes actual</span>
     </div>
 
     <div class="card">
         <h3>Ganancia neta del mes</h3>
-        <h2>$ {{ "%.2f"|format(neto_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(neto_mes) }}</h2>
         <span class="{{ 'positive' if neto_mes >= 0 else 'negative' }}">Mes actual</span>
     </div>
 </section>

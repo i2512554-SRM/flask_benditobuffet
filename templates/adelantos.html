@@ -153,6 +153,7 @@
         <h3 id="modalTitle">Aprobar adelanto</h3>
         <p>Agrega una respuesta opcional para el empleado:</p>
         <form method="POST" id="modalForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <textarea name="respuesta_admin" placeholder="Ej: Adelanto aprobado, se acreditará en tu próximo pago..." maxlength="500"></textarea>
             <input type="hidden" name="accion" id="modalAccion" value="aprobar">
             <div class="modal-actions">

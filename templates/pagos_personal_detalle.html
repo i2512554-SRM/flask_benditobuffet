@@ -22,15 +22,15 @@
 <section class="stats">
     <div class="card">
         <h3>Total pagado</h3>
-        <h2>$ {{ "%.2f"|format(total_pagado) }}</h2>
+        <h2>S/. {{ "%.2f"|format(total_pagado) }}</h2>
     </div>
     <div class="card">
         <h3>Total adelantos</h3>
-        <h2>$ {{ "%.2f"|format(total_adelantos) }}</h2>
+        <h2>S/. {{ "%.2f"|format(total_adelantos) }}</h2>
     </div>
     <div class="card">
         <h3>Neto</h3>
-        <h2>$ {{ "%.2f"|format(neto) }}</h2>
+        <h2>S/. {{ "%.2f"|format(neto) }}</h2>
     </div>
 </section>
 
@@ -56,7 +56,7 @@
             {% for pago in pagos %}
                 <tr>
                     <td data-label="Fecha">{{ pago.fecha_pago.strftime('%Y-%m-%d') }}</td>
-                    <td data-label="Monto">$ {{ "%.2f"|format(pago.monto) }}</td>
+                    <td data-label="Monto">S/. {{ "%.2f"|format(pago.monto) }}</td>
                     <td data-label="Estado">{{ pago.estado }}</td>
                     <td data-label="Descripción">{{ pago.descripcion or '-' }}</td>
                 </tr>
@@ -80,7 +80,7 @@
                 <tr>
                     <td data-label="Fecha">{{ pago.fecha.strftime('%Y-%m-%d') }}</td>
                     <td data-label="Tipo">{{ pago.tipo or 'Pago' }}</td>
-                    <td data-label="Monto">$ {{ "%.2f"|format(pago.monto) }}</td>
+                    <td data-label="Monto">S/. {{ "%.2f"|format(pago.monto) }}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -103,7 +103,7 @@
                 <tr>
                     <td data-label="Fecha">{{ adelanto.fecha.strftime('%Y-%m-%d') }}</td>
                     <td data-label="Motivo">{{ adelanto.motivo }}</td>
-                    <td data-label="Monto">$ {{ "%.2f"|format(adelanto.monto) }}</td>
+                    <td data-label="Monto">S/. {{ "%.2f"|format(adelanto.monto) }}</td>
                     <td data-label="Estado">{{ adelanto.estado }}</td>
                 </tr>
             {% endfor %}

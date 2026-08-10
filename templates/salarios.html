@@ -73,6 +73,7 @@
         <button type="button" class="close-overlay" id="closeModalSalario" aria-label="Cerrar">×</button>
         <h2 id="modalSalarioTitulo">Asignar Salario</h2>
         <form method="POST" action="{{ url_for('gestionar_salarios') }}" id="formSalario">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="modalEmpleado">Empleado</label>
             <input type="text" id="modalEmpleado" readonly style="opacity: 0.7; cursor: default;">
             <input type="hidden" name="id_usuario" id="modalIdUsuario">

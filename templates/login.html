@@ -37,6 +37,7 @@
             </div>
 
             <form method="POST" class="form" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="rolInput" name="rol" value="administrador">
                 <label>Usuario / Correo electrónico</label>
                 <input type="text" id="usuario" name="correo" autocomplete="off" placeholder="correo@ejemplo.com" required>

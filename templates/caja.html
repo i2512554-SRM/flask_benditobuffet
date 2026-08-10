@@ -25,6 +25,7 @@
     
 
     <form action="{{ url_for('enviar_reporte') }}" method="POST" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn-primary" data-loading-text="Enviando...">
             <i class="fa-solid fa-envelope"></i> Enviar Reporte
         </button>
@@ -50,15 +51,15 @@
 <section class="stats">
     <div class="card small-card">
         <h3>Ventas del Día</h3>
-        <h2>${{ "%.2f" | format(ventas_dia) }}</h2>
+        <h2>S/.{{ "%.2f" | format(ventas_dia) }}</h2>
     </div>
     <div class="card small-card">
         <h3>Gastos del Día</h3>
-        <h2>${{ "%.2f" | format(gastos_dia) }}</h2>
+        <h2>S/.{{ "%.2f" | format(gastos_dia) }}</h2>
     </div>
     <div class="card small-card">
         <h3>Neto del Día</h3>
-        <h2 class="{{ 'positive' if neto_dia >= 0 else 'negative' }}">${{ "%.2f" | format(neto_dia) }}</h2>
+        <h2 class="{{ 'positive' if neto_dia >= 0 else 'negative' }}">S/.{{ "%.2f" | format(neto_dia) }}</h2>
     </div>
 </section>
 
@@ -82,6 +83,7 @@
               action="{{ url_for('caja_registrar') }}"
               method="POST"
               class="form-grid">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="form-group">
                 <label for="tipo">Tipo</label>
@@ -169,7 +171,7 @@
                                     <td data-label="Descripción">{{ transaccion.descripcion or '-' }}</td>
                                     <td data-label="Categoría">{{ transaccion.categoria }}</td>
                                     <td data-label="Método">{{ transaccion.metodo_pago }}</td>
-                                    <td data-label="Monto" class="{{ 'positive' if transaccion.tipo == 'Venta' else 'negative' }}">${{ "%.2f" | format(transaccion.monto) }}</td>
+                                    <td data-label="Monto" class="{{ 'positive' if transaccion.tipo == 'Venta' else 'negative' }}">S/.{{ "%.2f" | format(transaccion.monto) }}</td>
                                 </tr>
                             {% else %}
                                 <tr>
@@ -203,9 +205,9 @@
                             {% for cierre in cierres %}
                                 <tr>
                                     <td data-label="Fecha">{{ cierre.fecha.strftime('%d/%m/%Y %H:%M') if cierre.fecha else '' }}</td>
-                                    <td data-label="Ventas">${{ "%.2f" | format(cierre.total_ventas) }}</td>
-                                    <td data-label="Gastos">${{ "%.2f" | format(cierre.total_gastos) }}</td>
-                                    <td data-label="Neto" class="{{ 'positive' if cierre.neto >= 0 else 'negative' }}">${{ "%.2f" | format(cierre.neto) }}</td>
+                                    <td data-label="Ventas">S/.{{ "%.2f" | format(cierre.total_ventas) }}</td>
+                                    <td data-label="Gastos">S/.{{ "%.2f" | format(cierre.total_gastos) }}</td>
+                                    <td data-label="Neto" class="{{ 'positive' if cierre.neto >= 0 else 'negative' }}">S/.{{ "%.2f" | format(cierre.neto) }}</td>
                                     <td data-label="Observaciones">{{ cierre.observaciones or 'Sin anotaciones' }}</td>
                                 </tr>
                             {% else %}
@@ -226,6 +228,7 @@
         <button type="button" class="close-modal" aria-label="Cerrar">&times;</button>
         <h3>Nueva categoría</h3>
         <form id="formNuevaCategoria" class="modal-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" id="nuevaCategoriaNombre" name="nombre" placeholder="Nombre de la categoría" required autocomplete="off">
             <p id="categoriaError" class="form-error hidden"></p>
             <button type="submit" class="btn-primary" data-loading-text="Guardando...">Agregar categoría</button>
@@ -239,6 +242,7 @@
         <h3>Cerrar Caja</h3>
         <p>Opcionalmente agrega una observación antes de cerrar el día.</p>
         <form id="formCerrarCaja" action="/caja/cerrar" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <textarea id="observaciones" name="observaciones" placeholder="Escribe una nota... (opcional)"></textarea>
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" id="btnCancelarCerrar">Cancelar</button>

@@ -37,6 +37,7 @@
 
         <div id="paymentFormContainer">
             <form id="paymentForm" method="post" action="{{ url_for('registrar_pago_personal') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label>Empleado</label>
                 <select name="id_usuario" required>
                     <option value="">Seleccione...</option>
@@ -63,6 +64,7 @@
 
         <div id="advanceFormContainer" class="hidden">
             <form id="advanceForm" method="post" action="{{ url_for('registrar_adelanto_personal') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label>Empleado</label>
                 <select name="id_usuario" required>
                     <option value="">Seleccione...</option>
@@ -90,17 +92,17 @@
 <section class="stats">
     <div class="card">
         <h3>Total pagado</h3>
-        <h2>$ {{ "%.2f"|format(total_pagado_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(total_pagado_mes) }}</h2>
         <span class="positive">Mes seleccionado</span>
     </div>
     <div class="card">
         <h3>Total adelantos</h3>
-        <h2>$ {{ "%.2f"|format(total_adelantos_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(total_adelantos_mes) }}</h2>
         <span class="negative">Mes seleccionado</span>
     </div>
     <div class="card">
         <h3>Neto del mes</h3>
-        <h2>$ {{ "%.2f"|format(neto_mes) }}</h2>
+        <h2>S/. {{ "%.2f"|format(neto_mes) }}</h2>
         <span class="{{ 'positive' if neto_mes >= 0 else 'negative' }}">Mes seleccionado</span>
     </div>
     <div class="card">
@@ -138,15 +140,15 @@
         <div class="summary-values">
             <div>
                 <span>Pagado</span>
-                <strong>$ {{ "%.2f"|format(emp.total_pagado) }}</strong>
+                <strong>S/. {{ "%.2f"|format(emp.total_pagado) }}</strong>
             </div>
             <div>
                 <span>Adelantos</span>
-                <strong>$ {{ "%.2f"|format(emp.total_adelantos) }}</strong>
+                <strong>S/. {{ "%.2f"|format(emp.total_adelantos) }}</strong>
             </div>
             <div>
                 <span>Neto</span>
-                <strong>$ {{ "%.2f"|format(emp.neto) }}</strong>
+                <strong>S/. {{ "%.2f"|format(emp.neto) }}</strong>
             </div>
         </div>
     </div>
@@ -176,9 +178,9 @@
             {% for item in resumen_empleados %}
                 <tr>
                     <td data-label="Empleado">{{ item.empleado.nombres }} {{ item.empleado.apellido }}</td>
-                    <td data-label="Pagado">$ {{ "%.2f"|format(item.total_pagado) }}</td>
-                    <td data-label="Adelantos">$ {{ "%.2f"|format(item.total_adelantos) }}</td>
-                    <td data-label="Neto">$ {{ "%.2f"|format(item.neto) }}</td>
+                    <td data-label="Pagado">S/. {{ "%.2f"|format(item.total_pagado) }}</td>
+                    <td data-label="Adelantos">S/. {{ "%.2f"|format(item.total_adelantos) }}</td>
+                    <td data-label="Neto">S/. {{ "%.2f"|format(item.neto) }}</td>
                     <td data-label="Acción"><a class="btn-secondary" href="{{ url_for('pagos_personal_detalle', id_usuario=item.empleado.id_usuario) }}">Historial</a></td>
                 </tr>
             {% endfor %}
@@ -202,7 +204,7 @@
                 <tr>
                     <td data-label="Fecha">{{ pago.fecha_pago.strftime('%Y-%m-%d') }}</td>
                     <td data-label="Empleado">{{ pago.usuario_empleado.nombres }} {{ pago.usuario_empleado.apellido }}</td>
-                    <td data-label="Monto">$ {{ "%.2f"|format(pago.monto) }}</td>
+                    <td data-label="Monto">S/. {{ "%.2f"|format(pago.monto) }}</td>
                     <td data-label="Estado">{{ pago.estado }}</td>
                 </tr>
             {% endfor %}

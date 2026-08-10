@@ -110,6 +110,17 @@ class ActividadUsuario(db.Model):
         return f"<ActividadUsuario {self.id} usuario={self.id_usuario} accion={self.accion}>"
 
 
+class IntentoLogin(db.Model):
+    __tablename__ = 'intentos_login'
+
+    id = db.Column(db.Integer, primary_key=True)
+    identificador = db.Column(db.String(255), nullable=False, index=True)
+    fecha = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<IntentoLogin {self.id} {self.identificador} {self.fecha}>"
+
+
 class TransaccionCaja(db.Model):
     __tablename__ = 'transacciones_caja'
 

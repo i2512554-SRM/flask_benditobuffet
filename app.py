@@ -1,8 +1,12 @@
 # Importamos la clase Flask desde el paquete flask
+import logging
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_bcrypt import Bcrypt
+from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
 from functools import wraps
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import re
 import os
 import uuid
@@ -17,6 +21,7 @@ from models import (
     PagoPersonal,
     Adelanto,
     ActividadUsuario,
+    IntentoLogin,
     TransaccionCaja,
     CierreCaja,
     Producto,
@@ -25,9 +30,13 @@ from models import (
 )
 
 # Creamos una instancia de la aplicación Flask
+load_dotenv()
 app = Flask(__name__)
-app.secret_key = "clave_secreta_segura_bendito_buffet"
+app.secret_key = os.getenv("SECRET_KEY", "clave_secreta_segura_bendito_buffet")
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'perfiles')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -36,6 +45,8 @@ init_db(app)
 with app.app_context():
     db.create_all()
 bcrypt = Bcrypt(app)
+csrf = CSRFProtect(app)
+logging.basicConfig(level=logging.INFO)
 
 # Helpers de contraseña
 
@@ -82,14 +93,73 @@ def admin_required(f):
     return role_required("administrador")(f)
 
 # -------------------------------
+# BLOQUEO DE INTENTOS DE LOGIN
+# -------------------------------
+INTENTOS_MAXIMOS = 5
+VENTANA_BLOQUEO_MINUTOS = 15
+
+
+def _clave_intentos(correo=None, ip=None):
+    if correo:
+        return f"correo:{correo.lower().strip()}"
+    return f"ip:{ip}"
+
+
+def _intentos_fallidos_recientes(identificador):
+    limite = datetime.now() - timedelta(minutes=VENTANA_BLOQUEO_MINUTOS)
+    return IntentoLogin.query.filter(
+        IntentoLogin.identificador == identificador,
+        IntentoLogin.fecha >= limite
+    ).count()
+
+
+def _tiempo_restante_bloqueo(identificador):
+    limite = datetime.now() - timedelta(minutes=VENTANA_BLOQUEO_MINUTOS)
+    intentos = IntentoLogin.query.filter(
+        IntentoLogin.identificador == identificador,
+        IntentoLogin.fecha >= limite
+    ).order_by(IntentoLogin.fecha.asc()).all()
+    if len(intentos) < INTENTOS_MAXIMOS:
+        return 0
+    primer_intento = intentos[0]
+    fin_bloqueo = primer_intento.fecha + timedelta(minutes=VENTANA_BLOQUEO_MINUTOS)
+    restante = int((fin_bloqueo - datetime.now()).total_seconds())
+    return max(0, restante)
+
+
+def _registrar_intento_fallido(identificador):
+    db.session.add(IntentoLogin(identificador=identificador, fecha=datetime.now()))
+    db.session.commit()
+
+
+def _limpiar_intentos(identificador):
+    IntentoLogin.query.filter_by(identificador=identificador).delete()
+    db.session.commit()
+
+# -------------------------------
 # RUTAS
 # -------------------------------
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        correo = request.form["correo"]
+        correo = request.form["correo"].strip().lower()
         clave = request.form["clave"]
+        ip = request.remote_addr or "desconocida"
+
+        clave_correo = _clave_intentos(correo=correo)
+        clave_ip = _clave_intentos(ip=ip)
+
+        for clave_ident, etiqueta in ((clave_correo, "cuenta"), (clave_ip, "IP")):
+            restante = _tiempo_restante_bloqueo(clave_ident)
+            if restante > 0:
+                minutos = max(1, -(-restante // 60))
+                flash(
+                    f"Demasiados intentos fallidos. La {etiqueta} está bloqueada. "
+                    f"Intenta de nuevo en {minutos} min.",
+                    "error"
+                )
+                return render_template("login.html")
 
         usuario = Usuario.query.filter_by(correo=correo).first()
 
@@ -98,12 +168,29 @@ def login():
                 usuario.clave = bcrypt.generate_password_hash(clave).decode('utf-8')
                 db.session.commit()
 
+            _limpiar_intentos(clave_correo)
+            _limpiar_intentos(clave_ip)
+
             session.clear()
             session["usuario_id"] = usuario.id_usuario
             session["rol"] = usuario.rol.nombre.lower() if usuario.rol else ""
             session["nombre"] = usuario.nombres
             return redirect(url_for("panel"))
-        flash("Credenciales incorrectas", "error")
+
+        _registrar_intento_fallido(clave_correo)
+        _registrar_intento_fallido(clave_ip)
+
+        restantes = INTENTOS_MAXIMOS - _intentos_fallidos_recientes(clave_correo)
+        if restantes > 0:
+            flash(
+                f"Credenciales incorrectas. Te quedan {restantes} intento(s).",
+                "error"
+            )
+        else:
+            flash(
+                "Demasiados intentos fallidos. La cuenta fue bloqueada por 15 minutos.",
+                "error"
+            )
     else:
         session.clear()
 
@@ -809,7 +896,7 @@ def enviar_reporte():
         "--efectivo", str(efectivo),
         "--tarjeta", str(tarjeta),
         "--transferencia", str(transferencia),
-        "--destinatario", "i2512554@continental.edu.pe"
+        "--destinatario", os.getenv("REPORTE_DESTINATARIO", "")
     ],
     capture_output=True,
     text=True)
@@ -1047,6 +1134,31 @@ def asignar_turno():
 
 
 # -------------------------------
+# CONSULTA DNI (API RENIEC)
+# -------------------------------
+
+@app.route("/api/dni/<dni>")
+@login_required
+def api_consultar_dni(dni):
+    if not re.match(r'^\d{8}$', dni):
+        return jsonify({"error": "DNI inválido"}), 400
+
+    token = os.getenv("DNI_API_TOKEN", "").strip()
+    if not token:
+        return jsonify({"error": "Token de DNI no configurado"}), 500
+
+    try:
+        respuesta = requests.get(
+            f"https://dniruc.apisperu.com/api/v1/dni/{dni}",
+            params={"token": token},
+            timeout=10,
+        )
+        return jsonify(respuesta.json()), respuesta.status_code
+    except requests.RequestException:
+        return jsonify({"error": "Error de conexión con la API de RENIEC"}), 502
+
+
+# -------------------------------
 # INVENTARIO E INVERSIÓN
 # -------------------------------
 
@@ -1262,7 +1374,7 @@ if __name__ == "__main__":
             )
             db.session.add(admin)
             db.session.commit()
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1")
 
 @app.after_request
 def add_header(response):

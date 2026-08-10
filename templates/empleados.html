@@ -30,6 +30,7 @@
         <div class="card">
             <h2>Nuevo Empleado</h2>
             <form method="POST" action="{{ url_for('nuevo_empleado') }}" class="form-grid">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="nombres" placeholder="Nombres" required>
                 <input type="text" name="apellido" placeholder="Apellido">
                 
