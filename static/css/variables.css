@@ -36,6 +36,18 @@
     --scrollbar-thumb: #cbd5e1;
     --scrollbar-thumb-hover: #a1a9b8;
     --transition-fast: 180ms;
+
+    /* Module system tokens */
+    --module-icon-size: 56px;
+    --module-icon-bg: linear-gradient(135deg, var(--stat-gradient-start), var(--stat-gradient-end));
+    --module-radius: 18px;
+    --card-radius: 18px;
+    --table-radius: 18px;
+    --modal-radius: 20px;
+    --page-padding: 2.5rem;
+    --section-gap: 1.5rem;
+    --btn-radius: 12px;
+    --badge-radius: 999px;
 }
 
 body,
@@ -54,6 +66,7 @@ html {
 
 body.dark-mode,
 .dark-mode {
+    color-scheme: dark;
     --color-gris-claro: #111827;
     --color-blanco: #1f2937;
     --color-negro-suave: #f9fafb;
@@ -80,6 +93,9 @@ body.dark-mode,
     --scrollbar-track: #1b2433;
     --scrollbar-thumb: #334155;
     --scrollbar-thumb-hover: #475569;
+
+    /* Module system dark tokens */
+    --module-icon-bg: linear-gradient(135deg, rgba(255,122,24,0.2), rgba(255,178,89,0.15));
 }
 
 button,
@@ -140,6 +156,11 @@ textarea {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 0.9rem 1rem;
+}
+
+select option {
+    background: var(--input-bg);
+    color: var(--text-main);
 }
 
 input::placeholder,

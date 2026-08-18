@@ -4,24 +4,24 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 {% endblock %}
 {% block content %}
-<header>
+<header class="page-header">
     <div>
         <h1>
-            <a href="{{ url_for('gestion_personal') }}" class="btn-outline">
-                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            <a href="{{ url_for('gestion_personal') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
             </a>
             Salarios
         </h1>
         <p>Asignación y edición de salarios del personal</p>
     </div>
-    <div class="header-buttons">
+    <div class="header-actions">
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
     </div>
 </header>
 
-<section class="tables tables--single">
-    <div class="table-card">
+<div class="pagos-container">
+<section class="table-card">
         <h2><i class="fa-solid fa-coins" style="color: var(--btn-primary); margin-right: 8px;"></i> Lista de Empleados</h2>
         {% if empleados %}
         <table>
@@ -41,7 +41,7 @@
                     <td data-label="Nombre">{{ emp.nombres }} {{ emp.apellido }}</td>
                     <td data-label="DNI">{{ emp.dni or '—' }}</td>
                     <td data-label="Rol">{{ emp.rol.nombre if emp.rol else 'N/A' }}</td>
-                    <td data-label="Estado"><span class="estado {{ 'activo' if emp.estado == 1 else 'inactivo' }}">{{ 'Activo' if emp.estado == 1 else 'Inactivo' }}</span></td>
+                    <td data-label="Estado"><span class="estado {{ 'activo' if emp.estado else 'inactivo' }}">{{ 'Activo' if emp.estado else 'Inactivo' }}</span></td>
                     <td data-label="Salario Actual">
                         {% if emp.perfil and emp.perfil.salario is not none %}
                             S/. {{ '%.2f'|format(emp.perfil.salario) }}
@@ -67,6 +67,7 @@
         {% endif %}
     </div>
 </section>
+</div>
 
 <div class="overlay hidden" id="modalSalario">
     <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="modalSalarioTitulo">

@@ -6,17 +6,17 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/caja.css') }}">
 {% endblock %}
 {% block content %}
-<header>
+<header class="page-header">
     <div>
         <h1>
-            <a href="{{ url_for('gestion_personal') }}" class="btn-outline">
-                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            <a href="{{ url_for('gestion_personal') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
             </a>
             Pagos al Personal
         </h1>
         <p>Control mensual de salarios, adelantos y netos.</p>
     </div>
-    <div class="header-buttons">
+    <div class="header-actions">
         <button type="button" class="btn-outline" id="openRegisterPayment">+ registrar pago</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
@@ -90,6 +90,7 @@
     </div>
 </div>
 
+<div class="pagos-container">
 <section class="stats">
     <div class="card">
         <h3>Total pagado</h3>
@@ -214,6 +215,7 @@
         {{ paginacion(pagos_historial, 'pagos_personal') }}
     </div>
 </section>
+</div>
 
 <script>
     const showEmpleadosBtn = document.getElementById('showEmpleados');

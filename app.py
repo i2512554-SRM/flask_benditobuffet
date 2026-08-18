@@ -1,36 +1,29 @@
 # Importamos la clase Flask desde el paquete flask
 import logging
 import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from flask_bcrypt import Bcrypt
-from flask_wtf.csrf import CSRFProtect
-from dotenv import load_dotenv
-from functools import wraps
-from datetime import datetime, date, timedelta
 import re
 import os
 import uuid
+from functools import wraps
+from datetime import datetime, date, timedelta
 from calendar import monthrange
-from werkzeug.utils import secure_filename
-from bd import db, init_db
-from models import (
-    Usuario,
-    Rol,
-    UsuarioPerfil,
-    PagoEmpleado,
-    PagoPersonal,
-    Adelanto,
-    ActividadUsuario,
-    IntentoLogin,
-    TransaccionCaja,
-    CierreCaja,
-    Producto,
-    Inversion,
-    Categoria,
-)
 
-# Creamos una instancia de la aplicación Flask
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask_bcrypt import Bcrypt
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+from pathlib import Path
+# Fuerza la carga del archivo .env usando la ruta absoluta de la carpeta raíz
+env_path = Path(__file__).resolve().parent / '.env'
+load_dotenv(dotenv_path=env_path)
+# 1. CARGAR VARIABLES DEL ARCHIVO .ENV PRIMERO
 load_dotenv()
+
+# 2. IMPORTAR db e init_db
+from bd import db, init_db
+
+# 3. CREAR LA APP Y CONFIGURAR
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "clave_secreta_segura_bendito_buffet")
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
@@ -40,14 +33,19 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'perfiles')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Inicializamos SQLAlchemy con la aplicación Flask
+# 4. INICIALIZAR SQLAlchemy con Supabase
 init_db(app)
-with app.app_context():
-    db.create_all()
+
 bcrypt = Bcrypt(app)
 csrf = CSRFProtect(app)
 logging.basicConfig(level=logging.INFO)
 
+# 5. IMPORTAR MODELOS AL FINAL
+from models import (
+    Usuario, Rol, DocumentoIdentidad, UsuarioPerfil, PagoEmpleado, PagoPersonal,
+    Adelanto, ActividadUsuario, IntentoLogin, TransaccionCaja,
+    CierreCaja, Producto, Inversion, Categoria, Proveedor
+)
 # Helpers de contraseña
 
 def is_hashed_password(password):
@@ -399,10 +397,10 @@ def _obtener_proximo_pago():
 def pagos_personal():
     inicio, fin = _parse_filtro_mes()
     total_pagado_mes, total_adelantos_mes, neto_mes = _obtener_totales_pagos(inicio, fin)
-    empleados_activos = Usuario.query.filter_by(estado=1).count()
+    empleados_activos = Usuario.query.filter_by(estado=True).count()
     proximo_pago_dias = _obtener_proximo_pago()
 
-    empleados = Usuario.query.filter_by(estado=1).order_by(Usuario.nombres.asc()).all()
+    empleados = Usuario.query.filter_by(estado=True).order_by(Usuario.nombres.asc()).all()
     pagos_map, adelantos_map = _totales_pagos_por_empleado(inicio, fin)
     resumen_empleados = []
     for empleado in empleados:
@@ -647,7 +645,7 @@ def editar_perfil():
 
     perfil = usuario.perfil
     if not perfil:
-        perfil = UsuarioPerfil(id_usuario=usuario.id_usuario)
+        perfil = UsuarioPerfil(id_usuario=usuario.id_usuario, fecha_creacion=datetime.now())
         db.session.add(perfil)
 
     if foto and foto.filename:
@@ -1027,7 +1025,7 @@ def gestionar_salarios():
         usuario = Usuario.query.get_or_404(int(id_usuario))
         perfil = usuario.perfil
         if not perfil:
-            perfil = UsuarioPerfil(id_usuario=usuario.id_usuario)
+            perfil = UsuarioPerfil(id_usuario=usuario.id_usuario, fecha_creacion=datetime.now())
             db.session.add(perfil)
 
         perfil.salario = salario
@@ -1041,7 +1039,7 @@ def gestionar_salarios():
 
         return redirect(url_for("gestionar_salarios"))
 
-    empleados = Usuario.query.options(db.joinedload(Usuario.rol), db.joinedload(Usuario.perfil)).order_by(Usuario.estado.desc(), Usuario.nombres).all()
+    empleados = Usuario.query.options(db.joinedload(Usuario.rol), db.joinedload(Usuario.perfil), db.joinedload(Usuario.documento)).order_by(Usuario.estado.desc(), Usuario.nombres).all()
     return render_template("salarios.html", empleados=empleados)
 
 # -------------------------------
@@ -1052,7 +1050,7 @@ def gestionar_salarios():
 @login_required
 @admin_required
 def empleados():
-    empleados_list = Usuario.query.options(db.joinedload(Usuario.rol)).all()
+    empleados_list = Usuario.query.options(db.joinedload(Usuario.rol), db.joinedload(Usuario.documento)).all()
     roles = Rol.query.all()
     return render_template("empleados.html", empleados=empleados_list, roles=roles)
 
@@ -1061,9 +1059,9 @@ def empleados():
 @admin_required
 def toggle_estado_empleado(id):
     empleado = Usuario.query.get_or_404(id)
-    empleado.estado = 0 if empleado.estado == 1 else 1
+    empleado.estado = not empleado.estado
     db.session.commit()
-    flash(f"Empleado {'activado' if empleado.estado == 1 else 'desactivado'}", "success")
+    flash(f"Empleado {'activado' if empleado.estado else 'desactivado'}", "success")
     return redirect(url_for("empleados"))
 
 @app.route("/empleados/nuevo", methods=["GET", "POST"])
@@ -1084,21 +1082,25 @@ def nuevo_empleado():
         usuario_login = correo
         hashed_clave = bcrypt.generate_password_hash(clave).decode('utf-8')
 
+        doc = DocumentoIdentidad(tipo_documento='DNI', numero=dni)
+        db.session.add(doc)
+        db.session.flush()
+
         nuevo_usuario = Usuario(
             nombres=nombres,
             apellido=apellido,
-            dni=dni,
+            id_documento=doc.id_documento,
             correo=correo,
             telefono=telefono,
             usuario=usuario_login,
             clave=hashed_clave,
             id_rol=rol_id,
-            estado=1
+            estado=True
         )
         db.session.add(nuevo_usuario)
         db.session.commit()
 
-        perfil = UsuarioPerfil(id_usuario=nuevo_usuario.id_usuario, fecha_ingreso=date.today())
+        perfil = UsuarioPerfil(id_usuario=nuevo_usuario.id_usuario, fecha_ingreso=date.today(), fecha_creacion=datetime.now())
         db.session.add(perfil)
         db.session.commit()
 
@@ -1117,11 +1119,13 @@ def editar_empleado(id):
     if request.method == "POST":
         empleado.nombres = request.form["nombres"]
         empleado.apellido = request.form.get("apellido", "")
-        empleado.dni = request.form["dni"]
         empleado.correo = request.form["correo"]
         empleado.telefono = request.form.get("telefono", "")
         empleado.id_rol = int(request.form["rol_id"])
         empleado.usuario = request.form.get("usuario", empleado.correo)
+
+        if empleado.documento:
+            empleado.documento.numero = request.form["dni"]
 
         clave_nueva = request.form.get("clave")
         if clave_nueva:
@@ -1162,7 +1166,7 @@ def _toggle_turno_usuario(usuario, turno_nombre):
 @login_required
 @admin_required
 def turnos():
-    empleados = Usuario.query.options(db.joinedload(Usuario.rol)).all()
+    empleados = Usuario.query.options(db.joinedload(Usuario.rol), db.joinedload(Usuario.documento)).all()
     return render_template("turnos.html", empleados=empleados)
 
 
@@ -1223,8 +1227,8 @@ def _calcular_resumen_inventario():
     ).scalar() or 0
     total_equipamiento = db.session.query(
         db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
-    ).filter(
-        db.func.lower(Producto.categoria).like('%equipamiento%')
+    ).join(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(
+        db.func.lower(Categoria.nombre).like('%equipamiento%')
     ).scalar() or 0
     return float(total_inventario), float(total_equipamiento)
 
@@ -1269,12 +1273,12 @@ def inventario():
 
     query_productos = Producto.query
     if cat:
-        query_productos = query_productos.filter(db.func.lower(Producto.categoria) == cat.lower())
+        query_productos = query_productos.join(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.func.lower(Categoria.nombre) == cat.lower())
     if q:
         like = f"%{q.lower()}%"
-        query_productos = query_productos.filter(db.or_(
+        query_productos = query_productos.outerjoin(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.or_(
             db.func.lower(Producto.nombre).like(like),
-            db.func.lower(Producto.categoria).like(like),
+            db.func.lower(Categoria.nombre).like(like),
         ))
     productos = query_productos.order_by(Producto.fecha_registro.desc()).paginate(
         page=page, per_page=PAGINACION_POR_PAGINA, error_out=False
@@ -1327,12 +1331,19 @@ def inventario_articulo_nuevo():
         flash(errores[0], "error")
         return redirect(url_for("inventario"))
 
+    cat_obj = Categoria.query.filter(db.func.lower(Categoria.nombre) == categoria.lower()).first()
+    if not cat_obj:
+        cat_obj = Categoria(nombre=categoria, fecha_creacion=datetime.now())
+        db.session.add(cat_obj)
+        db.session.flush()
+
     producto = Producto(
         nombre=nombre,
-        categoria=categoria,
+        id_categoria=cat_obj.id_categoria,
         precio=precio,
         stock=stock,
-        fecha_registro=datetime.now()
+        fecha_registro=datetime.now(),
+        fecha_edicion=datetime.now()
     )
     db.session.add(producto)
     db.session.commit()
@@ -1425,36 +1436,6 @@ def inventario_articulo_editar(id):
 # INICIALIZACIÓN
 # -------------------------------
 
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        if not Rol.query.filter_by(nombre="Administrador").first():
-            roles = [
-                Rol(nombre="Administrador"),
-                Rol(nombre="Cajera"),
-                Rol(nombre="Cocinero"),
-                Rol(nombre="Trabajador")
-            ]
-            db.session.bulk_save_objects(roles)
-            db.session.commit()
-
-        if not Usuario.query.filter_by(correo="admin@bendito.com").first():
-            hashed = bcrypt.generate_password_hash("admin123").decode('utf-8')
-            admin_role = Rol.query.filter_by(nombre="Administrador").first()
-            admin = Usuario(
-                nombres="Administrador",
-                apellido="",
-                dni="",
-                correo="admin@bendito.com",
-                telefono="",
-                usuario="admin@bendito.com",
-                clave=hashed,
-                id_rol=admin_role.id_rol if admin_role else 1,
-                estado=1
-            )
-            db.session.add(admin)
-            db.session.commit()
-    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1")
 
 @app.after_request
 def add_header(response):
@@ -1462,3 +1443,7 @@ def add_header(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)

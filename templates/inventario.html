@@ -4,23 +4,23 @@
 {% block title %}Inventario e Inversión - Bendito Buffet{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="main-container">
-<header class="inventario-header">
-   <div>
-    <h1>
-        <a href="{{ url_for('panel') }}" class="btn-outline">
-            <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
-        </a>
-        Inventario e Inversión
-    </h1>
-
-    <p>Monitorea stock, costos y compras</p>
-</div>
+<header class="page-header">
+    <div>
+        <h1>
+            <a href="{{ url_for('panel') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            Inventario e Inversión
+        </h1>
+        <p>Monitorea stock, costos y compras</p>
+    </div>
     <div class="header-actions">
         <button type="button" class="btn-secondary" id="btnNuevoArticulo">
             <i class="fa-solid fa-plus"></i> Nuevo artículo

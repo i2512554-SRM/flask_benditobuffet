@@ -4,39 +4,35 @@
 {% block title %}Gestión de Caja - Bendito Buffet{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/caja.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 {% endblock %}
 
 {% block content %}
 <div class="main-container">
-<header class="caja-header">
+<header class="page-header">
     <div>
         <h1>
-            <a href="{{ url_for('panel') }}" class="btn-outline">
-                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            <a href="{{ url_for('panel') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
             </a>
             Gestión de Caja
         </h1>
-
         <p>Registra ventas, gastos y cierra el corte diario.</p>
     </div>
-
-   <div class="header-actions">
-    
-
-    <form action="{{ url_for('enviar_reporte') }}" method="POST" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn-primary" data-loading-text="Enviando...">
-            <i class="fa-solid fa-envelope"></i> Enviar Reporte
+    <div class="header-actions">
+        <form action="{{ url_for('enviar_reporte') }}" method="POST" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-primary" data-loading-text="Enviando...">
+                <i class="fa-solid fa-envelope"></i> Enviar Reporte
+            </button>
+        </form>
+        <button class="btn-primary" id="btnOpenCerrarCaja">
+            Cerrar Caja
         </button>
-    </form>
-
-    <button class="btn-primary" id="btnOpenCerrarCaja">
-        Cerrar Caja
-    </button>
-    <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
-</div>
+        <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
+    </div>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -49,30 +45,39 @@
     {% endif %}
 {% endwith %}
 
-<section class="stats">
-    <div class="card small-card">
-        <h3>Ventas del Día</h3>
-        <h2>S/.{{ "%.2f" | format(ventas_dia) }}</h2>
+<section class="caja-stats">
+    <div class="caja-stat-card">
+        <span class="caja-stat-icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
+        <div>
+            <h3>Ventas del Día</h3>
+            <h2>S/.{{ "%.2f" | format(ventas_dia) }}</h2>
+        </div>
     </div>
-    <div class="card small-card">
-        <h3>Gastos del Día</h3>
-        <h2>S/.{{ "%.2f" | format(gastos_dia) }}</h2>
+    <div class="caja-stat-card">
+        <span class="caja-stat-icon caja-stat-icon--danger"><i class="fa-solid fa-arrow-trend-down"></i></span>
+        <div>
+            <h3>Gastos del Día</h3>
+            <h2>S/.{{ "%.2f" | format(gastos_dia) }}</h2>
+        </div>
     </div>
-    <div class="card small-card">
-        <h3>Neto del Día</h3>
-        <h2 class="{{ 'positive' if neto_dia >= 0 else 'negative' }}">S/.{{ "%.2f" | format(neto_dia) }}</h2>
+    <div class="caja-stat-card">
+        <span class="caja-stat-icon caja-stat-icon--net"><i class="fa-solid fa-scale-balanced"></i></span>
+        <div>
+            <h3>Neto del Día</h3>
+            <h2 class="{{ 'positive' if neto_dia >= 0 else 'negative' }}">S/.{{ "%.2f" | format(neto_dia) }}</h2>
+        </div>
     </div>
 </section>
 
 <section class="tabs-container">
     <div class="tabs-nav">
-        <button type="button" class="tab-button active" data-tab="tab-nueva">Nueva Transacción</button>
+        <button type="button" class="tab-button" data-tab="tab-nueva">Nueva Transacción</button>
         <button type="button" class="tab-button" data-tab="tab-historial">Historial</button>
         <button type="button" class="tab-button" data-tab="tab-cierres">Cierres de Caja</button>
     </div>
 
     <div class="tabs-content">
-        <section id="tab-nueva" class="tab-panel active">
+        <section id="tab-nueva" class="tab-panel">
     <article class="panel-card">
 
         <div class="card-header">

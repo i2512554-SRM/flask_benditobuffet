@@ -2,63 +2,25 @@
 {% block title %}Asignación de Turnos - Bendito Buffet{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
-<style>
-.turno-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    background: var(--btn-primary, #ff7b00);
-    color: #fff;
-    margin: 1px 2px;
-}
-.text-muted {
-    color: var(--text-muted, #888);
-    font-size: 0.85rem;
-}
-.toggle-turno-form {
-    display: inline;
-}
-.btn-turno {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.3rem;
-    padding: 4px 8px;
-    transition: transform 0.15s;
-}
-.btn-turno:hover {
-    transform: scale(1.15);
-}
-.btn-turno.activo {
-    color: var(--btn-primary, #ff7b00);
-}
-.btn-turno.inactivo {
-    color: var(--text-muted, #555);
-}
-.btn-turno.inactivo:hover {
-    color: var(--btn-primary, #ff7b00);
-}
-</style>
 {% endblock %}
 {% block content %}
-<header>
+<header class="page-header">
     <div>
         <h1>
-            <a href="{{ url_for('gestion_personal') }}" class="btn-outline">
-                <i class="fa-solid fa-arrow-left" style="font-size: 16px;"></i>
+            <a href="{{ url_for('gestion_personal') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
             </a>
             Asignación de Turnos
         </h1>
         <p>Asigna turnos de tarde (12:00–17:00) y noche (17:00–22:00) a cada empleado</p>
     </div>
-    <div class="header-buttons">
+    <div class="header-actions">
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
     </div>
 </header>
 
+<section class="pagos-container">
 <section class="table-card">
     <h2>Empleados y turnos asignados</h2>
     {% if empleados %}
@@ -118,6 +80,7 @@
     {% else %}
     <p>No hay empleados registrados.</p>
     {% endif %}
+</section>
 </section>
 
 {% with messages = get_flashed_messages(with_categories=true) %}

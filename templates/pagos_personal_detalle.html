@@ -4,17 +4,17 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 {% endblock %}
 {% block content %}
-<header>
+<header class="page-header">
     <div>
-    <h1>Historial de {{ empleado.nombres }} {{ empleado.apellido }}</h1>
-
-    <p>Historial de pagos, adelantos y movimientos</p>
-</div>
-    <div class="header-buttons">
-        <a href="{{ url_for('pagos_personal') }}" class="btn-outline">
-            <i class="fa-solid fa-arrow-left" style="font-size:16px"></i>
-            Volver
-        </a>
+        <h1>
+            <a href="{{ url_for('pagos_personal') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            Historial de {{ empleado.nombres }} {{ empleado.apellido }}
+        </h1>
+        <p>Historial de pagos, adelantos y movimientos</p>
+    </div>
+    <div class="header-actions">
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
     </div>
 </header>

@@ -4,12 +4,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/panel.css') }}">
 {% endblock %}
 {% block content %}
-<header>
+<header class="page-header">
     <div>
         <h1>Panel Cajero</h1>
         <p>Gestión de caja y ventas</p>
     </div>
-    <div class="header-buttons">
+    <div class="header-actions">
         <button class="btn-outline" onclick="location.href='{{ url_for('perfil') }}'">Mi Perfil</button>
         <a href="{{ url_for('logout') }}" class="btn-outline">Cerrar Sesión</a>
         <button type="button" class="btn-outline" data-theme-toggle aria-pressed="false" aria-label="Alternar modo noche"><i class="fa-solid fa-moon"></i></button>
@@ -41,11 +41,13 @@
 
     <div class="module-grid">
         <div class="module-card" onclick="location.href='{{ url_for('caja') }}'">
+            <span class="module-icon"><i class="fa-solid fa-cash-register"></i></span>
             <h3>Gestión de Caja</h3>
             <p>Registrar ventas, egresos y cierre diario</p>
         </div>
 
         <div class="module-card" onclick="location.href='{{ url_for('inventario') }}'">
+            <span class="module-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
             <h3>Inventario</h3>
             <p>Ver productos disponibles</p>
         </div>
