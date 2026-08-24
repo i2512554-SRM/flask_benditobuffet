@@ -1,63 +1,74 @@
 .container {
     max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: Arial, sans-serif;
+    margin: 40px auto;
+    padding: 0 20px;
 }
 
-h1 {
+.container h1 {
     text-align: center;
-    color: #333;
+    color: var(--color-negro-suave);
+    margin-bottom: 20px;
 }
 
-.form-group {
+.container .form-group {
     margin-bottom: 15px;
 }
 
-label {
+.container label {
     display: block;
     margin-bottom: 5px;
-    font-weight: bold;
+    color: var(--color-negro-suave);
+    font-weight: 600;
 }
 
-select, input[type="text"] {
+.container select,
+.container input {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid var(--color-gris-suave);
+    border-radius: 10px;
+    background: var(--color-blanco);
+    color: var(--color-negro-suave);
+    font-size: 14px;
 }
 
-button {
-    display: block;
+.container select:focus,
+.container input:focus {
+    outline: none;
+    border-color: var(--color-primario-naranja);
+}
+
+.container button {
     width: 100%;
-    padding: 10px;
-    background-color: #007bff;
-    color: white;
+    padding: 12px;
+    background: var(--color-primario-naranja);
+    color: var(--color-blanco);
     border: none;
-    border-radius: 4px;
+    border-radius: 10px;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
 }
 
-button:hover {
-    background-color: #0056b3;
+.container button:hover {
+    opacity: 0.9;
 }
 
 #resultado {
     margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #f9f9f9;
 }
 
 #resultado pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    background: var(--color-gris-claro);
+    padding: 15px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    color: var(--color-negro-suave);
 }
 
-.error {
-    color: red;
-    font-weight: bold;
+#resultado .error {
+    color: var(--color-rojo);
+    text-align: center;
+    padding: 10px;
 }

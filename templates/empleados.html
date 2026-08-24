@@ -55,7 +55,7 @@ oninput="this.value=this.value.replace(/[^0-9]/g,'')">
 </div>
 
 <input type="hidden" id="nombres" name="nombres">
-<input type="hidden" id="apellidos" name="apellidos">
+<input type="hidden" id="apellidos" name="apellido">
 
 </div>
 
@@ -111,7 +111,7 @@ oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
 <tbody>
 {% for empleado in empleados %}
 <tr>
-    <td>{{ empleado.nombres }} {{ empleado.apellidos }}</td>
+    <td>{{ empleado.nombres }} {{ empleado.apellido }}</td>
     <td>{{ empleado.dni }}</td>
     <td>{{ empleado.correo }}</td>
     <td>{{ empleado.telefono }}</td>
@@ -202,12 +202,15 @@ function buscarDNI() {
         });
 }
 
-document.querySelector("form").addEventListener("submit", function(e) {
-    if (!dniConsultado) {
-        e.preventDefault();
-        alert("Primero debes consultar el DNI");
-    }
-});
+const form = document.querySelector("form");
+if (form) {
+    form.addEventListener("submit", function(e) {
+        if (!dniConsultado) {
+            e.preventDefault();
+            alert("Primero debes consultar el DNI");
+        }
+    });
+}
 </script>
 
 {% endblock %}

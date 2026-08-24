@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Página no encontrada - Bendito Buffet{% endblock %}
+{% block extra_css %}
+<style>
+    body {
+        display: flex; align-items: center; justify-content: center;
+        min-height: 100vh; margin: 0;
+        background: var(--bg-primary, #0d1117);
+        color: var(--text-primary, #c9d1d9);
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .error-container {
+        text-align: center; padding: 2rem;
+        background: var(--bg-secondary, #161b22);
+        border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+        max-width: 420px; width: 90%;
+    }
+    .error-code {
+        font-size: 5rem; font-weight: 800; line-height: 1;
+        background: linear-gradient(135deg, var(--primary, #ff6b35), var(--secondary, #ffc107));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: .5rem;
+    }
+    .error-msg { font-size: 1.3rem; margin-bottom: 1.5rem; opacity: .85; }
+    .error-container a {
+        display: inline-block; padding: .7rem 2rem; border-radius: 8px;
+        background: var(--primary, #ff6b35); color: #fff;
+        text-decoration: none; font-weight: 600; transition: .2s;
+    }
+    .error-container a:hover { opacity: .85; transform: translateY(-1px); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-msg">Página no encontrada</div>
+    <p style="opacity:.6;margin-bottom:1.5rem;">La página que buscas no existe o fue movida.</p>
+    <a href="{{ url_for('panel') }}">Volver al Panel</a>
+</div>
+{% endblock %}

@@ -415,6 +415,11 @@ def editar_empleado(id):
 @admin_required
 def eliminar_empleado(id):
     empleado = Usuario.query.get_or_404(id)
+    BloqueoLogin.query.filter_by(usuario=empleado.correo).delete()
+    try:
+        db.session.execute(db.text("DELETE FROM actividad_usuario WHERE id_usuario = :id"), {"id": id})
+    except Exception:
+        pass
     db.session.delete(empleado)
     db.session.commit()
     flash("Empleado eliminado", "success")
@@ -432,6 +437,7 @@ def consulta_dni():
     return render_template("consulta_dni.html")
 
 @app.route('/api/dni/<dni>')
+@login_required
 def consultar_dni(dni):
     import requests
 
@@ -467,9 +473,55 @@ def test_db():
         return f"✅ Conectado. Usuarios encontrados: {len(usuarios)}"
     except Exception as e:
         return f"💥 Error: {str(e)}"
+
+@app.route("/panel")
+@login_required
+def panel_redirect():
+    return redirect(url_for("panel"))
+
+@app.route("/editar_perfil", methods=["GET", "POST"])
+@login_required
+def editar_perfil():
+    empleado = Usuario.query.get_or_404(session["usuario_id"])
+    if request.method == "POST":
+        empleado.nombres = request.form.get("nombres", empleado.nombres).strip()
+        empleado.apellido = request.form.get("apellido", empleado.apellido).strip()
+        empleado.telefono = request.form.get("telefono", empleado.telefono).strip()
+        try:
+            db.session.commit()
+            flash("Perfil actualizado correctamente", "success")
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Error al actualizar perfil", "error")
+        return redirect(url_for("perfil", id=empleado.id_usuario))
+    return redirect(url_for("perfil", id=empleado.id_usuario))
+
+@app.route("/caja")
+@login_required
+def caja():
+    flash("Módulo de Caja en desarrollo", "error")
+    return redirect(url_for("panel"))
+
+@app.route("/inventario")
+@login_required
+def inventario():
+    flash("Módulo de Inventario en desarrollo", "error")
+    return redirect(url_for("panel"))
+
+@app.errorhandler(404)
+def pagina_no_encontrada(e):
+    return render_template("404.html"), 404
+
 # -------------------------------
 # INICIALIZACIÓN
 # -------------------------------
+
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 if __name__ == "__main__":
     with app.app_context():
@@ -501,10 +553,3 @@ if __name__ == "__main__":
             db.session.add(admin)
             db.session.commit()
     app.run(debug=True)
-
-@app.after_request
-def add_header(response):
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
