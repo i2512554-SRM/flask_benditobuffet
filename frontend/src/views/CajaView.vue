@@ -11,8 +11,9 @@
     
     <div v-if="cajaAbierta" class="status-box">
       <h3>Caja Abierta</h3>
-      <p>Monto inicial: S/. {{ cajaActual.neto }}</p>
-      <p>Monto actual: S/. {{ montoActual }}</p>
+      <p>Total ventas: S/. {{ totalVentas }}</p>
+      <p>Total egresos: S/. {{ totalEgresos }}</p>
+      <p>Neto del dia: S/. {{ netoDia }}</p>
     </div>
     
     <DataTable :value="transacciones" class="mt-4">
@@ -23,10 +24,7 @@
     </DataTable>
     
     <Dialog v-model:visible="dialogAbierta" header="Abrir Caja" :modal="true">
-      <div class="field">
-        <label for="monto_inicial">Monto Inicial</label>
-        <InputNumber id="monto_inicial" v-model="montoInicial" mode="currency" currency="PEN" locale="es-PE" />
-      </div>
+      <p>Se abrira la caja del dia. Las ventas y gastos se registraran a continuacion.</p>
       <template #footer>
         <Button label="Cancelar" severity="secondary" @click="dialogAbierta = false" />
         <Button label="Abrir" @click="abrirCaja" />
@@ -55,10 +53,9 @@
     <Dialog v-model:visible="dialogCierre" header="Cerrar Caja" :modal="true">
       <div class="resumen">
         <h3>Resumen de Caja</h3>
-        <p>Monto inicial: S/. {{ cajaActual.neto }}</p>
         <p>Total ventas: S/. {{ totalVentas }}</p>
         <p>Total egresos: S/. {{ totalEgresos }}</p>
-        <p>Monto final: S/. {{ montoActual }}</p>
+        <p>Neto del dia: S/. {{ netoDia }}</p>
       </div>
       <template #footer>
         <Button label="Cancelar" severity="secondary" @click="dialogCierre = false" />
@@ -91,54 +88,46 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import api from '../config/axios'
 
 const transacciones = ref([])
 const historial = ref([])
-const cajaActual = ref({})
+const cajaActual = ref({ abierta: false, cierre: null, ventas_dia: 0, gastos_dia: 0, neto_dia: 0, transacciones: [] })
 const dialogAbierta = ref(false)
 const dialogTransaccion = ref(false)
 const dialogCierre = ref(false)
 const dialogHistorial = ref(false)
-const montoInicial = ref(0)
 const nuevaTransaccion = ref({
-  tipo: 'venta',
+  tipo: 'Venta',
   monto: 0,
   descripcion: ''
 })
 
 const tiposTransaccion = [
-  { label: 'Venta', value: 'venta' },
-  { label: 'Egreso', value: 'egreso' }
+  { label: 'Venta', value: 'Venta' },
+  { label: 'Gasto', value: 'Gasto' }
 ]
 
-const cajaAbierta = computed(() => cajaActual.value.id_cierre && cajaActual.value.fecha === null)
+const cajaAbierta = computed(() => !!cajaActual.value.abierta)
 
 const totalVentas = computed(() => {
   return transacciones.value
-    .filter(t => t.tipo === 'venta')
+    .filter(t => t.tipo === 'Venta')
     .reduce((sum, t) => sum + t.monto, 0)
     .toFixed(2)
 })
 
 const totalEgresos = computed(() => {
   return transacciones.value
-    .filter(t => t.tipo === 'egreso')
+    .filter(t => t.tipo === 'Gasto')
     .reduce((sum, t) => sum + t.monto, 0)
     .toFixed(2)
 })
 
-const montoActual = computed(() => {
-  if (!cajaActual.value.id_cierre) return 0
-  let monto = cajaActual.value.neto
-  transacciones.value.forEach(t => {
-    if (t.tipo === 'venta') monto += t.monto
-    else if (t.tipo === 'egreso') monto -= t.monto
-  })
-  return monto.toFixed(2)
+const netoDia = computed(() => {
+  return (Number(totalVentas.value) - Number(totalEgresos.value)).toFixed(2)
 })
 
 onMounted(async () => {
@@ -197,13 +186,12 @@ const cargarHistorial = async () => {
 }
 
 const verDetalle = (caja) => {
-  // TODO: Implementar vista de detalle
   console.log('Ver detalle de caja:', caja)
 }
 
 const abrirCaja = async () => {
   try {
-    const response = await api.post('/caja/abrir', { monto_inicial: montoInicial.value })
+    const response = await api.post('/caja/abrir', {})
     if (response.data.success) {
       await cargarCajaActual()
       dialogAbierta.value = false
@@ -218,8 +206,9 @@ const registrarTransaccion = async () => {
     const response = await api.post('/caja/transacciones', nuevaTransaccion.value)
     if (response.data.success) {
       await cargarTransacciones()
+      await cargarCajaActual()
       dialogTransaccion.value = false
-      nuevaTransaccion.value = { tipo: 'venta', monto: 0, descripcion: '' }
+      nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
     }
   } catch (error) {
     console.error('Error registrando transaccion:', error)

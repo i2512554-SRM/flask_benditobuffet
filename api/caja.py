@@ -9,7 +9,7 @@ caja_bp = Blueprint('caja', __name__)
 @jwt_required()
 def get_caja_actual():
     from datetime import datetime, timedelta
-    hoy = datetime.now().date()
+    hoy = datetime.utcnow().date()
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
 
@@ -24,9 +24,15 @@ def get_caja_actual():
         TransaccionCaja.fecha < fin
     ).order_by(TransaccionCaja.fecha.desc()).all()
 
+    cierre = CierreCaja.query.filter(
+        CierreCaja.fecha >= inicio, CierreCaja.fecha < fin, CierreCaja.estado == 'abierta'
+    ).first()
+
     return jsonify({
         'success': True,
         'data': {
+            'abierta': cierre is not None,
+            'cierre': cierre_schema.dump(cierre) if cierre else None,
             'ventas_dia': float(ventas),
             'gastos_dia': float(gastos),
             'neto_dia': float(ventas) - float(gastos),
@@ -38,19 +44,21 @@ def get_caja_actual():
 @jwt_required()
 def abrir_caja():
     from datetime import datetime, timedelta
-    hoy = datetime.now().date()
+    hoy = datetime.utcnow().date()
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
 
-    cierre_hoy = CierreCaja.query.filter(CierreCaja.fecha >= inicio, CierreCaja.fecha < fin).first()
+    cierre_hoy = CierreCaja.query.filter(
+        CierreCaja.fecha >= inicio, CierreCaja.fecha < fin, CierreCaja.estado == 'abierta'
+    ).first()
     if cierre_hoy:
-        return jsonify({'success': False, 'message': 'Ya hay un cierre registrado hoy'}), 400
+        return jsonify({'success': False, 'message': 'Ya hay una caja abierta hoy'}), 400
     
     cierre = CierreCaja(
         id_usuario=get_jwt_identity(),
         total_ventas=0,
         total_gastos=0,
-        neto=0,
+        estado='abierta',
         fecha=datetime.utcnow()
     )
     db.session.add(cierre)
@@ -61,11 +69,13 @@ def abrir_caja():
 @jwt_required()
 def cerrar_caja():
     from datetime import datetime, timedelta
-    hoy = datetime.now().date()
+    hoy = datetime.utcnow().date()
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
 
-    cierre = CierreCaja.query.filter(CierreCaja.fecha >= inicio, CierreCaja.fecha < fin).first()
+    cierre = CierreCaja.query.filter(
+        CierreCaja.fecha >= inicio, CierreCaja.fecha < fin, CierreCaja.estado == 'abierta'
+    ).first()
     if not cierre:
         return jsonify({'success': False, 'message': 'No hay caja abierta hoy'}), 400
     
@@ -75,7 +85,8 @@ def cerrar_caja():
     cierre.total_gastos = db.session.query(db.func.coalesce(db.func.sum(TransaccionCaja.monto), 0)).filter(
         TransaccionCaja.tipo == 'Gasto', TransaccionCaja.fecha >= inicio, TransaccionCaja.fecha < fin
     ).scalar() or 0
-    cierre.neto = float(cierre.total_ventas) - float(cierre.total_gastos)
+    cierre.estado = 'cerrada'
+    cierre.fecha_cierre = datetime.utcnow()
     db.session.commit()
     return jsonify({'success': True, 'data': cierre_schema.dump(cierre)})
 
@@ -83,7 +94,7 @@ def cerrar_caja():
 @jwt_required()
 def get_transacciones():
     from datetime import datetime, timedelta
-    hoy = datetime.now().date()
+    hoy = datetime.utcnow().date()
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
 
