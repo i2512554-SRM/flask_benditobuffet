@@ -35,31 +35,44 @@ def get_empleado(id):
 @personal_bp.route('/', methods=['POST'])
 @admin_required
 def crear_empleado():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     from datetime import datetime
-    
-    documento = DocumentoIdentidad(
-        tipo_documento='DNI',
-        numero=data['dni']
-    )
-    db.session.add(documento)
-    db.session.flush()
-    
-    empleado = Usuario(
-        nombres=data['nombres'],
-        apellido=data['apellido'],
-        correo=data['correo'],
-        telefono=data.get('telefono', ''),
-        usuario=data.get('usuario') or data['dni'],
-        clave=data.get('clave') or data['dni'],
-        id_documento=documento.id_documento,
-        id_rol=2,
-        estado=True,
-        turno=data.get('turno', 'Manana'),
-        fecha_creacion=datetime.utcnow()
-    )
-    db.session.add(empleado)
-    db.session.commit()
+    from sqlalchemy.exc import IntegrityError
+
+    dni = str(data.get('dni') or '').strip()
+    if not dni or not data.get('nombres') or not data.get('apellido'):
+        return jsonify({'success': False, 'message': 'Los campos DNI, nombres y apellidos son obligatorios'}), 400
+
+    if DocumentoIdentidad.query.filter_by(numero=dni).first():
+        return jsonify({'success': False, 'message': 'El DNI ya se encuentra registrado'}), 400
+
+    try:
+        documento = DocumentoIdentidad(
+            tipo_documento='DNI',
+            numero=dni
+        )
+        db.session.add(documento)
+        db.session.flush()
+
+        empleado = Usuario(
+            nombres=data['nombres'],
+            apellido=data['apellido'],
+            correo=data.get('correo', ''),
+            telefono=data.get('telefono', ''),
+            usuario=data.get('usuario') or dni,
+            clave=data.get('clave') or dni,
+            id_documento=documento.id_documento,
+            id_rol=2,
+            estado=True,
+            turno=data.get('turno', 'Manana'),
+            fecha_creacion=datetime.utcnow()
+        )
+        db.session.add(empleado)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'El DNI ya se encuentra registrado'}), 400
+
     return jsonify({'success': True, 'data': usuario_schema.dump(empleado)})
 
 @personal_bp.route('/<int:id>', methods=['PUT'])
