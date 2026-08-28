@@ -4,24 +4,6 @@
       <img :src="logoSrc" class="logo" alt="Logo Bendito Buffet" />
       <h2>Iniciar Sesion</h2>
       <p class="sub">Sistema de Gestion Integral - Bendito Buffet</p>
-      <p class="sub2">Selecciona tu rol para acceder al sistema</p>
-
-      <div class="roles">
-        <div class="rol" :class="{ activo: rol === 'administrador' }" @click="cambiarRol('administrador')">
-          <i class="fa-solid fa-shield"></i> Administrador
-        </div>
-        <div class="rol" :class="{ activo: rol === 'cajero' }" @click="cambiarRol('cajero')">
-          <i class="fa-solid fa-dollar-sign"></i> Cajero
-        </div>
-      </div>
-
-      <div class="info">
-        <i :class="infoRol.icono"></i>
-        <div>
-          <h4>{{ infoRol.titulo }}</h4>
-          <p>{{ infoRol.desc }}</p>
-        </div>
-      </div>
 
       <form class="form" @submit.prevent="handleLogin">
         <label>Usuario</label>
@@ -43,7 +25,7 @@
         />
 
         <button type="submit" class="btn" :disabled="loading">
-          {{ loading ? 'Ingresando...' : 'Entrar como ' + infoRol.titulo }}
+          {{ loading ? 'Ingresando...' : 'Ingresar' }}
         </button>
       </form>
 
@@ -59,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import logoSrc from '../assets/logo.png'
@@ -69,28 +51,8 @@ const authStore = useAuthStore()
 
 const usuario = ref('')
 const contrasena = ref('')
-const rol = ref('administrador')
 const loading = ref(false)
 const errorMsg = ref('')
-
-const rolesInfo = {
-  administrador: {
-    titulo: 'Administrador',
-    desc: 'Acceso completo a todos los modulos del sistema.',
-    icono: 'fa-solid fa-shield'
-  },
-  cajero: {
-    titulo: 'Cajero',
-    desc: 'Acceso a modulo de caja e inventario.',
-    icono: 'fa-solid fa-dollar-sign'
-  }
-}
-
-const infoRol = computed(() => rolesInfo[rol.value])
-
-const cambiarRol = (nuevoRol) => {
-  rol.value = nuevoRol
-}
 
 const handleLogin = async () => {
   loading.value = true
@@ -148,74 +110,6 @@ h2 {
   color: var(--text-muted, #6b7280);
   margin: 5px 0;
   font-size: 14px;
-}
-
-.sub2 {
-  color: var(--text-muted, #6b7280);
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-.roles {
-  display: flex;
-  justify-content: space-between;
-  background: var(--bg-secondary, #f7f8fb);
-  border-radius: 12px;
-  padding: 5px;
-  margin-bottom: 20px;
-}
-
-.rol {
-  flex: 1;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 10px;
-  font-size: 14px;
-  text-align: center;
-  color: var(--text-main, #111827);
-  transition: all 0.18s ease;
-}
-
-.rol i {
-  margin-right: 5px;
-}
-
-.rol.activo {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  font-weight: 600;
-}
-
-.info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 123, 0, 0.12);
-  border: 1px solid #ff7b00;
-  border-radius: 12px;
-  padding: 15px;
-  text-align: left;
-  margin-bottom: 20px;
-}
-
-.info i {
-  background: #ff7b00;
-  color: var(--bg-card, #ffffff);
-  padding: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.info h4 {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-main, #111827);
-}
-
-.info p {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--text-muted, #6b7280);
 }
 
 .form {
@@ -310,9 +204,6 @@ hr {
 @media (max-width: 540px) {
   .card {
     padding: 24px 16px;
-  }
-  .roles {
-    gap: 10px;
   }
 }
 </style>
