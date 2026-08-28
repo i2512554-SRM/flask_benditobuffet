@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, time, timedelta
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
+import bcrypt
 from models import db, Usuario, PagoPersonal, PagoEmpleado, Adelanto, ActividadUsuario, DocumentoIdentidad
 from schemas.usuario import usuario_schema, usuarios_schema, pago_schema, pagos_schema
 
@@ -60,7 +61,7 @@ def crear_empleado():
             correo=data.get('correo', ''),
             telefono=data.get('telefono', ''),
             usuario=data.get('usuario') or dni,
-            clave=data.get('clave') or dni,
+            clave=bcrypt.hashpw((data.get('clave') or dni).encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
             id_documento=documento.id_documento,
             id_rol=2,
             estado=True,
@@ -86,7 +87,11 @@ def actualizar_empleado(id):
     empleado.correo = data.get('correo', empleado.correo)
     empleado.telefono = data.get('telefono', empleado.telefono)
     empleado.turno = data.get('turno', empleado.turno)
-    
+
+    nueva_clave = data.get('clave')
+    if nueva_clave:
+        empleado.clave = bcrypt.hashpw(str(nueva_clave).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
     if 'dni' in data and empleado.documento:
         empleado.documento.numero = data['dni']
     
@@ -116,7 +121,7 @@ def _totales_pagos(start_date, end_date, id_usuario=None):
     pagos_q = db.session.query(db.func.coalesce(db.func.sum(PagoEmpleado.monto), 0)).filter(
         PagoEmpleado.estado == 'Pagado', PagoEmpleado.fecha_pago >= inicio, PagoEmpleado.fecha_pago <= fin)
     adelantos_q = db.session.query(db.func.coalesce(db.func.sum(Adelanto.monto), 0)).filter(
-        Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado != 'Cancelado')
+        Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado == 'Aprobado')
     if id_usuario:
         pagos_q = pagos_q.filter(PagoEmpleado.id_usuario == id_usuario)
         adelantos_q = adelantos_q.filter(Adelanto.id_usuario == id_usuario)
@@ -133,7 +138,7 @@ def _totales_por_empleado(start_date, end_date):
         .group_by(PagoEmpleado.id_usuario).all())
     adelantos = dict(db.session.query(
         Adelanto.id_usuario, db.func.coalesce(db.func.sum(Adelanto.monto), 0)
-    ).filter(Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado != 'Cancelado')
+    ).filter(Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado == 'Aprobado')
         .group_by(Adelanto.id_usuario).all())
     return pagos, adelantos
 
@@ -394,6 +399,7 @@ def get_salarios():
 
         adelantos = Adelanto.query.filter(
             Adelanto.id_usuario == emp.id_usuario,
+            Adelanto.estado == 'Aprobado',
             Adelanto.fecha >= inicio,
             Adelanto.fecha < fin
         ).all()

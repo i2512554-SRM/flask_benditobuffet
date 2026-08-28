@@ -144,13 +144,13 @@ def editar_perfil():
         foto = None
 
     if not correo or not _validar_correo(correo):
-        return jsonify({'success': False, 'error': 'Ingrese un correo valido'}), 400
+        return jsonify({'success': False, 'error': 'Ingrese un correo válido'}), 400
 
     correo_existente = Usuario.query.filter(
         Usuario.correo == correo, Usuario.id_usuario != usuario_id
     ).first()
     if correo_existente:
-        return jsonify({'success': False, 'error': 'El correo ya esta registrado en otra cuenta'}), 400
+        return jsonify({'success': False, 'error': 'El correo ya está registrado en otra cuenta'}), 400
 
     usuario.correo = correo
     usuario.telefono = telefono
@@ -166,9 +166,9 @@ def editar_perfil():
     if foto and foto.filename:
         ext = foto.filename.rsplit('.', 1)[1].lower() if '.' in foto.filename else ''
         if ext not in ALLOWED_IMAGE_EXTENSIONS:
-            return jsonify({'success': False, 'error': 'Formato de imagen no valido. Usa jpg, jpeg, png o webp'}), 400
+            return jsonify({'success': False, 'error': 'Formato de imagen no válido. Usa jpg, jpeg, png o webp'}), 400
         if not _validar_imagen_por_contenido(foto):
-            return jsonify({'success': False, 'error': 'El archivo seleccionado no es una imagen valida'}), 400
+            return jsonify({'success': False, 'error': 'El archivo seleccionado no es una imagen válida'}), 400
 
         nombre_archivo = secure_filename(f"perfil_{usuario_id}_{uuid.uuid4().hex}.{ext}")
         ruta_archivo = os.path.join(current_app.config['UPLOAD_FOLDER'], nombre_archivo)
@@ -216,21 +216,21 @@ def cambiar_contrasena():
         valida_actual = (usuario.clave == actual)
 
     if not valida_actual:
-        return jsonify({'success': False, 'error': 'La contrasena actual no es correcta'}), 400
+        return jsonify({'success': False, 'error': 'La contraseña actual no es correcta'}), 400
 
     if nueva != verificar:
-        return jsonify({'success': False, 'error': 'Las contrasenas nuevas no coinciden'}), 400
+        return jsonify({'success': False, 'error': 'Las contraseñas nuevas no coinciden'}), 400
 
     if nueva == actual:
-        return jsonify({'success': False, 'error': 'La nueva contrasena no puede ser igual a la actual'}), 400
+        return jsonify({'success': False, 'error': 'La nueva contraseña no puede ser igual a la actual'}), 400
 
     try:
         usuario.clave = bcrypt.hashpw(nueva.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Contrasena actualizada correctamente'})
+        return jsonify({'success': True, 'message': 'Contraseña actualizada correctamente'})
     except Exception:
         db.session.rollback()
-        return jsonify({'success': False, 'error': 'No se pudo cambiar la contrasena. Intente de nuevo.'}), 500
+        return jsonify({'success': False, 'error': 'No se pudo cambiar la contraseña. Intente de nuevo.'}), 500
 
 
 @perfil_bp.route('/adelantos', methods=['POST'])
@@ -253,7 +253,7 @@ def solicitar_adelanto():
         if monto <= 0:
             raise ValueError
     except (ValueError, TypeError):
-        return jsonify({'success': False, 'error': 'Ingrese un monto valido. Debe ser mayor a cero.'}), 400
+        return jsonify({'success': False, 'error': 'Ingrese un monto válido. Debe ser mayor a cero.'}), 400
 
     adelanto = Adelanto(
         id_usuario=usuario_id,

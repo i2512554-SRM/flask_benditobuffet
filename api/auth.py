@@ -10,16 +10,16 @@ def login():
     data = request.get_json()
     
     if not data or 'usuario' not in data or 'clave' not in data:
-        return jsonify({'success': False, 'error': 'Usuario y contrasena requeridos'}), 400
+        return jsonify({'success': False, 'error': 'Usuario y contraseña requeridos'}), 400
     
     usuario = Usuario.query.filter_by(usuario=data['usuario']).first()
     
     if not usuario:
-        return jsonify({'success': False, 'error': 'Credenciales invalidas'}), 401
+        return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
     
     stored_hash = usuario.clave.encode('utf-8') if isinstance(usuario.clave, str) else usuario.clave
     if not bcrypt.checkpw(data['clave'].encode('utf-8'), stored_hash):
-        return jsonify({'success': False, 'error': 'Credenciales invalidas'}), 401
+        return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
     
     access_token = create_access_token(identity=str(usuario.id_usuario))
     refresh_token = create_refresh_token(identity=str(usuario.id_usuario))
@@ -41,7 +41,7 @@ def login():
 @jwt_required()
 def logout():
     # JWT es stateless, simplemente retornamos exito
-    return jsonify({'success': True, 'message': 'Sesion cerrada correctamente'})
+    return jsonify({'success': True, 'message': 'Sesión cerrada correctamente'})
 
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)

@@ -92,7 +92,7 @@ def gestionar_solicitud(id_adelanto):
     elif accion == 'rechazar':
         adelanto.estado = 'Rechazado'
     else:
-        return jsonify({'success': False, 'error': 'Accion no valida'}), 400
+        return jsonify({'success': False, 'error': 'Acción no válida'}), 400
 
     adelanto.respuesta_admin = respuesta if respuesta else None
     adelanto.fecha_gestion = datetime.now()
