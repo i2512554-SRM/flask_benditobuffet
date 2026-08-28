@@ -1,14 +1,75 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, Producto, Inversion, Categoria, Proveedor
+from datetime import datetime, date, time, timedelta
+from models import db, Producto, Inversion, Categoria, Proveedor, ActividadUsuario
 from schemas.inventario import producto_schema, productos_schema, inversion_schema, inversiones_schema
 
 inventario_bp = Blueprint('inventario', __name__)
 
+@inventario_bp.route('/resumen', methods=['GET'])
+@jwt_required()
+def get_resumen():
+    total_inventario = db.session.query(
+        db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
+    ).scalar() or 0
+    equipamiento = db.session.query(
+        db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
+    ).join(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(
+        db.func.lower(Categoria.nombre).like('%equipamiento%')
+    ).scalar() or 0
+
+    hoy = date.today()
+    inicio_mes = datetime(hoy.year, hoy.month, 1)
+    fin_mes = datetime(hoy.year, hoy.month, hoy.day) + timedelta(days=1)
+    inversiones_mes = db.session.query(
+        db.func.coalesce(db.func.sum(Inversion.monto), 0)
+    ).filter(Inversion.fecha >= inicio_mes, Inversion.fecha < fin_mes).scalar() or 0
+    productos_mes = Producto.query.filter(
+        Producto.fecha_registro >= inicio_mes, Producto.fecha_registro < fin_mes
+    ).count()
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'valor_total': float(total_inventario),
+            'inversiones_mes': float(inversiones_mes),
+            'articulos_registrados': Producto.query.count(),
+            'productos_mes': productos_mes,
+            'equipamiento_valor': float(equipamiento),
+        }
+    })
+
+@inventario_bp.route('/inversiones/<int:id>', methods=['GET'])
+@jwt_required()
+def get_inversion(id):
+    inversion = Inversion.query.get_or_404(id)
+    return jsonify({'success': True, 'data': inversion_schema.dump(inversion)})
+
+@inventario_bp.route('/inversiones/<int:id>', methods=['DELETE'])
+@jwt_required()
+def eliminar_inversion(id):
+    inversion = Inversion.query.get_or_404(id)
+    admin_id = int(get_jwt_identity())
+    db.session.delete(inversion)
+    db.session.add(ActividadUsuario(id_usuario=admin_id, accion='Eliminó compra/inversión de inventario', fecha=datetime.now()))
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Compra/inversión eliminada'})
+
 @inventario_bp.route('/productos', methods=['GET'])
 @jwt_required()
 def get_productos():
-    productos = Producto.query.all()
+    query = Producto.query
+    q = request.args.get('q', '').strip()
+    cat = request.args.get('cat', '').strip()
+    if cat:
+        query = query.join(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.func.lower(Categoria.nombre) == cat.lower())
+    if q:
+        like = f"%{q.lower()}%"
+        query = query.outerjoin(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.or_(
+            db.func.lower(Producto.nombre).like(like),
+            db.func.lower(Categoria.nombre).like(like),
+        ))
+    productos = query.order_by(Producto.fecha_registro.desc()).all()
     return jsonify({'success': True, 'data': productos_schema.dump(productos)})
 
 @inventario_bp.route('/productos/<int:id>', methods=['GET'])
@@ -99,7 +160,8 @@ def get_categorias():
 @jwt_required()
 def crear_categoria():
     data = request.get_json()
-    categoria = Categoria(nombre=data['nombre'])
+    from datetime import datetime
+    categoria = Categoria(nombre=data['nombre'], fecha_creacion=datetime.now())
     db.session.add(categoria)
     db.session.commit()
     return jsonify({'success': True, 'data': {'id_categoria': categoria.id_categoria, 'nombre': categoria.nombre}})
