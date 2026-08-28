@@ -19,7 +19,7 @@
           <Tag :value="slotProps.data.estado" :severity="slotProps.data.estado === 'Pendiente' ? 'warning' : 'success'" />
         </template>
       </Column>
-      <Column field="descripcion" header="Descripcion"></Column>
+      <Column field="motivo" header="Motivo"></Column>
     </DataTable>
     
     <Dialog v-model:visible="dialogVisible" header="Registrar Adelanto" :modal="true" :style="{ width: '500px' }">
@@ -33,8 +33,8 @@
           <InputNumber id="monto" v-model="form.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
         <div class="field col-12">
-          <label for="descripcion">Descripcion</label>
-          <InputText id="descripcion" v-model="form.descripcion" class="w-full" />
+          <label for="motivo">Motivo</label>
+          <InputText id="motivo" v-model="form.motivo" class="w-full" />
         </div>
       </div>
       <template #footer>
@@ -77,7 +77,7 @@ const cargarEmpleados = async () => {
 }
 
 const registrarDialog = () => {
-  form.value = { id_usuario: null, monto: 0, descripcion: '' }
+  form.value = { id_usuario: null, monto: 0, motivo: '' }
   dialogVisible.value = true
 }
 
