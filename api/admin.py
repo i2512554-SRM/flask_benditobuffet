@@ -107,4 +107,4 @@ def gestionar_solicitud(id_adelanto):
     except Exception:
         db.session.rollback()
 
-    return jsonify({'success': True, 'message': f'Adelanto {accion} correctamente'})
+    return jsonify({'success': True, 'message': f'Adelanto {adelanto.estado.lower()} correctamente'})
