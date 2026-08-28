@@ -6,6 +6,9 @@
         <p>Gestion integral del restaurante</p>
       </div>
       <div class="header-actions">
+        <router-link to="/perfil" class="btn btn-outline">
+          <i class="fa-solid fa-user"></i> Mi Perfil
+        </router-link>
         <button class="btn btn-outline" @click="loadStats">
           <i class="fa-solid fa-arrows-rotate"></i> Actualizar
         </button>
@@ -57,13 +60,15 @@
         <h3>Gestion de Caja</h3>
         <p>Registrar ventas, egresos y cierre diario</p>
       </router-link>
-      <router-link to="/personal/empleados" class="module-card">
-        <div class="module-icon personal">
-          <i class="fa-solid fa-users-gear"></i>
-        </div>
-        <h3>Gestion del Personal</h3>
-        <p>Empleados, pagos, solicitudes y turnos</p>
-      </router-link>
+      <template v-if="isAdmin">
+        <router-link to="/personal/empleados" class="module-card">
+          <div class="module-icon personal">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+          <h3>Gestion del Personal</h3>
+          <p>Empleados, pagos, solicitudes y turnos</p>
+        </router-link>
+      </template>
       <router-link to="/inventario" class="module-card">
         <div class="module-icon inventario">
           <i class="fa-solid fa-boxes-stacked"></i>
@@ -71,18 +76,20 @@
         <h3>Inventario e Inversion</h3>
         <p>Compras, equipamiento y costos</p>
       </router-link>
-      <div class="module-card ia-card">
-        <div class="module-icon ia">
-          <i class="fa-solid fa-robot"></i>
+      <template v-if="isAdmin">
+        <div class="module-card ia-card">
+          <div class="module-icon ia">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <h3>IA Predictiva</h3>
+          <p>Analisis y predicciones inteligentes</p>
+          <span class="coming-soon">Proximamente</span>
         </div>
-        <h3>IA Predictiva</h3>
-        <p>Analisis y predicciones inteligentes</p>
-        <span class="coming-soon">Proximamente</span>
-      </div>
+      </template>
     </div>
 
     <!-- Quick Actions -->
-    <div class="quick-actions">
+    <div class="quick-actions" v-if="isAdmin">
       <h2>Acciones Rapidas</h2>
       <div class="actions-grid">
         <router-link to="/caja" class="action-btn primary">
@@ -100,6 +107,18 @@
       </div>
     </div>
 
+    <div class="quick-actions" v-else>
+      <h2>Acciones Rapidas</h2>
+      <div class="actions-grid">
+        <router-link to="/caja" class="action-btn primary">
+          <i class="fa-solid fa-arrow-right"></i> Ir a Caja
+        </router-link>
+        <router-link to="/inventario" class="action-btn secondary">
+          <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
+        </router-link>
+      </div>
+    </div>
+
     <!-- Loading overlay -->
     <div class="loading-overlay" v-if="loading">
       <i class="fa-solid fa-spinner fa-spin"></i>
@@ -108,9 +127,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.rol === 1)
 const loading = ref(true)
 const stats = ref({
   ventas_mes: 0,

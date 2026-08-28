@@ -12,27 +12,33 @@
         <span>Caja</span>
       </router-link>
 
-      <div class="nav-section">Personal</div>
-      <router-link to="/personal/empleados" class="nav-item">
-        <div class="nav-icon"><i class="fa-solid fa-users"></i></div>
-        <span>Empleados</span>
-      </router-link>
-      <router-link to="/personal/pagos" class="nav-item">
-        <div class="nav-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
-        <span>Pagos</span>
-      </router-link>
-      <router-link to="/personal/turnos" class="nav-item">
-        <div class="nav-icon"><i class="fa-solid fa-calendar-days"></i></div>
-        <span>Turnos</span>
-      </router-link>
-      <router-link to="/personal/adelantos" class="nav-item">
-        <div class="nav-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-        <span>Adelantos</span>
-      </router-link>
-      <router-link to="/personal/salarios" class="nav-item">
-        <div class="nav-icon"><i class="fa-solid fa-coins"></i></div>
-        <span>Salarios</span>
-      </router-link>
+      <div class="nav-section" v-if="isAdmin">Personal</div>
+      <template v-if="isAdmin">
+        <router-link to="/personal/empleados" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-users"></i></div>
+          <span>Empleados</span>
+        </router-link>
+        <router-link to="/personal/pagos" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+          <span>Pagos</span>
+        </router-link>
+        <router-link to="/personal/turnos" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-calendar-days"></i></div>
+          <span>Turnos</span>
+        </router-link>
+        <router-link to="/personal/adelantos" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+          <span>Adelantos</span>
+        </router-link>
+        <router-link to="/personal/solicitudes" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-file-pen"></i></div>
+          <span>Solicitudes</span>
+        </router-link>
+        <router-link to="/personal/salarios" class="nav-item">
+          <div class="nav-icon"><i class="fa-solid fa-coins"></i></div>
+          <span>Salarios</span>
+        </router-link>
+      </template>
 
       <div class="nav-section">Operaciones</div>
       <router-link to="/inventario" class="nav-item">
@@ -44,6 +50,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.rol === 1)
 </script>
 
 <style scoped>
