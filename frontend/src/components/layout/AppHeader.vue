@@ -8,10 +8,10 @@
       </div>
     </div>
     <div class="header-right">
-      <div class="header-user" v-if="authStore.user">
+      <router-link to="/perfil" class="header-user" v-if="authStore.user">
         <i class="fa-solid fa-user-circle"></i>
         <span>{{ authStore.user.nombre }}</span>
-      </div>
+      </router-link>
       <button class="theme-toggle" @click="toggleDarkMode" :title="isDarkMode ? 'Modo claro' : 'Modo oscuro'">
         <i :class="isDarkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
       </button>
@@ -106,6 +106,17 @@ const handleLogout = () => {
   font-size: 0.85rem;
   color: var(--text-main);
   font-weight: 500;
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: all 0.18s ease;
+}
+
+.header-user:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--btn-primary);
 }
 
 .header-user i {

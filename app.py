@@ -25,6 +25,8 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'perfiles')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://localhost:5174"]}})
 
@@ -47,17 +49,20 @@ from api.admin import admin_bp
 from api.caja import caja_bp
 from api.personal import personal_bp
 from api.inventario import inventario_bp
+from api.perfil import perfil_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(caja_bp, url_prefix='/api/caja')
 app.register_blueprint(personal_bp, url_prefix='/api/personal')
 app.register_blueprint(inventario_bp, url_prefix='/api/inventario')
+app.register_blueprint(perfil_bp)
 
 csrf.exempt(auth_bp)
 csrf.exempt(admin_bp)
 csrf.exempt(caja_bp)
 csrf.exempt(personal_bp)
 csrf.exempt(inventario_bp)
+csrf.exempt(perfil_bp)
 
 # -------------------------------
 # ERROR HANDLERS (API)
@@ -106,6 +111,10 @@ def api_consultar_dni(dni):
 # SERVIR VUE SPA
 # -------------------------------
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+
+@app.route('/uploads/perfiles/<path:filename>')
+def uploads_perfiles(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

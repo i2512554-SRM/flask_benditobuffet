@@ -1,5 +1,6 @@
 from flask_marshmallow import Marshmallow
 from flask_marshmallow.sqla import SQLAlchemyAutoSchema
+from marshmallow import fields
 from models import Usuario, PagoPersonal
 
 ma = Marshmallow()
@@ -11,6 +12,8 @@ class UsuarioSchema(SQLAlchemyAutoSchema):
         sqla_session = None
         include_fk = False
         exclude = ('clave',)
+
+    dni = fields.String(attribute='dni')
         
 usuario_schema = UsuarioSchema()
 usuarios_schema = UsuarioSchema(many=True)
