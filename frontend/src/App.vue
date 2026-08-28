@@ -47,7 +47,7 @@ const showLayout = computed(() => !['login', 'home'].includes(route.name))
   flex: 1;
   margin-left: 250px;
   padding: 2rem;
-  background: var(--surface-ground);
+  background: var(--bg-main);
   min-height: calc(100vh - 60px - 50px);
 }
 </style>
