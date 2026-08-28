@@ -1,0 +1,51 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from models import Usuario
+import bcrypt
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    
+    if not data or 'usuario' not in data or 'clave' not in data:
+        return jsonify({'success': False, 'error': 'Usuario y contrasena requeridos'}), 400
+    
+    usuario = Usuario.query.filter_by(usuario=data['usuario']).first()
+    
+    if not usuario:
+        return jsonify({'success': False, 'error': 'Credenciales invalidas'}), 401
+    
+    stored_hash = usuario.clave.encode('utf-8') if isinstance(usuario.clave, str) else usuario.clave
+    if not bcrypt.checkpw(data['clave'].encode('utf-8'), stored_hash):
+        return jsonify({'success': False, 'error': 'Credenciales invalidas'}), 401
+    
+    access_token = create_access_token(identity=str(usuario.id_usuario))
+    refresh_token = create_refresh_token(identity=str(usuario.id_usuario))
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'token': access_token,
+            'refresh_token': refresh_token,
+            'user': {
+                'id': usuario.id_usuario,
+                'nombre': usuario.nombres,
+                'rol': usuario.rol.id_rol if usuario.rol else None
+            }
+        }
+    })
+
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # JWT es stateless, simplemente retornamos exito
+    return jsonify({'success': True, 'message': 'Sesion cerrada correctamente'})
+
+@auth_bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    current_user = get_jwt_identity()
+    access_token = create_access_token(identity=current_user)
+    return jsonify({'success': True, 'data': {'token': access_token}})
