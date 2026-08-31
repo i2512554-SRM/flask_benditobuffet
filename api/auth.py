@@ -16,11 +16,27 @@ def login():
     
     if not usuario:
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
-    
-    stored_hash = usuario.clave.encode('utf-8') if isinstance(usuario.clave, str) else usuario.clave
-    if not bcrypt.checkpw(data['clave'].encode('utf-8'), stored_hash):
+
+    clave = data['clave']
+    stored = usuario.clave if isinstance(usuario.clave, str) else ''
+    valida = False
+
+    if stored.startswith('$2'):
+        try:
+            valida = bcrypt.checkpw(clave.encode('utf-8'), stored.encode('utf-8'))
+        except (ValueError, TypeError):
+            valida = False
+    else:
+        valida = (stored == clave)
+
+    if not valida:
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
-    
+
+    if not stored.startswith('$2'):
+        from bd import db
+        usuario.clave = bcrypt.hashpw(clave.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        db.session.commit()
+
     access_token = create_access_token(identity=str(usuario.id_usuario))
     refresh_token = create_refresh_token(identity=str(usuario.id_usuario))
     
