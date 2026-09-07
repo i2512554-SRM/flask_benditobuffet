@@ -1,20 +1,78 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from models import Usuario
+from datetime import datetime, timedelta, timezone
+from bd import db
+from models import Usuario, BloqueoLogin, ActividadUsuario, IntentoLogin
 import bcrypt
 
+MAX_INTENTOS_FALLIDOS = 5
+DURACION_BLOQUEO_MIN = 15
+
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+
+def _ahora():
+    return datetime.now(timezone.utc)
+
+
+def _obtener_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    if fwd and fwd.strip():
+        return fwd.split(',')[0].strip()
+    return request.remote_addr or 'desconocida'
+
+
+def _bloqueo_activo(identificador):
+    limite = _ahora()
+    return BloqueoLogin.query.filter(
+        BloqueoLogin.usuario == identificador,
+        BloqueoLogin.bloqueado_hasta.isnot(None),
+        BloqueoLogin.bloqueado_hasta > limite
+    ).order_by(BloqueoLogin.bloqueado_hasta.desc()).first()
+
+
+def _registrar_intento_fallido(identificador, ip):
+    bloqueo = BloqueoLogin.query.filter_by(usuario=identificador, ip=ip).order_by(BloqueoLogin.id.desc()).first()
+    if not bloqueo:
+        bloqueo = BloqueoLogin(usuario=identificador, ip=ip, intentos=1, tipo='usuario', fecha=_ahora())
+        db.session.add(bloqueo)
+    else:
+        bloqueo.intentos = (bloqueo.intentos or 0) + 1
+        bloqueo.fecha = _ahora()
+
+    if bloqueo.intentos >= MAX_INTENTOS_FALLIDOS:
+        bloqueo.bloqueado_hasta = _ahora() + timedelta(minutes=DURACION_BLOQUEO_MIN)
+    db.session.commit()
+
+
+def _limpiar_bloqueos(identificador, ip):
+    for b in BloqueoLogin.query.filter(BloqueoLogin.usuario == identificador).all():
+        db.session.delete(b)
+    db.session.commit()
+
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    
+
     if not data or 'usuario' not in data or 'clave' not in data:
         return jsonify({'success': False, 'error': 'Usuario y contraseña requeridos'}), 400
-    
-    usuario = Usuario.query.filter_by(usuario=data['usuario']).first()
-    
+
+    identificador = data['usuario']
+    ip = _obtener_ip()
+
+    bloqueo = _bloqueo_activo(identificador)
+    if bloqueo:
+        restante_min = max(1, int((bloqueo.bloqueado_hasta - _ahora()).total_seconds() // 60) + 1)
+        return jsonify({
+            'success': False,
+            'error': f'Demasiados intentos fallidos. Cuenta bloqueada, reintenta en {restante_min} min.'
+        }), 429
+
+    usuario = Usuario.query.filter_by(usuario=identificador).first()
+
     if not usuario:
+        _registrar_intento_fallido(identificador, ip)
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
 
     clave = data['clave']
@@ -30,16 +88,25 @@ def login():
         valida = (stored == clave)
 
     if not valida:
+        _registrar_intento_fallido(identificador, ip)
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
 
     if not stored.startswith('$2'):
-        from bd import db
         usuario.clave = bcrypt.hashpw(clave.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         db.session.commit()
 
+    _limpiar_bloqueos(identificador, ip)
+
+    try:
+        db.session.add(IntentoLogin(identificador=identificador, fecha=_ahora()))
+        db.session.add(ActividadUsuario(id_usuario=usuario.id_usuario, accion='Inició sesión', fecha=_ahora()))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     access_token = create_access_token(identity=str(usuario.id_usuario))
     refresh_token = create_refresh_token(identity=str(usuario.id_usuario))
-    
+
     return jsonify({
         'success': True,
         'data': {

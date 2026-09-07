@@ -1,8 +1,16 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, time, timedelta
-from models import db, Producto, Inversion, Categoria, Proveedor, ActividadUsuario
-from schemas.inventario import producto_schema, productos_schema, inversion_schema, inversiones_schema
+from bd import db
+from models import (
+    Producto, Inversion, Categoria, Proveedor, ActividadUsuario,
+    CompraInventario, DetalleCompraInventario, InventarioMovimiento
+)
+from schemas.inventario import (
+    producto_schema, productos_schema, inversion_schema, inversiones_schema,
+    compra_inventario_schema, compras_inventario_schema,
+    inventario_movimientos_schema
+)
 
 inventario_bp = Blueprint('inventario', __name__)
 
@@ -83,15 +91,26 @@ def get_producto(id):
 def crear_producto():
     data = request.get_json()
     from datetime import datetime
+    stock_inicial = float(data.get('stock', 0))
     producto = Producto(
         nombre=data['nombre'],
         precio=data['precio'],
-        stock=data.get('stock', 0),
+        stock=stock_inicial,
         id_categoria=data['id_categoria'],
         fecha_registro=datetime.utcnow(),
         fecha_edicion=datetime.utcnow()
     )
     db.session.add(producto)
+    db.session.flush()
+    if stock_inicial > 0:
+        db.session.add(InventarioMovimiento(
+            id_producto=producto.id_producto,
+            id_usuario=int(get_jwt_identity()),
+            tipo='Entrada',
+            cantidad=stock_inicial,
+            observacion='Stock inicial al crear producto',
+            fecha=datetime.utcnow()
+        ))
     db.session.commit()
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
 
@@ -124,9 +143,144 @@ def eliminar_producto(id):
 def actualizar_stock(id):
     producto = Producto.query.get_or_404(id)
     data = request.get_json()
-    producto.stock = data['stock']
+    nuevo = float(data['stock'])
+    diferencia = nuevo - producto.stock
+    usuario_id = int(get_jwt_identity())
+    producto.stock = nuevo
+    if diferencia:
+        db.session.add(InventarioMovimiento(
+            id_producto=producto.id_producto,
+            id_usuario=usuario_id,
+            tipo='Ajuste',
+            cantidad=abs(diferencia),
+            observacion='Ajuste manual de stock',
+            fecha=datetime.utcnow()
+        ))
     db.session.commit()
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
+
+@inventario_bp.route('/movimientos', methods=['GET'])
+@jwt_required()
+def get_movimientos():
+    query = InventarioMovimiento.query
+    prod = request.args.get('producto', '').strip()
+    tipo = request.args.get('tipo', '').strip()
+    if prod:
+        like = f"%{prod.lower()}%"
+        query = query.join(Producto, InventarioMovimiento.id_producto == Producto.id_producto).filter(db.func.lower(Producto.nombre).like(like))
+    if tipo:
+        query = query.filter(db.func.lower(InventarioMovimiento.tipo) == tipo.lower())
+    movimientos = query.order_by(InventarioMovimiento.fecha.desc()).limit(200).all()
+    return jsonify({'success': True, 'data': inventario_movimientos_schema.dump(movimientos)})
+
+@inventario_bp.route('/compras', methods=['GET'])
+@jwt_required()
+def get_compras():
+    compras = CompraInventario.query.order_by(CompraInventario.fecha.desc()).all()
+    return jsonify({'success': True, 'data': compras_inventario_schema.dump(compras)})
+
+@inventario_bp.route('/compras/<int:id>', methods=['GET'])
+@jwt_required()
+def get_compra(id):
+    compra = CompraInventario.query.get_or_404(id)
+    return jsonify({'success': True, 'data': compra_inventario_schema.dump(compra)})
+
+@inventario_bp.route('/compras', methods=['POST'])
+@jwt_required()
+def crear_compra():
+    data = request.get_json()
+    detalle = data.get('detalle') or []
+    if not detalle:
+        return jsonify({'success': False, 'error': 'Agrega al menos un producto a la compra'}), 400
+
+    usuario_id = int(get_jwt_identity())
+    n_hoy = CompraInventario.query.filter(
+        db.func.date(CompraInventario.fecha) == date.today()
+    ).count() + 1
+    codigo = f"COMPRA-{date.today().strftime('%Y%m%d')}-{n_hoy:03d}"
+
+    compra = CompraInventario(
+        codigo=codigo,
+        id_proveedor=data.get('id_proveedor'),
+        id_usuario=usuario_id,
+        total_compra=0,
+        notas=data.get('notas', ''),
+        estado='Completada',
+        fecha=datetime.utcnow()
+    )
+    db.session.add(compra)
+    db.session.flush()
+
+    total = 0
+    for linea in detalle:
+        id_producto = linea.get('id_producto')
+        producto = Producto.query.get(id_producto)
+        if not producto:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': 'Producto no encontrado para la compra'}), 400
+        cantidad = float(linea.get('cantidad') or 0)
+        precio = float(linea.get('precio_unitario') or 0)
+        subtotal = cantidad * precio
+        total += subtotal
+        det = DetalleCompraInventario(
+            id_compra=compra.id_compra,
+            id_producto=producto.id_producto,
+            cantidad=cantidad,
+            precio_unitario=precio,
+        )
+        db.session.add(det)
+        producto.stock = (producto.stock or 0) + cantidad
+        producto.fecha_edicion = datetime.utcnow()
+        db.session.add(InventarioMovimiento(
+            id_producto=producto.id_producto,
+            id_usuario=usuario_id,
+            tipo='Entrada',
+            cantidad=cantidad,
+            id_compra=compra.id_compra,
+            observacion=f'Ingreso por compra {codigo}',
+            fecha=datetime.utcnow()
+        ))
+
+    compra.total_compra = total
+    db.session.add(ActividadUsuario(
+        id_usuario=usuario_id,
+        accion=f'Registró compra de inventario {codigo}',
+        fecha=datetime.utcnow()
+    ))
+    db.session.commit()
+    return jsonify({'success': True, 'data': compra_inventario_schema.dump(compra)}), 201
+
+@inventario_bp.route('/compras/<int:id>', methods=['DELETE'])
+@jwt_required()
+def eliminar_compra(id):
+    compra = CompraInventario.query.get_or_404(id)
+    if compra.estado != 'Completada':
+        return jsonify({'success': False, 'error': 'La compra ya fue anulada'}), 400
+
+    usuario_id = int(get_jwt_identity())
+    for det in compra.detalle:
+        producto = Producto.query.get(det.id_producto)
+        if producto:
+            producto.stock = max(0, (producto.stock or 0) - det.cantidad)
+            producto.fecha_edicion = datetime.utcnow()
+        db.session.add(InventarioMovimiento(
+            id_producto=det.id_producto,
+            id_usuario=usuario_id,
+            tipo='Salida',
+            cantidad=det.cantidad,
+            observacion=f'Anulación de compra {compra.codigo} (reversa de stock)',
+            fecha=datetime.utcnow()
+        ))
+
+    compra.estado = 'Anulada'
+    compra.fecha = datetime.utcnow()
+    db.session.add(ActividadUsuario(
+        id_usuario=usuario_id,
+        accion=f'Anuló compra de inventario {compra.codigo}',
+        fecha=datetime.utcnow()
+    ))
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Compra anulada y stock revertido'})
 
 @inventario_bp.route('/inversiones', methods=['GET'])
 @jwt_required()
@@ -179,10 +333,10 @@ def crear_proveedor():
     from datetime import datetime
     proveedor = Proveedor(
         nombre=data['nombre'],
-        ruc=data.get('ruc', ''),
-        telefono=data.get('telefono', ''),
-        correo=data.get('correo', ''),
-        direccion=data.get('direccion', ''),
+        ruc=data.get('ruc') or None,
+        telefono=data.get('telefono') or None,
+        correo=data.get('correo') or None,
+        direccion=data.get('direccion') or None,
         estado=True,
         fecha_creacion=datetime.utcnow()
     )

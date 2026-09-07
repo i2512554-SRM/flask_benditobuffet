@@ -300,3 +300,107 @@ class Categoria(db.Model):
 
     def __repr__(self):
         return f"<Categoria {self.id_categoria} {self.nombre}>"
+
+
+class CompraInventario(db.Model):
+    __tablename__ = 'compras_inventario'
+    __table_args__ = (
+        db.Index('ix_compras_inventario_fecha', 'fecha'),
+    )
+
+    id_compra = db.Column(db.BigInteger, primary_key=True)
+    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    id_proveedor = db.Column(db.BigInteger, db.ForeignKey('proveedores.id_proveedor'), nullable=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    total_compra = db.Column(db.Float, nullable=False, default=0)
+    notas = db.Column(db.Text)
+    estado = db.Column(db.String(30), nullable=False, default='Completada')
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    detalle = db.relationship('DetalleCompraInventario', back_populates='compra', cascade='all, delete-orphan')
+    proveedor_rel = db.relationship('Proveedor', foreign_keys=[id_proveedor])
+
+    @property
+    def proveedor(self):
+        return self.proveedor_rel.nombre if self.proveedor_rel else None
+
+    @property
+    def n_detalle(self):
+        return len(self.detalle)
+
+    def __repr__(self):
+        return f"<CompraInventario {self.id_compra} {self.codigo} {self.total_compra}>"
+
+
+class DetalleCompraInventario(db.Model):
+    __tablename__ = 'detalle_compras_inventario'
+    __table_args__ = (
+        db.Index('ix_detalle_compras_inventario_compra', 'id_compra'),
+    )
+
+    id_detalle = db.Column(db.BigInteger, primary_key=True)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=False)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    cantidad = db.Column(db.Float, nullable=False, default=0)
+    precio_unitario = db.Column(db.Float, nullable=False, default=0)
+    subtotal = db.Column(db.Float, db.Computed('(cantidad * precio_unitario)'))
+
+    compra = db.relationship('CompraInventario', back_populates='detalle')
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    def __repr__(self):
+        return f"<DetalleCompraInventario {self.id_detalle} producto={self.id_producto}>"
+
+
+class InventarioMovimiento(db.Model):
+    __tablename__ = 'inventario_movimientos'
+    __table_args__ = (
+        db.Index('ix_inventario_movimientos_producto', 'id_producto'),
+        db.Index('ix_inventario_movimientos_fecha', 'fecha'),
+    )
+
+    id_movimiento = db.Column(db.BigInteger, primary_key=True)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    tipo = db.Column(db.String(30), nullable=False)
+    cantidad = db.Column(db.Float, nullable=False, default=0)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=True)
+    observacion = db.Column(db.String(255))
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+    usuario_rel = db.relationship('Usuario', foreign_keys=[id_usuario])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    @property
+    def usuario(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
+    def __repr__(self):
+        return f"<InventarioMovimiento {self.id_movimiento} {self.tipo} {self.cantidad}>"
+
+
+class BloqueoLogin(db.Model):
+    __tablename__ = 'bloqueos_login'
+    __table_args__ = (
+        db.Index('ix_bloqueos_login_usuario', 'usuario'),
+        db.Index('ix_bloqueos_login_fecha', 'fecha'),
+    )
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    usuario = db.Column(db.String(255), nullable=False)
+    ip = db.Column(db.String(50))
+    intentos = db.Column(db.Integer, nullable=False, default=0)
+    bloqueado_hasta = db.Column(db.DateTime(timezone=True), nullable=True)
+    tipo = db.Column(db.String(20), nullable=False, default='usuario')
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<BloqueoLogin {self.id} {self.usuario} intentos={self.intentos}>"

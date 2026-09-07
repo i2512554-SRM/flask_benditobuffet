@@ -4,7 +4,8 @@
     <p class="subtitle">Control de productos, compras e inversiones.</p>
 
     <div class="actions">
-      <Button label="Registrar compra/inversión" icon="pi pi-cart-plus" @click="openCompra" />
+      <Button label="Registrar compra" icon="pi pi-cart-plus" @click="openCompra" />
+      <Button label="Registrar inversión" icon="pi pi-chart-line" severity="secondary" @click="openInversion" />
       <Button label="Agregar producto" icon="pi pi-plus" severity="secondary" @click="agregarDialog" />
       <Button label="Gestionar proveedores" icon="pi pi-truck" severity="secondary" @click="openProveedores" />
     </div>
@@ -30,7 +31,9 @@
 
     <div class="view-toggle">
       <Button label="Productos" :class="{ active: vista === 'productos' }" severity="secondary" plain @click="vista = 'productos'" />
-      <Button label="Compras / Inversiones" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="vista = 'compras'" />
+      <Button label="Compras" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="vista = 'compras'" />
+      <Button label="Inversiones" :class="{ active: vista === 'inversiones' }" severity="secondary" plain @click="vista = 'inversiones'" />
+      <Button label="Movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain @click="vista = 'movimientos'" />
     </div>
 
     <div class="table-card" v-if="vista === 'productos'">
@@ -58,7 +61,31 @@
     </div>
 
     <div class="table-card" v-if="vista === 'compras'">
-      <h2>Compras e inversiones</h2>
+      <h2>Compras de inventario</h2>
+      <DataTable :value="compras" :paginator="true" :rows="10" class="mt-4">
+        <Column field="codigo" header="Código" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable>
+          <template #body="slotProps">{{ fmtFecha(slotProps.data.fecha) }}</template>
+        </Column>
+        <Column field="proveedor" header="Proveedor">
+          <template #body="slotProps">{{ slotProps.data.proveedor || '-' }}</template>
+        </Column>
+        <Column field="n_detalle" header="Productos" sortable></Column>
+        <Column field="total_compra" header="Total" sortable>
+          <template #body="slotProps">S/. {{ fmt2(slotProps.data.total_compra) }}</template>
+        </Column>
+        <Column field="estado" header="Estado" sortable></Column>
+        <Column header="Acciones">
+          <template #body="slotProps">
+            <Button icon="pi pi-eye" severity="info" text rounded @click="verCompra(slotProps.data)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded @click="eliminarCompra(slotProps.data)" />
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+
+    <div class="table-card" v-if="vista === 'inversiones'">
+      <h2>Inversiones</h2>
       <DataTable :value="inversiones" :paginator="true" :rows="10" class="mt-4">
         <Column field="fecha" header="Fecha" sortable>
           <template #body="slotProps">{{ fmtFecha(slotProps.data.fecha) }}</template>
@@ -72,10 +99,36 @@
         </Column>
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button icon="pi pi-eye" severity="info" text rounded @click="verCompra(slotProps.data)" />
-            <Button icon="pi pi-trash" severity="danger" text rounded @click="eliminarCompra(slotProps.data)" />
+            <Button icon="pi pi-eye" severity="info" text rounded @click="verInversion(slotProps.data)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded @click="eliminarInversion(slotProps.data)" />
           </template>
         </Column>
+      </DataTable>
+    </div>
+
+    <div class="table-card" v-if="vista === 'movimientos'">
+      <div class="table-header">
+        <h2>Historial de movimientos</h2>
+        <div class="search-box">
+          <InputText v-model="movBusqueda" placeholder="Buscar por producto..." class="w-full" @input="cargarMovimientos" />
+          <Select v-model="movTipo" :options="['Entrada', 'Salida', 'Ajuste']" placeholder="Todos los tipos" showClear class="w-full" @update:model-value="cargarMovimientos" />
+        </div>
+      </div>
+      <DataTable :value="movimientos" :paginator="true" :rows="10" class="mt-4">
+        <Column field="fecha" header="Fecha" sortable>
+          <template #body="slotProps">{{ fmtFechaHora(slotProps.data.fecha) }}</template>
+        </Column>
+        <Column field="producto" header="Producto" sortable></Column>
+        <Column field="tipo" header="Tipo" sortable>
+          <template #body="slotProps">
+            <span :class="['mov-tipo', 'mov-' + slotProps.data.tipo.toLowerCase()]">{{ slotProps.data.tipo }}</span>
+          </template>
+        </Column>
+        <Column field="cantidad" header="Cantidad" sortable></Column>
+        <Column field="usuario" header="Responsable">
+          <template #body="slotProps">{{ slotProps.data.usuario || '-' }}</template>
+        </Column>
+        <Column field="observacion" header="Observación"></Column>
       </DataTable>
     </div>
 
@@ -104,28 +157,55 @@
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="compraDialog" header="Registrar compra/inversión" :modal="true" :style="{ width: '520px' }">
+    <Dialog v-model:visible="compraDialog" header="Registrar compra de inventario" :modal="true" :style="{ width: '620px' }">
       <div class="formgrid grid">
-        <div class="field col-12">
-          <label for="descripcion">Descripción</label>
-          <InputText id="descripcion" v-model="compraForm.descripcion" class="w-full" />
-        </div>
         <div class="field col-12">
           <label for="proveedor">Proveedor</label>
           <Select id="proveedor" v-model="compraForm.id_proveedor" :options="proveedores" optionLabel="nombre" optionValue="id_proveedor" class="w-full" showClear />
         </div>
-        <div class="field col-6">
-          <label for="monto">Monto</label>
-          <InputNumber id="monto" v-model="compraForm.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+        <div class="field col-12">
+          <label>Detalle de productos</label>
+          <div v-for="(linea, idx) in compraForm.detalle" :key="idx" class="detalle-row">
+            <Select v-model="linea.id_producto" :options="productos" optionLabel="nombre" optionValue="id_producto" placeholder="Producto" class="w-full" />
+            <InputNumber v-model="linea.cantidad" placeholder="Cant." :min="0" class="w-full" />
+            <InputNumber v-model="linea.precio_unitario" placeholder="P. unit." mode="currency" currency="PEN" locale="es-PE" :min="0" class="w-full" />
+            <Button icon="pi pi-trash" severity="danger" text rounded @click="quitarLinea(idx)" />
+          </div>
+          <Button label="Agregar línea" icon="pi pi-plus" severity="secondary" text @click="agregarLinea" class="mt-1" />
         </div>
         <div class="field col-12">
           <label for="notas">Notas</label>
-          <Textarea id="notas" v-model="compraForm.notas" rows="3" class="w-full" />
+          <Textarea id="notas" v-model="compraForm.notas" rows="2" class="w-full" />
         </div>
       </div>
       <template #footer>
         <Button label="Cancelar" severity="secondary" @click="compraDialog = false" />
-        <Button label="Guardar" @click="guardarCompra" />
+        <Button label="Guardar compra" :disabled="!compraForm.detalle.length" @click="guardarCompra" />
+      </template>
+    </Dialog>
+
+    <Dialog v-model:visible="inversionDialog" header="Registrar inversión" :modal="true" :style="{ width: '520px' }">
+      <div class="formgrid grid">
+        <div class="field col-12">
+          <label for="descripcion">Descripción</label>
+          <InputText id="descripcion" v-model="inversionForm.descripcion" class="w-full" />
+        </div>
+        <div class="field col-12">
+          <label for="proveedor">Proveedor</label>
+          <Select id="proveedor" v-model="inversionForm.id_proveedor" :options="proveedores" optionLabel="nombre" optionValue="id_proveedor" class="w-full" showClear />
+        </div>
+        <div class="field col-6">
+          <label for="monto">Monto</label>
+          <InputNumber id="monto" v-model="inversionForm.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+        </div>
+        <div class="field col-12">
+          <label for="notas">Notas</label>
+          <Textarea id="notas" v-model="inversionForm.notas" rows="3" class="w-full" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" severity="secondary" @click="inversionDialog = false" />
+        <Button label="Guardar" @click="guardarInversion" />
       </template>
     </Dialog>
 
@@ -152,7 +232,22 @@
       </DataTable>
     </Dialog>
 
-    <Dialog v-model:visible="compraDetalleDialog" header="Detalle de compra/inversión" :modal="true" :style="{ width: '480px' }">
+    <Dialog v-model:visible="compraDetalleDialog" header="Detalle de compra" :modal="true" :style="{ width: '560px' }">
+      <div v-if="compraSeleccionada.codigo" class="detalle-info">
+        <div class="d-row"><span class="d-label">Código</span><span>{{ compraSeleccionada.codigo }}</span></div>
+        <div class="d-row"><span class="d-label">Proveedor</span><span>{{ compraSeleccionada.proveedor || '-' }}</span></div>
+        <div class="d-row"><span class="d-label">Fecha</span><span>{{ fmtFecha(compraSeleccionada.fecha) }}</span></div>
+        <div class="d-row"><span class="d-label">Total</span><span>S/. {{ fmt2(compraSeleccionada.total_compra) }}</span></div>
+        <h4 class="sub-det">Productos</h4>
+        <div v-for="d in compraSeleccionada.detalle || []" :key="d.id_detalle" class="det-line">
+          <span>{{ d.producto }}</span>
+          <span>{{ d.cantidad }} × S/. {{ fmt2(d.precio_unitario) }} = S/. {{ fmt2(d.subtotal) }}</span>
+        </div>
+        <div class="d-row"><span class="d-label">Notas</span><span>{{ compraSeleccionada.notas || '-' }}</span></div>
+      </div>
+    </Dialog>
+
+    <Dialog v-model:visible="inversionDetalleDialog" header="Detalle de inversión" :modal="true" :style="{ width: '480px' }">
       <div v-if="compraSeleccionada.id_inversion" class="detalle-info">
         <div class="d-row"><span class="d-label">Descripción</span><span>{{ compraSeleccionada.descripcion }}</span></div>
         <div class="d-row"><span class="d-label">Proveedor</span><span>{{ compraSeleccionada.proveedor || '-' }}</span></div>
@@ -180,26 +275,34 @@ import api from '../config/axios'
 const toast = useToast()
 const productos = ref([])
 const categorias = ref([])
+const compras = ref([])
 const inversiones = ref([])
+const movimientos = ref([])
 const proveedores = ref([])
 const resumen = ref({ valor_total: 0, inversiones_mes: 0, articulos_registrados: 0, productos_mes: 0 })
 const vista = ref('productos')
 const busqueda = ref('')
 const categoriaFiltro = ref(null)
+const movBusqueda = ref('')
+const movTipo = ref(null)
 const editingRows = ref([])
 const productoDialog = ref(false)
 const compraDialog = ref(false)
+const inversionDialog = ref(false)
 const proveedorDialog = ref(false)
 const compraDetalleDialog = ref(false)
+const inversionDetalleDialog = ref(false)
 const editing = ref({})
 const form = ref({})
 const compraForm = ref({})
+const inversionForm = ref({})
 const provForm = ref({ nombre: '' })
 const compraSeleccionada = ref({})
 
 const fmt = (v) => Number(v || 0).toFixed(2)
 const fmt2 = (v) => Number(v || 0).toFixed(2)
 const fmtFecha = (v) => v ? String(v).slice(0, 10) : '-'
+const fmtFechaHora = (v) => v ? String(v).slice(0, 16).replace('T', ' ') : '-'
 
 const cargarProductos = async () => {
   const params = {}
@@ -217,9 +320,22 @@ const cargarCategorias = async () => {
   if (res.data.success) categorias.value = res.data.data
 }
 
+const cargarCompras = async () => {
+  const res = await api.get('/inventario/compras')
+  if (res.data.success) compras.value = res.data.data
+}
+
 const cargarInversiones = async () => {
   const res = await api.get('/inventario/inversiones')
   if (res.data.success) inversiones.value = res.data.data
+}
+
+const cargarMovimientos = async () => {
+  const params = {}
+  if (movBusqueda.value) params.producto = movBusqueda.value
+  if (movTipo.value) params.tipo = movTipo.value
+  const res = await api.get('/inventario/movimientos', { params })
+  if (res.data.success) movimientos.value = res.data.data
 }
 
 const cargarProveedores = async () => {
@@ -266,19 +382,86 @@ const eliminar = async (prod) => {
 }
 
 const openCompra = () => {
-  compraForm.value = { descripcion: '', id_proveedor: null, monto: 0, notas: '' }
+  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: 1, precio_unitario: 0 }], notas: '' }
   compraDialog.value = true
+}
+
+const agregarLinea = () => {
+  compraForm.value.detalle.push({ id_producto: null, cantidad: 1, precio_unitario: 0 })
+}
+
+const quitarLinea = (idx) => {
+  compraForm.value.detalle.splice(idx, 1)
 }
 
 const guardarCompra = async () => {
   try {
-    await api.post('/inventario/inversiones', compraForm.value)
-    toast.add({ severity: 'success', summary: 'Compra/inversión registrada', life: 2500 })
+    const lineas = compraForm.value.detalle.filter(l => l.id_producto && l.cantidad > 0)
+    if (!lineas.length) {
+      toast.add({ severity: 'warn', summary: 'Agrega al menos un producto con cantidad', life: 3000 })
+      return
+    }
+    await api.post('/inventario/compras', {
+      id_proveedor: compraForm.value.id_proveedor || null,
+      notas: compraForm.value.notas,
+      detalle: lineas
+    })
+    toast.add({ severity: 'success', summary: 'Compra registrada y stock actualizado', life: 2500 })
     compraDialog.value = false
+    await Promise.all([cargarCompras(), cargarProductos(), cargarMovimientos(), cargarResumen()])
+  } catch (e) {
+    toast.add({ severity: 'error', summary: e.response?.data?.error || 'Error al registrar', life: 3500 })
+  }
+}
+
+const verCompra = async (compra) => {
+  try {
+    const res = await api.get(`/inventario/compras/${compra.id_compra}`)
+    if (res.data.success) {
+      compraSeleccionada.value = res.data.data
+      compraDetalleDialog.value = true
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error al cargar detalle', life: 3000 })
+  }
+}
+
+const eliminarCompra = async (compra) => {
+  if (!confirm(`¿Anular la compra ${compra.codigo}? Se revertirá el stock.`)) return
+  try {
+    await api.delete(`/inventario/compras/${compra.id_compra}`)
+    toast.add({ severity: 'success', summary: 'Compra anulada y stock revertido', life: 2500 })
+    await Promise.all([cargarCompras(), cargarProductos(), cargarMovimientos(), cargarResumen()])
+  } catch (e) {
+    toast.add({ severity: 'error', summary: e.response?.data?.error || 'Error al anular', life: 3500 })
+  }
+}
+
+const openInversion = () => {
+  inversionForm.value = { descripcion: '', id_proveedor: null, monto: 0, notas: '' }
+  inversionDialog.value = true
+}
+
+const guardarInversion = async () => {
+  try {
+    await api.post('/inventario/inversiones', inversionForm.value)
+    toast.add({ severity: 'success', summary: 'Inversión registrada', life: 2500 })
+    inversionDialog.value = false
     await Promise.all([cargarInversiones(), cargarResumen()])
   } catch (e) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error al registrar', life: 3500 })
   }
+}
+
+const verInversion = (inv) => {
+  compraSeleccionada.value = inv
+  inversionDetalleDialog.value = true
+}
+
+const eliminarInversion = async (inv) => {
+  await api.delete(`/inventario/inversiones/${inv.id_inversion}`)
+  toast.add({ severity: 'success', summary: 'Inversión eliminada', life: 2500 })
+  await Promise.all([cargarInversiones(), cargarResumen()])
 }
 
 const openProveedores = () => {
@@ -294,19 +477,11 @@ const guardarProveedor = async () => {
   await cargarProveedores()
 }
 
-const verCompra = (inv) => {
-  compraSeleccionada.value = inv
-  compraDetalleDialog.value = true
-}
-
-const eliminarCompra = async (inv) => {
-  await api.delete(`/inventario/inversiones/${inv.id_inversion}`)
-  toast.add({ severity: 'success', summary: 'Compra/inversión eliminada', life: 2500 })
-  await Promise.all([cargarInversiones(), cargarResumen()])
-}
-
 onMounted(async () => {
-  await Promise.all([cargarProductos(), cargarCategorias(), cargarInversiones(), cargarProveedores(), cargarResumen()])
+  await Promise.all([
+    cargarProductos(), cargarCategorias(), cargarCompras(), cargarInversiones(),
+    cargarMovimientos(), cargarProveedores(), cargarResumen()
+  ])
 })
 </script>
 
@@ -327,4 +502,12 @@ onMounted(async () => {
 .mt-3 { margin-top: 0.75rem; }
 .detalle-info .d-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
 .detalle-info .d-label { font-weight: 600; color: var(--text-muted); }
+.sub-det { margin: 1rem 0 0.5rem; }
+.det-line { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; font-size: 0.9rem; border-bottom: 1px dashed var(--border-color); }
+.mt-1 { margin-top: 0.25rem; }
+.detalle-row { display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.mov-tipo { padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.mov-entrada { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+.mov-salida { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+.mov-ajuste { background: rgba(245, 158, 11, 0.15); color: #b45309; }
 </style>

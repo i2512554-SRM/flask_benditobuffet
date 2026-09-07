@@ -41,7 +41,8 @@ logging.basicConfig(level=logging.INFO)
 from models import (
     Usuario, Rol, DocumentoIdentidad, UsuarioPerfil, PagoEmpleado, PagoPersonal,
     Adelanto, ActividadUsuario, IntentoLogin, TransaccionCaja,
-    CierreCaja, Producto, Inversion, Categoria, Proveedor
+    CierreCaja, Producto, Inversion, Categoria, Proveedor,
+    CompraInventario, DetalleCompraInventario, InventarioMovimiento, BloqueoLogin
 )
 
 from api.auth import auth_bp
