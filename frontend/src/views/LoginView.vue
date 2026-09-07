@@ -80,6 +80,11 @@ import logoSrc from '../assets/logo.png'
 const router = useRouter()
 const authStore = useAuthStore()
 
+// Limpia cualquier sesión/token viejo guardado en el navegador
+// para evitar que un token caducado bloquee el inicio de sesión.
+localStorage.removeItem('token')
+localStorage.removeItem('user')
+
 const usuario = ref('')
 const contrasena = ref('')
 const loading = ref(false)
