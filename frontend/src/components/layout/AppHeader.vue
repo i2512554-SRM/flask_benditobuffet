@@ -31,7 +31,7 @@
       <button class="theme-toggle" @click="toggleDarkMode" :title="isDarkMode ? 'Modo claro' : 'Modo oscuro'">
         <i :class="isDarkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
       </button>
-      <button class="btn-logout" @click="handleLogout">
+      <button class="btn-logout" @click="confirmarCierre">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Cerrar Sesion</span>
       </button>
@@ -41,8 +41,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useLogout } from '../../composables/useLogout'
 import logoSrc from '../../assets/logo.png'
 
 defineProps({
@@ -50,7 +50,7 @@ defineProps({
 })
 defineEmits(['toggle-menu'])
 
-const router = useRouter()
+const { confirmarCierre } = useLogout()
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.user?.rol === 1)
 const isDarkMode = ref(false)
@@ -66,11 +66,6 @@ const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
   document.documentElement.classList.toggle('dark-mode')
   localStorage.setItem('dark-mode', isDarkMode.value)
-}
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
 }
 </script>
 

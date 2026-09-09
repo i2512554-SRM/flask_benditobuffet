@@ -129,7 +129,7 @@
       </nav>
 
       <div class="drawer-footer">
-        <button class="drawer-logout" @click="handleLogout">
+        <button class="drawer-logout" @click="confirmarCierre">
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Cerrar sesión</span>
         </button>
@@ -140,8 +140,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useLogout } from '../../composables/useLogout'
 import logoSrc from '../../assets/logo.png'
 
 defineProps({
@@ -149,7 +149,7 @@ defineProps({
 })
 defineEmits(['close'])
 
-const router = useRouter()
+const { confirmarCierre } = useLogout()
 const authStore = useAuthStore()
 
 const isAdmin = computed(() => authStore.user?.rol === 1)
@@ -161,11 +161,6 @@ const subtitle = computed(() => {
   if (isCajera.value) return 'Área de Caja'
   return 'Área del Colaborador'
 })
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
 </script>
 
 <style scoped>
