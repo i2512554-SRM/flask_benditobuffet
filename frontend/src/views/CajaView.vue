@@ -87,6 +87,34 @@
         <Button label="Cerrar" severity="secondary" @click="dialogHistorial = false" />
       </template>
     </Dialog>
+
+    <Dialog v-model:visible="dialogDetalle" header="Detalle de Caja" :modal="true" :style="{ width: '480px' }">
+      <div v-if="detalleSeleccionada" class="detalle-caja">
+        <div class="dc-row">
+          <span class="dc-label">Fecha</span>
+          <span class="dc-value">{{ detalleSeleccionada.fecha || '—' }}</span>
+        </div>
+        <div class="dc-row">
+          <span class="dc-label">Estado</span>
+          <span class="dc-value">{{ estadoLabel(detalleSeleccionada.estado) }}</span>
+        </div>
+        <div class="dc-row">
+          <span class="dc-label">Total ventas</span>
+          <span class="dc-value">S/. {{ fmtMoney(detalleSeleccionada.total_ventas) }}</span>
+        </div>
+        <div class="dc-row">
+          <span class="dc-label">Total gastos</span>
+          <span class="dc-value">S/. {{ fmtMoney(detalleSeleccionada.total_gastos) }}</span>
+        </div>
+        <div class="dc-row dc-total" :class="(detalleSeleccionada.neto ?? 0) >= 0 ? 'pos' : 'neg'">
+          <span class="dc-label">Neto</span>
+          <span class="dc-value">S/. {{ fmtMoney(detalleSeleccionada.neto) }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cerrar" severity="secondary" @click="dialogDetalle = false" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -117,6 +145,8 @@ const dialogAbierta = ref(false)
 const dialogTransaccion = ref(false)
 const dialogCierre = ref(false)
 const dialogHistorial = ref(false)
+const dialogDetalle = ref(false)
+const detalleSeleccionada = ref(null)
 const nuevaTransaccion = ref({
   tipo: 'Venta',
   monto: 0,
@@ -240,8 +270,12 @@ const cargarHistorial = async () => {
 }
 
 const verDetalle = (caja) => {
-  console.log('Ver detalle de caja:', caja)
+  detalleSeleccionada.value = caja
+  dialogDetalle.value = true
 }
+
+const fmtMoney = (v) => Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
+const estadoLabel = (e) => (e === 'abierta' ? 'Abierta' : e === 'cerrada' ? 'Cerrada' : e || '—')
 
 const abrirCaja = async () => {
   try {
@@ -328,4 +362,47 @@ const cerrarCaja = async () => {
 .mt-4 {
   margin-top: 1rem;
 }
+
+.detalle-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+}
+
+.dc-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dc-value {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dc-total {
+  margin-top: 0.25rem;
+}
+
+.dc-total.pos {
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.dc-total.pos .dc-value { color: var(--color-verde-fuerte); }
+
+.dc-total.neg {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.dc-total.neg .dc-value { color: var(--color-rojo); }
 </style>
