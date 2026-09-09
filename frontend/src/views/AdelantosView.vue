@@ -1,5 +1,6 @@
 <template>
   <div class="adelantos-view">
+    <VolverBtn to="/personal" />
     <h1>Adelantos de Salario</h1>
     
     <div class="actions">
@@ -47,6 +48,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import VolverBtn from '../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'

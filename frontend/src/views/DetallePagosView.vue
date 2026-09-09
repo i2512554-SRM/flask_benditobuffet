@@ -1,7 +1,7 @@
 <template>
   <div class="detalle-view">
+    <VolverBtn to="/personal/pagos" />
     <div class="header">
-      <Button icon="pi pi-arrow-left" severity="secondary" text @click="$router.push('/personal/pagos')" />
       <div>
         <h1>Historial de {{ detalle.empleado?.nombres }} {{ detalle.empleado?.apellido }}</h1>
         <p class="subtitle">Historial de pagos, adelantos y movimientos</p>
@@ -88,6 +88,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import VolverBtn from '../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'

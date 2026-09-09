@@ -1,21 +1,21 @@
 <template>
   <div class="panel-view">
-    <div class="page-header">
-      <div>
-        <h1>Panel Administrativo</h1>
-        <p>Gestion integral del restaurante</p>
+    <div class="page-hero">
+      <div class="hero-left">
+        <h1>¡Hola, {{ nombre }}! 👋</h1>
+        <p>Bienvenido al panel de administración de Bendito Buffet</p>
+        <div class="hero-badges">
+          <span class="rol-badge"><i class="fa-solid fa-user-shield"></i> Administrador</span>
+          <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ fechaHoy }}</span>
+        </div>
       </div>
-      <div class="header-actions">
-        <router-link to="/perfil" class="btn btn-outline">
-          <i class="fa-solid fa-user"></i> Mi Perfil
-        </router-link>
-        <button class="btn btn-outline" @click="loadStats">
-          <i class="fa-solid fa-arrows-rotate"></i> Actualizar
-        </button>
-      </div>
+      <button class="btn btn-outline" @click="cargar">
+        <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+      </button>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Resumen -->
+    <h2 class="seccion-title">Resumen general</h2>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon positive">
@@ -24,7 +24,6 @@
         <div class="stat-content">
           <span class="stat-label">Ventas del mes</span>
           <span class="stat-value">S/. {{ formatMoney(stats.ventas_mes) }}</span>
-          <span class="stat-badge positive">Mes actual</span>
         </div>
       </div>
       <div class="stat-card">
@@ -34,7 +33,6 @@
         <div class="stat-content">
           <span class="stat-label">Egresos del mes</span>
           <span class="stat-value">S/. {{ formatMoney(stats.egresos_mes) }}</span>
-          <span class="stat-badge negative">Mes actual</span>
         </div>
       </div>
       <div class="stat-card">
@@ -44,82 +42,94 @@
         <div class="stat-content">
           <span class="stat-label">Ganancia neta</span>
           <span class="stat-value">S/. {{ formatMoney(stats.neto_mes) }}</span>
-          <span class="stat-badge" :class="stats.neto_mes >= 0 ? 'positive' : 'negative'">
-            {{ stats.neto_mes >= 0 ? 'Mes actual' : 'Perdida' }}
-          </span>
         </div>
       </div>
-    </div>
-
-    <!-- Module Cards -->
-    <div class="module-grid">
-      <router-link to="/caja" class="module-card">
-        <div class="module-icon caja">
-          <i class="fa-solid fa-cash-register"></i>
-        </div>
-        <h3>Gestion de Caja</h3>
-        <p>Registrar ventas, egresos y cierre diario</p>
-      </router-link>
-      <template v-if="isAdmin">
-        <router-link to="/personal/empleados" class="module-card">
-          <div class="module-icon personal">
-            <i class="fa-solid fa-users-gear"></i>
-          </div>
-          <h3>Gestion del Personal</h3>
-          <p>Empleados, pagos, solicitudes y turnos</p>
-        </router-link>
-      </template>
-      <router-link to="/inventario" class="module-card">
-        <div class="module-icon inventario">
+      <div class="stat-card">
+        <div class="stat-icon purple">
           <i class="fa-solid fa-boxes-stacked"></i>
         </div>
-        <h3>Inventario e Inversion</h3>
-        <p>Compras, equipamiento y costos</p>
-      </router-link>
-      <template v-if="isAdmin">
-        <div class="module-card ia-card">
-          <div class="module-icon ia">
-            <i class="fa-solid fa-robot"></i>
-          </div>
-          <h3>IA Predictiva</h3>
-          <p>Analisis y predicciones inteligentes</p>
-          <span class="coming-soon">Proximamente</span>
+        <div class="stat-content">
+          <span class="stat-label">Valor de inventario</span>
+          <span class="stat-value">S/. {{ formatMoney(resumenInv.valor_total) }}</span>
         </div>
-      </template>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="quick-actions" v-if="isAdmin">
-      <h2>Acciones Rapidas</h2>
-      <div class="actions-grid">
-        <router-link to="/caja" class="action-btn primary">
-          <i class="fa-solid fa-arrow-right"></i> Ir a Caja
-        </router-link>
-        <router-link to="/personal/pagos" class="action-btn secondary">
-          <i class="fa-solid fa-money-bill-wave"></i> Registrar Pago
-        </router-link>
-        <router-link to="/inventario" class="action-btn secondary">
-          <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
-        </router-link>
-        <router-link to="/personal/adelantos" class="action-btn secondary">
-          <i class="fa-solid fa-file-invoice-dollar"></i> Adelantos
-        </router-link>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber">
+          <i class="fa-solid fa-inbox"></i>
+        </div>
+        <div class="stat-content">
+          <span class="stat-label">Solicitudes pendientes</span>
+          <span class="stat-value">{{ alertas.adelantos_pendientes + alertas.solicitudes_pendientes }}</span>
+        </div>
       </div>
     </div>
 
-    <div class="quick-actions" v-else>
-      <h2>Acciones Rapidas</h2>
-      <div class="actions-grid">
-        <router-link to="/caja" class="action-btn primary">
-          <i class="fa-solid fa-arrow-right"></i> Ir a Caja
-        </router-link>
-        <router-link to="/inventario" class="action-btn secondary">
-          <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
-        </router-link>
+    <!-- Acciones rápidas -->
+    <h2 class="seccion-title">Acciones rápidas</h2>
+    <div class="acciones-grid">
+      <router-link to="/caja" class="accion-chip">
+        <i class="fa-solid fa-cash-register"></i> Ir a Caja
+      </router-link>
+      <router-link to="/personal/empleados" class="accion-chip">
+        <i class="fa-solid fa-users"></i> Gestionar Personal
+      </router-link>
+      <router-link to="/inventario/operaciones" class="accion-chip">
+        <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
+      </router-link>
+      <router-link to="/personal/pagos" class="accion-chip">
+        <i class="fa-solid fa-money-bill-wave"></i> Registrar Pago
+      </router-link>
+      <router-link to="/personal/solicitudes" class="accion-chip">
+        <i class="fa-solid fa-clipboard-list"></i> Revisar Solicitudes
+      </router-link>
+    </div>
+
+    <!-- Notificaciones -->
+    <h2 class="seccion-title">Notificaciones</h2>
+    <div class="notif-card">
+      <div v-if="!notificaciones.length" class="notif-empty">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Todo en orden. No hay alertas pendientes.</span>
+      </div>
+      <div v-for="(n, i) in notificaciones" :key="i" class="notif-item" :class="'notif-' + n.tipo">
+        <i :class="n.icono"></i>
+        <div>
+          <span class="notif-titulo">{{ n.titulo }}</span>
+          <router-link v-if="n.link" :to="n.link" class="notif-link">Revisar →</router-link>
+        </div>
       </div>
     </div>
 
-    <!-- Loading overlay -->
+    <!-- Módulos -->
+    <h2 class="seccion-title">Módulos</h2>
+    <div class="modulo-grid">
+      <router-link to="/caja" class="seccion-card">
+        <div class="seccion-icon ic-orange"><i class="fa-solid fa-cash-register"></i></div>
+        <h3>Gestión de Caja</h3>
+        <p>Ventas y movimientos diarios</p>
+      </router-link>
+      <router-link to="/personal" class="seccion-card">
+        <div class="seccion-icon ic-blue"><i class="fa-solid fa-users"></i></div>
+        <h3>Gestión del Personal</h3>
+        <p>Empleados, pagos y turnos</p>
+      </router-link>
+      <router-link to="/inventario" class="seccion-card">
+        <div class="seccion-icon ic-purple"><i class="fa-solid fa-cubes-stacked"></i></div>
+        <h3>Inventario e Inversión</h3>
+        <p>Productos, compras y stock</p>
+      </router-link>
+      <router-link to="/seguridad" class="seccion-card">
+        <div class="seccion-icon ic-red"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Seguridad y Accesos</h3>
+        <p>Usuarios y accesos</p>
+      </router-link>
+      <router-link to="/ia" class="seccion-card">
+        <div class="seccion-icon ic-cyan"><i class="fa-solid fa-brain"></i></div>
+        <h3>IA Predictiva</h3>
+        <p>Análisis y predicciones</p>
+      </router-link>
+    </div>
+
     <div class="loading-overlay" v-if="loading">
       <i class="fa-solid fa-spinner fa-spin"></i>
     </div>
@@ -132,35 +142,74 @@ import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
 const authStore = useAuthStore()
-const isAdmin = computed(() => authStore.user?.rol === 1)
 const loading = ref(true)
-const stats = ref({
-  ventas_mes: 0,
-  egresos_mes: 0,
-  neto_mes: 0,
-  total_empleados: 0,
-  productos_stock_bajo: 0
+const stats = ref({ ventas_mes: 0, egresos_mes: 0, neto_mes: 0 })
+const resumenInv = ref({ valor_total: 0 })
+const alertas = ref({
+  stock_bajo: 0,
+  agotados: 0,
+  adelantos_pendientes: 0,
+  solicitudes_pendientes: 0,
+  pagos_pendientes: 0,
+  bloqueos_activos: 0,
+  movimientos_hoy: 0
 })
 
-const formatMoney = (val) => {
-  return Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
-}
+const nombre = computed(() => authStore.user?.nombre || 'Administrador')
+const fechaHoy = computed(() => {
+  return new Intl.DateTimeFormat('es-PE', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  }).format(new Date())
+})
 
-const loadStats = async () => {
+const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
+
+const notificaciones = computed(() => {
+  const a = alertas.value
+  const items = []
+  if (a.adelantos_pendientes > 0) {
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-file-invoice-dollar', titulo: `Hay ${a.adelantos_pendientes} adelanto(s) pendientes de revisión`, link: '/personal/adelantos' })
+  }
+  if (a.solicitudes_pendientes > 0) {
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-clipboard-list', titulo: `Hay ${a.solicitudes_pendientes} solicitud(es) de insumos pendientes`, link: '/personal/solicitudes' })
+  }
+  if (a.stock_bajo > 0) {
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-fill-drip', titulo: `${a.stock_bajo} producto(s) con stock bajo`, link: '/inventario/operaciones?vista=productos' })
+  }
+  if (a.agotados > 0) {
+    items.push({ tipo: 'error', icono: 'fa-solid fa-triangle-exclamation', titulo: `${a.agotados} producto(s) agotados`, link: '/inventario/operaciones?vista=productos' })
+  }
+  if (a.pagos_pendientes > 0) {
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-money-bill-wave', titulo: `Hay ${a.pagos_pendientes} pago(s) pendientes`, link: '/personal/pagos' })
+  }
+  if (a.bloqueos_activos > 0) {
+    items.push({ tipo: 'error', icono: 'fa-solid fa-shield-halved', titulo: `${a.bloqueos_activos} cuenta(s) bloqueada(s) por seguridad`, link: '/seguridad/monitoreo' })
+  }
+  if (a.movimientos_hoy > 0) {
+    items.push({ tipo: 'info', icono: 'fa-solid fa-cash-register', titulo: `Se registraron ${a.movimientos_hoy} movimiento(s) de caja hoy`, link: '/caja' })
+  }
+  return items
+})
+
+const cargar = async () => {
   loading.value = true
   try {
-    const res = await api.get('/admin/panel-stats')
-    if (res.data.success) {
-      stats.value = res.data.data
-    }
+    const [statsRes, alertasRes, invRes] = await Promise.all([
+      api.get('/admin/panel-stats'),
+      api.get('/admin/alertas-resumen'),
+      api.get('/inventario/resumen')
+    ])
+    if (statsRes.data.success) stats.value = statsRes.data.data
+    if (alertasRes.data.success) alertas.value = alertasRes.data.data
+    if (invRes.data.success) resumenInv.value = invRes.data.data
   } catch (err) {
-    console.error('Error loading stats:', err)
+    console.error('Error cargando panel admin:', err)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadStats)
+onMounted(cargar)
 </script>
 
 <style scoped>
@@ -168,45 +217,18 @@ onMounted(loadStats)
   padding: 0;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--text-main);
-}
-
-.page-header p {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Stats */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  padding: 1.5rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.9rem;
+  margin-top: 1rem;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
   background: var(--bg-card);
   border-radius: 14px;
   border: 1px solid var(--border-color);
@@ -214,205 +236,151 @@ onMounted(loadStats)
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   flex-shrink: 0;
 }
 
-.stat-icon.positive {
-  background: rgba(22, 163, 74, 0.1);
-  color: var(--color-verde-fuerte);
-}
+.stat-icon.positive { background: rgba(22, 163, 74, 0.1); color: var(--color-verde-fuerte); }
+.stat-icon.negative { background: rgba(220, 38, 38, 0.1); color: var(--color-rojo); }
+.stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.stat-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
 
-.stat-icon.negative {
-  background: rgba(220, 38, 38, 0.1);
-  color: var(--color-rojo);
-}
+.stat-content { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.72rem; color: var(--text-muted); }
+.stat-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
 
-.stat-content {
+.hero-badges {
   display: flex;
-  flex-direction: column;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 0.15rem;
-}
-
-.stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.stat-badge {
-  font-size: 0.65rem;
-  font-weight: 600;
-  margin-top: 0.2rem;
-}
-
-.stat-badge.positive {
-  color: var(--color-verde-fuerte);
-}
-
-.stat-badge.negative {
-  color: var(--color-rojo);
-}
-
-/* Modules */
-.module-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  padding: 0 2rem 1.5rem;
-}
-
-.module-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 1.75rem 1.25rem;
-  background: var(--bg-card);
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  text-decoration: none;
-  color: inherit;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  box-shadow: var(--shadow-soft);
-  position: relative;
-}
-
-.module-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  border-color: var(--btn-primary);
-}
-
-.module-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  margin-bottom: 0.85rem;
-  color: white;
-}
-
-.module-icon.caja {
-  background: linear-gradient(135deg, var(--btn-primary), var(--btn-gradient-end));
-}
-
-.module-icon.personal {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-}
-
-.module-icon.inventario {
-  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-}
-
-.module-icon.ia {
-  background: linear-gradient(135deg, #10b981, #34d399);
-}
-
-.module-card h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  font-weight: 600;
-}
-
-.module-card p {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.coming-soon {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 0.6rem;
-  font-weight: 600;
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-}
-
-.ia-card {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.ia-card:hover {
-  transform: none;
-}
-
-/* Quick Actions */
-.quick-actions {
-  padding: 0 2rem 2rem;
-}
-
-.quick-actions h2 {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  color: var(--text-main);
-  font-weight: 600;
-}
-
-.actions-grid {
-  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
   flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
-.action-btn {
+.rol-badge,
+.fecha-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.18s ease;
-  border: 1px solid transparent;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
 }
 
-.action-btn.primary {
-  background: var(--btn-gradient);
-  color: white;
-  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.25);
-}
-
-.action-btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(255, 122, 0, 0.35);
-}
-
-.action-btn.secondary {
-  background: var(--bg-secondary);
-  color: var(--text-main);
-  border-color: var(--border-color);
-}
-
-.action-btn.secondary:hover {
-  border-color: var(--btn-primary);
+.rol-badge {
+  background: rgba(255, 122, 0, 0.1);
   color: var(--btn-primary);
 }
 
-/* Loading */
+.fecha-badge {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.page-hero .hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.page-hero {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.acciones-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.accion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  text-decoration: none;
+  transition: all 0.18s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.accion-chip i {
+  color: var(--btn-primary);
+}
+
+.accion-chip:hover {
+  border-color: var(--btn-primary);
+  color: var(--btn-primary);
+  transform: translateY(-1px);
+}
+
+.notif-card {
+  margin-top: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.75rem;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.notif-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--color-verde-fuerte);
+  font-size: 0.85rem;
+}
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  background: var(--bg-secondary);
+}
+
+.notif-item i {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.notif-item.notif-warn { color: #b45309; background: rgba(245, 158, 11, 0.08); }
+.notif-item.notif-error { color: var(--color-rojo); background: rgba(220, 38, 38, 0.06); }
+.notif-item.notif-info { color: #2563eb; background: rgba(59, 130, 246, 0.08); }
+
+.notif-titulo {
+  color: var(--text-main);
+  font-weight: 500;
+  margin-right: 0.6rem;
+}
+
+.notif-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
 .loading-overlay {
   display: flex;
   justify-content: center;
@@ -421,16 +389,10 @@ onMounted(loadStats)
   font-size: 1.5rem;
 }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .stats-grid, .module-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .page-header {
+@media (max-width: 768px) {
+  .page-hero {
     flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
+    gap: 0.75rem;
   }
 }
 </style>

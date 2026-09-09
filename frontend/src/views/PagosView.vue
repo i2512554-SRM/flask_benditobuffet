@@ -1,43 +1,35 @@
 <template>
   <div class="pagos-view">
-    <h1>Pagos al Personal</h1>
-    <p class="subtitle">Control mensual de salarios, adelantos y netos.</p>
-
-    <div class="actions">
-      <Button label="Registrar pago" icon="pi pi-plus" @click="openRegistrar('pago')" />
-      <Button label="Registrar adelanto" icon="pi pi-plus" severity="secondary" @click="openRegistrar('adelanto')" />
+    <VolverBtn to="/personal" />
+    <div class="page-header animate-item">
+      <div>
+        <h1>Pagos al Personal</h1>
+        <p class="subtitle">Control mensual de salarios, adelantos y netos.</p>
+      </div>
+      <div class="actions">
+        <Button label="Registrar pago" icon="pi pi-plus" @click="openRegistrar('pago')" />
+        <Button label="Registrar adelanto" icon="pi pi-plus" severity="secondary" @click="openRegistrar('adelanto')" />
+      </div>
     </div>
 
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total pagado</div>
-        <div class="stat-value">S/. {{ fmt(totales.pagado) }}</div>
-        <div class="stat-note positive">Mes seleccionado</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total adelantos</div>
-        <div class="stat-value">S/. {{ fmt(totales.adelantos) }}</div>
-        <div class="stat-note negative">Mes seleccionado</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Neto del mes</div>
-        <div class="stat-value">S/. {{ fmt(totales.neto) }}</div>
-        <div class="stat-note" :class="totales.neto >= 0 ? 'positive' : 'negative'">Mes seleccionado</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Empleados activos</div>
-        <div class="stat-value">{{ empleadosActivos }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Próximo pago</div>
-        <div class="stat-value small">{{ proximoPago !== null ? proximoPago + ' días' : 'No hay pagos pendientes' }}</div>
-      </div>
+      <TransitionGroup name="pop">
+        <div v-for="card in statCards" :key="card.label" class="stat-card">
+          <div class="stat-icon" :class="card.tone">
+            <i :class="card.icon"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">{{ card.label }}</span>
+            <span class="stat-value">{{ card.valor }}</span>
+          </div>
+        </div>
+      </TransitionGroup>
     </div>
 
     <div class="filters">
       <label>Mes</label>
       <DatePicker v-model="mesSeleccionado" view="month" date-format="mm/yy" :max-date="new Date()" @update:model-value="cargarDatos" />
-      <Button label="Consultar" icon="pi pi-search" @click="cargarDatos" />
+      <Button label="Consultar" icon="pi pi-search" :loading="loading" @click="cargarDatos" />
     </div>
 
     <div class="view-toggle">
@@ -45,50 +37,78 @@
       <Button label="Historial" :class="{ active: vista === 'historial' }" severity="secondary" plain @click="vista = 'historial'" />
     </div>
 
-    <div class="table-card" v-if="vista === 'empleados'">
-      <h2>Resumen por empleado</h2>
-      <DataTable :value="resumen" :paginator="true" :rows="10" class="mt-4">
-        <Column field="nombres" header="Empleado">
-          <template #body="slotProps">{{ slotProps.data.nombres }} {{ slotProps.data.apellido }}</template>
-        </Column>
-        <Column field="total_pagado" header="Pagado" sortable>
-          <template #body="slotProps">S/. {{ fmt(slotProps.data.total_pagado) }}</template>
-        </Column>
-        <Column field="total_adelantos" header="Adelantos" sortable>
-          <template #body="slotProps">S/. {{ fmt(slotProps.data.total_adelantos) }}</template>
-        </Column>
-        <Column field="neto" header="Neto" sortable>
-          <template #body="slotProps">S/. {{ fmt(slotProps.data.neto) }}</template>
-        </Column>
-        <Column header="Acción">
-          <template #body="slotProps">
-            <Button label="Historial" size="small" severity="secondary" @click="$router.push(`/personal/pagos/empleado/${slotProps.data.id_usuario}`)" />
-          </template>
-        </Column>
-      </DataTable>
-    </div>
+    <!-- Skeleton -->
+    <Transition name="fade">
+      <div v-if="loading" class="table-card">
+        <div v-for="n in 5" :key="n" class="skeleton-row">
+          <div class="sk sk-line w-30"></div>
+          <div class="sk sk-line w-20"></div>
+          <div class="sk sk-line w-20"></div>
+          <div class="sk sk-line w-15"></div>
+        </div>
+      </div>
+    </Transition>
 
-    <div class="table-card" v-if="vista === 'historial'">
-      <h2>Historial de pagos</h2>
-      <DataTable :value="historial" :paginator="true" :rows="10" class="mt-4">
-        <Column field="fecha" header="Fecha" sortable></Column>
-        <Column field="empleado" header="Empleado" sortable></Column>
-        <Column field="monto" header="Monto" sortable>
-          <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
-        </Column>
-        <Column field="estado" header="Estado">
-          <template #body="slotProps">
-            <Tag :value="slotProps.data.estado" :severity="slotProps.data.estado === 'Pagado' ? 'success' : 'warning'" />
+    <Transition name="fade-up">
+      <div v-if="!loading && vista === 'empleados'" class="table-card">
+        <h2>Resumen por empleado</h2>
+        <DataTable :value="resumen" :paginator="true" :rows="10" dataKey="id_usuario" stripedRows class="mt-4">
+          <Column field="nombres" header="Empleado" sortable>
+            <template #body="slotProps">{{ slotProps.data.nombres }} {{ slotProps.data.apellido }}</template>
+          </Column>
+          <Column field="total_pagado" header="Pagado" sortable>
+            <template #body="slotProps">S/. {{ fmt(slotProps.data.total_pagado) }}</template>
+          </Column>
+          <Column field="total_adelantos" header="Adelantos" sortable>
+            <template #body="slotProps">S/. {{ fmt(slotProps.data.total_adelantos) }}</template>
+          </Column>
+          <Column field="neto" header="Neto" sortable>
+            <template #body="slotProps"><strong>S/. {{ fmt(slotProps.data.neto) }}</strong></template>
+          </Column>
+          <Column header="Acción">
+            <template #body="slotProps">
+              <Button label="Historial" size="small" severity="secondary" @click="$router.push(`/personal/pagos/empleado/${slotProps.data.id_usuario}`)" />
+            </template>
+          </Column>
+          <template #empty>
+            <div class="empty-state">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <p>No hay pagos ni adelantos en este mes. Registra uno con los botones de arriba.</p>
+            </div>
           </template>
-        </Column>
-      </DataTable>
-    </div>
+        </DataTable>
+      </div>
+    </Transition>
+
+    <Transition name="fade-up">
+      <div v-if="!loading && vista === 'historial'" class="table-card">
+        <h2>Historial de pagos</h2>
+        <DataTable :value="historial" :paginator="true" :rows="10" dataKey="id_pago" stripedRows class="mt-4">
+          <Column field="fecha" header="Fecha" sortable></Column>
+          <Column field="empleado" header="Empleado" sortable></Column>
+          <Column field="monto" header="Monto" sortable>
+            <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
+          </Column>
+          <Column field="estado" header="Estado">
+            <template #body="slotProps">
+              <Tag :value="slotProps.data.estado" :severity="slotProps.data.estado === 'Pagado' ? 'success' : 'warning'" />
+            </template>
+          </Column>
+          <template #empty>
+            <div class="empty-state">
+              <i class="fa-solid fa-receipt"></i>
+              <p>No hay pagos registrados en el periodo seleccionado.</p>
+            </div>
+          </template>
+        </DataTable>
+      </div>
+    </Transition>
 
     <Dialog v-model:visible="dialogVisible" :header="modal === 'pago' ? 'Registrar pago' : 'Registrar adelanto'" :modal="true" :style="{ width: '520px' }">
       <div class="formgrid grid">
         <div class="field col-12">
           <label for="empleado">Empleado</label>
-          <Select id="empleado" v-model="form.id_usuario" :options="empleados" optionLabel="nombres" optionValue="id_usuario" class="w-full" placeholder="Seleccione..." />
+          <Select id="empleado" v-model="form.id_usuario" :options="empleados" :optionLabel="(e) => `${e.nombres} ${e.apellido}`" optionValue="id_usuario" class="w-full" placeholder="Seleccione..." />
         </div>
         <template v-if="modal === 'pago'">
           <div class="field col-6">
@@ -121,14 +141,15 @@
       </div>
       <template #footer>
         <Button label="Cancelar" severity="secondary" @click="dialogVisible = false" />
-        <Button label="Guardar" @click="guardar" />
+        <Button label="Guardar" :loading="guardando" @click="guardar" />
       </template>
     </Dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
@@ -157,25 +178,51 @@ const pagos = ref({
 const empleados = ref([])
 const dialogVisible = ref(false)
 const modal = ref('pago')
-const vista = ref('historial')
+const vista = ref('empleados')
 const mesSeleccionado = ref(new Date())
 const form = ref({})
+const loading = ref(true)
+const guardando = ref(false)
 
-const fmt = (v) => Number(v || 0).toFixed(2)
+const totales = computed(() => pagos.value.totales || { pagado: 0, adelantos: 0, neto: 0 })
+const empleadosActivos = computed(() => pagos.value.empleados_activos || 0)
+const proximoPago = computed(() => pagos.value.proximo_pago)
+const resumen = computed(() => pagos.value.resumen || [])
+const historial = computed(() => pagos.value.historial || [])
+
+const fmt = (v) => Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
+
+const statCards = computed(() => [
+  { label: 'Total pagado', valor: 'S/. ' + fmt(totales.value.pagado), icon: 'fa-solid fa-sack-dollar', tone: 'pagos' },
+  { label: 'Total adelantos', valor: 'S/. ' + fmt(totales.value.adelantos), icon: 'fa-solid fa-hand-holding-dollar', tone: 'adelantos' },
+  { label: 'Neto del mes', valor: 'S/. ' + fmt(totales.value.neto), icon: 'fa-solid fa-scale-balanced', tone: 'neto' },
+  { label: 'Empleados activos', valor: String(empleadosActivos.value), icon: 'fa-solid fa-users', tone: 'empleados' },
+  { label: 'Próximo pago', valor: proximoPago.value !== null && proximoPago.value !== undefined ? proximoPago.value + ' días' : 'Sin pendientes', icon: 'fa-solid fa-calendar-day', tone: 'proximo' }
+])
 
 const cargarDatos = async () => {
-  const mes = mesSeleccionado.value ? mesSeleccionado.value.getMonth() + 1 : new Date().getMonth() + 1
-  const anio = mesSeleccionado.value ? mesSeleccionado.value.getFullYear() : new Date().getFullYear()
-  const res = await api.get('/personal/pagos', { params: { mes, anio } })
-  if (res.data.success) {
-    pagos.value = res.data.data
-    vista.value = res.data.data.resumen.length ? vista.value : 'historial'
+  loading.value = true
+  try {
+    const mes = mesSeleccionado.value ? mesSeleccionado.value.getMonth() + 1 : new Date().getMonth() + 1
+    const anio = mesSeleccionado.value ? mesSeleccionado.value.getFullYear() : new Date().getFullYear()
+    const res = await api.get('/personal/pagos', { params: { mes, anio } })
+    if (res.data.success) {
+      pagos.value = res.data.data
+    }
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Error al cargar pagos', life: 3500 })
+  } finally {
+    loading.value = false
   }
 }
 
 const cargarEmpleados = async () => {
-  const res = await api.get('/personal/')
-  if (res.data.success) empleados.value = res.data.data
+  try {
+    const res = await api.get('/personal/')
+    if (res.data.success) empleados.value = res.data.data
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Error al cargar empleados', life: 3500 })
+  }
 }
 
 const openRegistrar = (tipo) => {
@@ -197,14 +244,25 @@ const guardar = async () => {
     toast.add({ severity: 'warn', summary: 'Seleccione un empleado', life: 3000 })
     return
   }
-  if (modal.value === 'pago') {
-    await api.post('/personal/pagos', form.value)
-  } else {
-    await api.post('/personal/pagos/adelanto', form.value)
+  if (modal.value === 'adelanto' && !form.value.motivo?.trim()) {
+    toast.add({ severity: 'warn', summary: 'Ingrese el motivo del adelanto', life: 3000 })
+    return
   }
-  toast.add({ severity: 'success', summary: 'Registrado correctamente', life: 3000 })
-  dialogVisible.value = false
-  await cargarDatos()
+  guardando.value = true
+  try {
+    if (modal.value === 'pago') {
+      await api.post('/personal/pagos', form.value)
+    } else {
+      await api.post('/personal/pagos/adelanto', form.value)
+    }
+    toast.add({ severity: 'success', summary: modal.value === 'pago' ? 'Pago registrado' : 'Adelanto registrado', life: 3000 })
+    dialogVisible.value = false
+    await cargarDatos()
+  } catch (err) {
+    toast.add({ severity: 'error', summary: err.response?.data?.message || 'No se pudo registrar', life: 4000 })
+  } finally {
+    guardando.value = false
+  }
 }
 
 onMounted(async () => {
@@ -214,20 +272,75 @@ onMounted(async () => {
 
 <style scoped>
 .pagos-view { padding: 2rem; }
-.subtitle { color: var(--text-muted); margin-top: 0.25rem; }
-.actions { display: flex; gap: 1rem; margin: 1.5rem 0; }
+
+.page-header {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;
+}
+.page-header h1 { margin: 0; font-size: 1.5rem; color: var(--text-main); }
+.subtitle { color: var(--text-muted); margin: 0.25rem 0 0; }
+.actions { display: flex; gap: 0.75rem; }
+
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-.stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; }
-.stat-label { font-size: 0.75rem; color: var(--text-muted); }
-.stat-value { font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; }
-.stat-value.small { font-size: 1rem; margin-top: 0.6rem; }
-.stat-note { font-size: 0.7rem; margin-top: 0.25rem; }
-.positive { color: green; }
-.negative { color: red; }
-.filters { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.stat-card {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 14px; padding: 1.1rem 1.25rem; box-shadow: var(--shadow-soft);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+.stat-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.stat-icon.pagos { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.stat-icon.adelantos { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+.stat-icon.neto { background: rgba(255, 123, 0, 0.14); color: var(--btn-primary); }
+.stat-icon.empleados { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+.stat-icon.proximo { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+.stat-content { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.72rem; color: var(--text-muted); }
+.stat-value { font-size: 1.2rem; font-weight: 700; margin-top: 0.15rem; color: var(--text-main); }
+
+.filters { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .filters label { font-weight: 600; }
+
 .view-toggle { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .view-toggle .active { background: var(--btn-primary); color: white; border-color: var(--btn-primary); }
-.table-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; }
+
+.table-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.25rem; box-shadow: var(--shadow-soft); }
+.table-card h2 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--text-main); }
 .mt-4 { margin-top: 1rem; }
+
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
+.empty-state i { font-size: 1.75rem; opacity: 0.5; display: block; margin-bottom: 0.5rem; }
+
+/* Skeletons */
+.skeleton-row { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 0.25rem; border-bottom: 1px solid var(--border-color); }
+.sk {
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.12) 25%, rgba(148,163,184,0.25) 50%, rgba(148,163,184,0.12) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+.sk-line { height: 14px; }
+.w-30 { width: 30%; } .w-20 { width: 20%; } .w-15 { width: 15%; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* Animaciones */
+.animate-item { animation: slide-in 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes slide-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+.pop-enter-active { transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.pop-enter-from { opacity: 0; transform: translateY(12px) scale(0.97); }
+.pop-enter-to { opacity: 1; transform: none; }
+.pop-move { transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.fade-up-enter-active { transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.fade-up-enter-from { opacity: 0; transform: translateY(14px); }
+.fade-up-enter-to { opacity: 1; transform: none; }
+
+@media (max-width: 768px) {
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
 </style>

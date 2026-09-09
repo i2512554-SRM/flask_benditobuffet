@@ -1,11 +1,19 @@
 <template>
   <div class="caja-view">
-    <h1>Gestion de Caja</h1>
+    <VolverBtn :to="isAdmin ? '/panel' : '/panel-cajera'" :etiqueta="isAdmin ? 'Volver al Panel' : 'Volver a Mi Panel'" />
+    <div class="page-hero">
+      <h1>Gestión de Caja</h1>
+      <p>Apertura, ingresos, egresos, cierre e historial de movimientos en una sola pantalla</p>
+      <router-link v-if="isAdmin" to="/caja/reportes" class="btn btn-outline btn-reports">
+        <i class="fa-solid fa-chart-line"></i> Reportes Financieros
+      </router-link>
+    </div>
     
     <div class="actions">
       <Button label="Abrir Caja" icon="pi pi-plus" @click="abrirCajaDialog" :disabled="cajaAbierta" />
       <Button label="Cerrar Caja" icon="pi pi-times" severity="danger" @click="cerrarCajaDialog" :disabled="!cajaAbierta" />
-      <Button label="Registrar Transaccion" icon="pi pi-plus" @click="registrarTransaccionDialog" :disabled="!cajaAbierta" />
+      <Button label="Registrar Ingreso" icon="pi pi-plus" @click="registrarIngresoDialog" :disabled="!cajaAbierta" />
+      <Button label="Registrar Egreso" icon="pi pi-minus" severity="warning" @click="registrarEgresoDialog" :disabled="!cajaAbierta" />
       <Button label="Historial" icon="pi pi-history" @click="historialDialog" />
     </div>
     
@@ -38,7 +46,7 @@
       </div>
       <div class="field">
         <label for="monto">Monto</label>
-        <InputNumber id="monto" v-model="nuevaTransaccion.monto" mode="currency" currency="PEN" locale="es-PE" />
+        <InputNumber id="monto" v-model="nuevaTransaccion.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" />
       </div>
       <div class="field">
         <label for="descripcion">Descripcion</label>
@@ -84,14 +92,24 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
+import { useToast } from 'primevue/usetoast'
+import VolverBtn from '../components/ui/VolverBtn.vue'
+import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
+const route = useRoute()
+const router = useRouter()
+const toast = useToast()
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.rol === 1)
 const transacciones = ref([])
 const historial = ref([])
 const cajaActual = ref({ abierta: false, cierre: null, ventas_dia: 0, gastos_dia: 0, neto_dia: 0, transacciones: [] })
@@ -133,7 +151,33 @@ const netoDia = computed(() => {
 onMounted(async () => {
   await cargarCajaActual()
   await cargarTransacciones()
+  abrirSegunAccion()
 })
+
+const abrirSegunAccion = async () => {
+  const accion = route.query.accion
+  if (!accion) return
+  if (accion === 'apertura') {
+    if (cajaAbierta.value) {
+      toast.add({ severity: 'info', summary: 'La caja ya está abierta', life: 3000 })
+    } else {
+      abrirCajaDialog()
+    }
+  } else if (accion === 'ingreso') {
+    registrarIngresoDialog()
+  } else if (accion === 'egreso') {
+    registrarEgresoDialog()
+  } else if (accion === 'cierre') {
+    if (!cajaAbierta.value) {
+      toast.add({ severity: 'info', summary: 'No hay una caja abierta para cerrar', life: 3000 })
+    } else {
+      cerrarCajaDialog()
+    }
+  } else if (accion === 'historial') {
+    historialDialog()
+  }
+  router.replace({ query: {} })
+}
 
 const cargarCajaActual = async () => {
   try {
@@ -159,6 +203,16 @@ const cargarTransacciones = async () => {
 
 const abrirCajaDialog = () => {
   dialogAbierta.value = true
+}
+
+const registrarIngresoDialog = () => {
+  nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
+  dialogTransaccion.value = true
+}
+
+const registrarEgresoDialog = () => {
+  nuevaTransaccion.value = { tipo: 'Gasto', monto: 0, descripcion: '' }
+  dialogTransaccion.value = true
 }
 
 const registrarTransaccionDialog = () => {
@@ -202,16 +256,30 @@ const abrirCaja = async () => {
 }
 
 const registrarTransaccion = async () => {
+  const monto = Number(nuevaTransaccion.value.monto)
+  if (!monto || monto <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingrese un monto mayor que cero', life: 3000 })
+    return
+  }
+  if (!nuevaTransaccion.value.descripcion || !nuevaTransaccion.value.descripcion.trim()) {
+    toast.add({ severity: 'warn', summary: 'Ingrese una descripción', life: 3000 })
+    return
+  }
   try {
-    const response = await api.post('/caja/transacciones', nuevaTransaccion.value)
+    const response = await api.post('/caja/transacciones', {
+      tipo: nuevaTransaccion.value.tipo,
+      monto,
+      descripcion: nuevaTransaccion.value.descripcion.trim()
+    })
     if (response.data.success) {
       await cargarTransacciones()
       await cargarCajaActual()
       dialogTransaccion.value = false
       nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
+      toast.add({ severity: 'success', summary: 'Transacción registrada', life: 2500 })
     }
   } catch (error) {
-    console.error('Error registrando transaccion:', error)
+    toast.add({ severity: 'error', summary: error.response?.data?.error || 'Error registrando transacción', life: 3500 })
   }
 }
 
@@ -230,7 +298,18 @@ const cerrarCaja = async () => {
 </script>
 <style scoped>
 .caja-view {
-  padding: 2rem;
+  padding: 0;
+}
+
+.page-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.btn-reports {
+  margin-top: 0.5rem;
 }
 
 .actions {

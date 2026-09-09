@@ -1,7 +1,12 @@
 <template>
   <div class="inventario-view">
-    <h1>Inventario e Inversión</h1>
-    <p class="subtitle">Control de productos, compras e inversiones.</p>
+    <div class="page-hero">
+      <router-link to="/inventario" class="btn btn-outline btn-back">
+        <i class="fa-solid fa-arrow-left"></i> Volver a Inventario e Inversión
+      </router-link>
+      <h1>Operaciones de Inventario</h1>
+      <p>Control de productos, compras, inversiones y movimientos de almacén</p>
+    </div>
 
     <div class="actions">
       <Button label="Registrar compra" icon="pi pi-cart-plus" @click="openCompra" />
@@ -209,14 +214,25 @@
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="proveedorDialog" header="Gestionar proveedores" :modal="true" :style="{ width: '600px' }">
-      <div class="formgrid grid">
-        <div class="field col-8">
-          <InputText v-model="provForm.nombre" placeholder="Nombre del proveedor" class="w-full" />
+    <Dialog v-model:visible="proveedorDialog" header="Gestionar proveedores" :modal="true" :style="{ width: '640px' }">
+      <div class="prov-form-grid">
+        <div class="field">
+          <label for="prov-nombre">Nombre *</label>
+          <InputText id="prov-nombre" v-model="provForm.nombre" placeholder="Nombre del proveedor" class="w-full" />
         </div>
-        <div class="field col-4">
-          <Button label="Agregar" icon="pi pi-plus" @click="guardarProveedor" class="w-full" />
+        <div class="field">
+          <label for="prov-ruc">RUC</label>
+          <InputText id="prov-ruc" v-model="provForm.ruc" placeholder="Opcional" class="w-full" />
         </div>
+        <div class="field">
+          <label for="prov-tel">Teléfono</label>
+          <InputText id="prov-tel" v-model="provForm.telefono" placeholder="Opcional" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="prov-mail">Correo</label>
+          <InputText id="prov-mail" v-model="provForm.correo" placeholder="Opcional" class="w-full" />
+        </div>
+        <Button label="Agregar proveedor" icon="pi pi-plus" @click="guardarProveedor" class="w-full" />
       </div>
       <DataTable :value="proveedores" :rows="8" class="mt-3">
         <Column field="nombre" header="Proveedor"></Column>
@@ -261,6 +277,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -272,6 +289,8 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import api from '../config/axios'
 
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const productos = ref([])
 const categorias = ref([])
@@ -280,7 +299,8 @@ const inversiones = ref([])
 const movimientos = ref([])
 const proveedores = ref([])
 const resumen = ref({ valor_total: 0, inversiones_mes: 0, articulos_registrados: 0, productos_mes: 0 })
-const vista = ref('productos')
+const vistaValida = ['productos', 'compras', 'inversiones', 'movimientos']
+const vista = ref(vistaValida.includes(route.query.vista) ? route.query.vista : 'productos')
 const busqueda = ref('')
 const categoriaFiltro = ref(null)
 const movBusqueda = ref('')
@@ -465,16 +485,23 @@ const eliminarInversion = async (inv) => {
 }
 
 const openProveedores = () => {
-  provForm.value = { nombre: '' }
+  provForm.value = { nombre: '', ruc: '', telefono: '', correo: '' }
   proveedorDialog.value = true
 }
 
 const guardarProveedor = async () => {
-  if (!provForm.value.nombre) return
-  await api.post('/inventario/proveedores', provForm.value)
-  toast.add({ severity: 'success', summary: 'Proveedor agregado', life: 2500 })
-  provForm.value = { nombre: '' }
-  await cargarProveedores()
+  if (!provForm.value.nombre || !provForm.value.nombre.trim()) {
+    toast.add({ severity: 'warn', summary: 'El nombre del proveedor es obligatorio', life: 3000 })
+    return
+  }
+  try {
+    await api.post('/inventario/proveedores', provForm.value)
+    toast.add({ severity: 'success', summary: 'Proveedor agregado', life: 2500 })
+    provForm.value = { nombre: '', ruc: '', telefono: '', correo: '' }
+    await cargarProveedores()
+  } catch (e) {
+    toast.add({ severity: 'error', summary: e.response?.data?.error || 'No se pudo guardar el proveedor', life: 3500 })
+  }
 }
 
 onMounted(async () => {
@@ -486,7 +513,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.inventario-view { padding: 2rem; }
+.inventario-view { padding: 0; }
 .subtitle { color: var(--text-muted); margin-top: 0.25rem; }
 .actions { display: flex; gap: 1rem; margin: 1.5rem 0; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -506,6 +533,8 @@ onMounted(async () => {
 .det-line { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; font-size: 0.9rem; border-bottom: 1px dashed var(--border-color); }
 .mt-1 { margin-top: 0.25rem; }
 .detalle-row { display: grid; grid-template-columns: 2fr 1fr 1.5fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.prov-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.prov-form-grid .field { margin: 0; }
 .mov-tipo { padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 .mov-entrada { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
 .mov-salida { background: rgba(239, 68, 68, 0.12); color: #dc2626; }

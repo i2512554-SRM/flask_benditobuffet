@@ -1,5 +1,6 @@
 <template>
   <div class="perfil-view">
+    <VolverBtn />
     <!-- Notificaciones de adelantos -->
     <div v-if="notificaciones.length" class="notif-list">
       <div
@@ -258,6 +259,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../config/axios'
 
