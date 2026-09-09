@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from datetime import datetime, timedelta, timezone
+from sqlalchemy import or_
 from bd import db
-from models import Usuario, BloqueoLogin, ActividadUsuario, IntentoLogin
+from models import Usuario, DocumentoIdentidad, BloqueoLogin, ActividadUsuario, IntentoLogin
 import bcrypt
 
 MAX_INTENTOS_FALLIDOS = 5
@@ -29,6 +30,19 @@ def _bloqueo_activo(identificador):
         BloqueoLogin.bloqueado_hasta.isnot(None),
         BloqueoLogin.bloqueado_hasta > limite
     ).order_by(BloqueoLogin.bloqueado_hasta.desc()).first()
+
+
+def _registrar_intento(identificador, ip, resultado):
+    db.session.add(IntentoLogin(
+        identificador=identificador,
+        ip=ip,
+        resultado=resultado,
+        fecha=_ahora()
+    ))
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def _registrar_intento_fallido(identificador, ip):
@@ -63,16 +77,26 @@ def login():
 
     bloqueo = _bloqueo_activo(identificador)
     if bloqueo:
+        _registrar_intento(identificador, ip, 'bloqueado')
         restante_min = max(1, int((bloqueo.bloqueado_hasta - _ahora()).total_seconds() // 60) + 1)
         return jsonify({
             'success': False,
             'error': f'Demasiados intentos fallidos. Cuenta bloqueada, reintenta en {restante_min} min.'
         }), 429
 
-    usuario = Usuario.query.filter_by(usuario=identificador).first()
+    usuario = Usuario.query.outerjoin(
+        DocumentoIdentidad,
+        DocumentoIdentidad.id_documento == Usuario.id_documento
+    ).filter(
+        or_(
+            Usuario.usuario == identificador,
+            DocumentoIdentidad.numero == identificador
+        )
+    ).first()
 
     if not usuario:
         _registrar_intento_fallido(identificador, ip)
+        _registrar_intento(identificador, ip, 'fallo')
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
 
     clave = data['clave']
@@ -89,6 +113,7 @@ def login():
 
     if not valida:
         _registrar_intento_fallido(identificador, ip)
+        _registrar_intento(identificador, ip, 'fallo')
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
 
     if not stored.startswith('$2'):
@@ -96,9 +121,9 @@ def login():
         db.session.commit()
 
     _limpiar_bloqueos(identificador, ip)
+    _registrar_intento(identificador, ip, 'exito')
 
     try:
-        db.session.add(IntentoLogin(identificador=identificador, fecha=_ahora()))
         db.session.add(ActividadUsuario(id_usuario=usuario.id_usuario, accion='Inició sesión', fecha=_ahora()))
         db.session.commit()
     except Exception:

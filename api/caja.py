@@ -108,11 +108,23 @@ def get_transacciones():
 @jwt_required()
 def crear_transaccion():
     from datetime import datetime
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+
+    tipo = (data.get('tipo') or '').strip()
+    if tipo not in ('Venta', 'Gasto'):
+        return jsonify({'success': False, 'error': 'El tipo debe ser Venta o Gasto'}), 400
+
+    try:
+        monto = float(str(data.get('monto', '')).replace(',', '.'))
+        if monto <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'El monto debe ser un número mayor que cero'}), 400
+
     transaccion = TransaccionCaja(
         id_usuario=get_jwt_identity(),
-        tipo=data['tipo'],
-        monto=data['monto'],
+        tipo=tipo,
+        monto=monto,
         metodo_pago=data.get('metodo_pago', 'Efectivo'),
         categoria=data.get('categoria', ''),
         descripcion=data.get('descripcion', ''),

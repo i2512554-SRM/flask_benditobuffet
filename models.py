@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from bd import db
 
 
@@ -188,10 +190,18 @@ class IntentoLogin(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True)
     identificador = db.Column(db.String(255), nullable=False, index=True)
+    ip = db.Column(db.String(50))
+    resultado = db.Column(db.String(20), nullable=False, default='exito')
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
+    usuario_rel = db.relationship('Usuario', primaryjoin='foreign(IntentoLogin.identificador)==Usuario.usuario', uselist=False, viewonly=True)
+
+    @property
+    def usuario_nombre(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
     def __repr__(self):
-        return f"<IntentoLogin {self.id} {self.identificador} {self.fecha}>"
+        return f"<IntentoLogin {self.id} {self.identificador} {self.resultado} {self.fecha}>"
 
 
 class TransaccionCaja(db.Model):
@@ -387,6 +397,65 @@ class InventarioMovimiento(db.Model):
         return f"<InventarioMovimiento {self.id_movimiento} {self.tipo} {self.cantidad}>"
 
 
+class SolicitudInsumo(db.Model):
+    __tablename__ = 'solicitudes_insumos'
+    __table_args__ = (
+        db.Index('ix_solicitudes_insumos_usuario', 'id_usuario'),
+        db.Index('ix_solicitudes_insumos_producto', 'id_producto'),
+        db.Index('ix_solicitudes_insumos_estado', 'estado'),
+    )
+
+    id_solicitud = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    cantidad = db.Column(db.Float, nullable=False)
+    observacion = db.Column(db.String(255))
+    estado = db.Column(db.String(30), nullable=False, default='Pendiente')
+    respuesta = db.Column(db.String(255))
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_solicitud = db.relationship('Usuario', foreign_keys=[id_usuario])
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    @property
+    def solicitante(self):
+        return f"{self.usuario_solicitud.nombres} {self.usuario_solicitud.apellido}".strip() if self.usuario_solicitud else None
+
+    def __repr__(self):
+        return f"<SolicitudInsumo {self.id_solicitud} producto={self.id_producto} estado={self.estado}>"
+
+
+class Notificacion(db.Model):
+    __tablename__ = 'notificaciones'
+    __table_args__ = (
+        db.Index('ix_notificaciones_usuario', 'id_usuario'),
+        db.Index('ix_notificaciones_leida', 'leida'),
+        db.Index('ix_notificaciones_fecha', 'fecha'),
+    )
+
+    id_notificacion = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    titulo = db.Column(db.String(120), nullable=False)
+    mensaje = db.Column(db.String(500))
+    leida = db.Column(db.Boolean, nullable=False, default=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_notif = db.relationship('Usuario', foreign_keys=[id_usuario])
+
+    def __repr__(self):
+        return f"<Notificacion {self.id_notificacion} usuario={self.id_usuario}>"
+
+
+def crear_notificacion(id_usuario, titulo, mensaje):
+    n = Notificacion(id_usuario=id_usuario, titulo=titulo, mensaje=mensaje, fecha=datetime.now(timezone.utc))
+    db.session.add(n)
+    return n
+
+
 class BloqueoLogin(db.Model):
     __tablename__ = 'bloqueos_login'
     __table_args__ = (
@@ -401,6 +470,16 @@ class BloqueoLogin(db.Model):
     bloqueado_hasta = db.Column(db.DateTime(timezone=True), nullable=True)
     tipo = db.Column(db.String(20), nullable=False, default='usuario')
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_rel = db.relationship('Usuario', primaryjoin='foreign(BloqueoLogin.usuario)==Usuario.usuario', uselist=False, viewonly=True)
+
+    @property
+    def usuario_nombre(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
+    @property
+    def usuario_rol(self):
+        return self.usuario_rel.rol.id_rol if self.usuario_rel and self.usuario_rel.rol else None
 
     def __repr__(self):
         return f"<BloqueoLogin {self.id} {self.usuario} intentos={self.intentos}>"

@@ -39,6 +39,10 @@ def _validar_correo(correo):
 def _serializar_usuario(usuario):
     perfil = usuario.perfil
     turnos = [t.strip() for t in (usuario.turno or '').split(',') if t.strip()]
+    foto_perfil = None
+    if perfil and perfil.foto_perfil:
+        base = request.host_url.rstrip('/')
+        foto_perfil = f"{base}/uploads/perfiles/{perfil.foto_perfil}"
     return {
         'id_usuario': usuario.id_usuario,
         'nombres': usuario.nombres,
@@ -53,7 +57,7 @@ def _serializar_usuario(usuario):
         'turnos': turnos,
         'fecha_creacion': usuario.fecha_creacion.isoformat() if usuario.fecha_creacion else None,
         'perfil': {
-            'foto_perfil': f"/uploads/perfiles/{perfil.foto_perfil}" if (perfil and perfil.foto_perfil) else None,
+            'foto_perfil': foto_perfil,
             'fecha_ingreso': perfil.fecha_ingreso.strftime('%d/%m/%Y') if (perfil and perfil.fecha_ingreso) else None,
             'horario': perfil.horario if perfil else None,
             'salario': perfil.salario if perfil else None,

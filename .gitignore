@@ -29,3 +29,7 @@ build/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Logs del servidor local
+server.log
+server.err

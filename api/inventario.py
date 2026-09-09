@@ -4,7 +4,8 @@ from datetime import datetime, date, time, timedelta
 from bd import db
 from models import (
     Producto, Inversion, Categoria, Proveedor, ActividadUsuario,
-    CompraInventario, DetalleCompraInventario, InventarioMovimiento
+    CompraInventario, DetalleCompraInventario, InventarioMovimiento,
+    SolicitudInsumo, crear_notificacion
 )
 from schemas.inventario import (
     producto_schema, productos_schema, inversion_schema, inversiones_schema,
@@ -231,6 +232,19 @@ def crear_compra():
         db.session.add(det)
         producto.stock = (producto.stock or 0) + cantidad
         producto.fecha_edicion = datetime.utcnow()
+
+        pendientes = SolicitudInsumo.query.filter_by(
+            id_producto=producto.id_producto, estado='Pendiente'
+        ).all()
+        for s in pendientes:
+            s.estado = 'Atendida'
+            s.respuesta = f'Stock repuesto con la compra {codigo}'
+            crear_notificacion(
+                s.id_usuario,
+                'Solicitud de insumo atendida',
+                f'{producto.nombre}: tu solicitud fue atendida con la compra {codigo}.'
+            )
+
         db.session.add(InventarioMovimiento(
             id_producto=producto.id_producto,
             id_usuario=usuario_id,

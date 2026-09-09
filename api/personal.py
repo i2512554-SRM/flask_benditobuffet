@@ -4,7 +4,7 @@ from datetime import datetime, date, time, timedelta
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
 import bcrypt
-from models import db, Usuario, PagoPersonal, PagoEmpleado, Adelanto, ActividadUsuario, DocumentoIdentidad
+from models import db, Usuario, Rol, PagoPersonal, PagoEmpleado, Adelanto, ActividadUsuario, DocumentoIdentidad, crear_notificacion
 from schemas.usuario import usuario_schema, usuarios_schema, pago_schema, pagos_schema
 
 personal_bp = Blueprint('personal', __name__)
@@ -24,8 +24,14 @@ def admin_required(fn):
 @personal_bp.route('/', methods=['GET'])
 @admin_required
 def get_empleados():
-    empleados = Usuario.query.filter_by(estado=True).all()
-    return jsonify({'success': True, 'data': usuarios_schema.dump(empleados)})
+    empleados = Usuario.query.order_by(Usuario.nombres.asc()).all()
+    data = []
+    for emp in empleados:
+        item = usuario_schema.dump(emp)
+        item['rol_nombre'] = emp.rol.nombre if emp.rol else None
+        item['id_rol'] = emp.id_rol
+        data.append(item)
+    return jsonify({'success': True, 'data': data})
 
 @personal_bp.route('/<int:id>', methods=['GET'])
 @admin_required
@@ -47,6 +53,11 @@ def crear_empleado():
     if DocumentoIdentidad.query.filter_by(numero=dni).first():
         return jsonify({'success': False, 'message': 'El DNI ya se encuentra registrado'}), 400
 
+    id_rol = int(data.get('id_rol') or 2)
+    rol = Rol.query.get(id_rol)
+    if not rol or not rol.estado:
+        return jsonify({'success': False, 'message': 'Rol no válido'}), 400
+
     try:
         documento = DocumentoIdentidad(
             tipo_documento='DNI',
@@ -55,24 +66,32 @@ def crear_empleado():
         db.session.add(documento)
         db.session.flush()
 
+        correo = (data.get('correo') or '').strip() or f"{dni}@empleado.benditobuffet.local"
+
+        turno = data.get('turno') or ''
+        if isinstance(turno, list):
+            turno = ','.join(str(t) for t in turno if str(t).strip())
+        elif isinstance(turno, str):
+            turno = ','.join(t.strip() for t in turno.split(',') if t.strip())
+
         empleado = Usuario(
             nombres=data['nombres'],
             apellido=data['apellido'],
-            correo=data.get('correo', ''),
+            correo=correo,
             telefono=data.get('telefono', ''),
             usuario=data.get('usuario') or dni,
             clave=bcrypt.hashpw((data.get('clave') or dni).encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
             id_documento=documento.id_documento,
-            id_rol=2,
+            id_rol=rol.id_rol,
             estado=True,
-            turno=data.get('turno', 'Manana'),
+            turno=turno or None,
             fecha_creacion=datetime.utcnow()
         )
         db.session.add(empleado)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify({'success': False, 'message': 'El DNI ya se encuentra registrado'}), 400
+        return jsonify({'success': False, 'message': 'El DNI o correo ya se encuentra registrado'}), 400
 
     return jsonify({'success': True, 'data': usuario_schema.dump(empleado)})
 
@@ -81,12 +100,29 @@ def crear_empleado():
 def actualizar_empleado(id):
     empleado = Usuario.query.get_or_404(id)
     data = request.get_json()
-    
+
     empleado.nombres = data.get('nombres', empleado.nombres)
     empleado.apellido = data.get('apellido', empleado.apellido)
     empleado.correo = data.get('correo', empleado.correo)
     empleado.telefono = data.get('telefono', empleado.telefono)
-    empleado.turno = data.get('turno', empleado.turno)
+
+    if 'id_rol' in data:
+        id_rol = int(data['id_rol'])
+        rol = Rol.query.get(id_rol)
+        if not rol or not rol.estado:
+            return jsonify({'success': False, 'message': 'Rol no válido'}), 400
+        empleado.id_rol = rol.id_rol
+
+    if 'estado' in data:
+        empleado.estado = bool(data['estado'])
+
+    if 'turno' in data:
+        turno = data['turno']
+        if isinstance(turno, list):
+            turno = ','.join(str(t) for t in turno if str(t).strip())
+        elif isinstance(turno, str):
+            turno = ','.join(t.strip() for t in turno.split(',') if t.strip())
+        empleado.turno = turno or None
 
     nueva_clave = data.get('clave')
     if nueva_clave:
@@ -303,6 +339,11 @@ def crear_pago():
     )
     db.session.add(pago_empleado)
     db.session.add(ActividadUsuario(id_usuario=admin_id, accion=f'Registró pago para empleado {id_usuario}', fecha=datetime.now()))
+    crear_notificacion(
+        id_usuario,
+        'Nuevo pago registrado',
+        f'Se registró tu pago por S/ {monto:.2f} ({estado}).'
+    )
     db.session.commit()
     return jsonify({'success': True, 'data': {'id_pago': pago_empleado.id_pago, 'monto': monto, 'fecha': fecha.isoformat(), 'estado': estado}})
 
@@ -387,7 +428,9 @@ def get_salarios():
     inicio = datetime(anio, mes, 1)
     fin = inicio + relativedelta(months=1)
 
-    empleados = Usuario.query.filter_by(estado=True).all()
+    empleados = Usuario.query.options(
+        db.joinedload(Usuario.perfil)
+    ).filter_by(estado=True).order_by(Usuario.nombres.asc()).all()
     salarios = []
 
     for emp in empleados:
@@ -406,15 +449,17 @@ def get_salarios():
 
         total_pagos = sum(p.monto for p in pagos)
         total_adelantos = sum(a.monto for a in adelantos)
+        sueldo_base = float(emp.perfil.salario) if emp.perfil and emp.perfil.salario else 0.0
 
         salarios.append({
             'id_usuario': emp.id_usuario,
-            'nombres': emp.nombres,
-            'apellido': emp.apellido,
-            'sueldo_base': 0,
+            'empleado': f"{emp.nombres} {emp.apellido}".strip(),
+            'usuario': emp.usuario,
+            'sueldo_base': sueldo_base,
             'total_pagos': total_pagos,
             'total_adelantos': total_adelantos,
-            'neto': total_pagos - total_adelantos
+            'neto': total_pagos - total_adelantos,
+            'diferencia_sueldo': sueldo_base - total_pagos - total_adelantos
         })
 
     return jsonify({'success': True, 'data': salarios})

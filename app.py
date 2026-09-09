@@ -21,6 +21,8 @@ from bd import db, init_db
 
 app = Flask(__name__, static_folder=None)
 app.secret_key = os.getenv("SECRET_KEY", "clave_secreta_segura_bendito_buffet")
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -28,7 +30,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'perfiles')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://localhost:5174"]}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://localhost:5174", "http://localhost:5000", "http://127.0.0.1:5000"]}})
 
 init_db(app)
 
@@ -51,12 +53,16 @@ from api.caja import caja_bp
 from api.personal import personal_bp
 from api.inventario import inventario_bp
 from api.perfil import perfil_bp
+from api.cocina import cocina_bp
+from api.trabajador import trabajador_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(caja_bp, url_prefix='/api/caja')
 app.register_blueprint(personal_bp, url_prefix='/api/personal')
 app.register_blueprint(inventario_bp, url_prefix='/api/inventario')
 app.register_blueprint(perfil_bp)
+app.register_blueprint(cocina_bp)
+app.register_blueprint(trabajador_bp)
 
 csrf.exempt(auth_bp)
 csrf.exempt(admin_bp)
@@ -64,6 +70,8 @@ csrf.exempt(caja_bp)
 csrf.exempt(personal_bp)
 csrf.exempt(inventario_bp)
 csrf.exempt(perfil_bp)
+csrf.exempt(cocina_bp)
+csrf.exempt(trabajador_bp)
 
 # -------------------------------
 # ERROR HANDLERS (API)
@@ -97,14 +105,17 @@ def api_consultar_dni(dni):
         return jsonify({"error": "DNI invalido"}), 400
     token = os.getenv("DNI_API_TOKEN", "").strip()
     if not token:
-        return jsonify({"error": "Token de DNI no configurado"}), 500
+        return jsonify({"error": "La consulta DNI no esta disponible: falta configurar el token RENIEC (DNI_API_TOKEN) en el archivo .env"}), 503
     try:
         respuesta = requests.get(
             f"https://dniruc.apisperu.com/api/v1/dni/{dni}",
             params={"token": token},
             timeout=10,
         )
-        return jsonify(respuesta.json()), respuesta.status_code
+        cuerpo = respuesta.json()
+        if respuesta.status_code != 200 or cuerpo.get("success") is False:
+            return jsonify({"error": f"La API RENIEC rechazo la consulta: {cuerpo.get('message') or 'verifica el token DNI_API_TOKEN'}"}), 502
+        return jsonify(cuerpo), respuesta.status_code
     except requests.RequestException:
         return jsonify({"error": "Error de conexion con la API de RENIEC"}), 502
 
