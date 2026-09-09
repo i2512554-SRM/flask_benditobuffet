@@ -1,10 +1,26 @@
 <template>
   <header class="app-header">
     <div class="header-left">
-      <img :src="logoSrc" alt="Logo" class="header-logo" />
-      <div class="header-brand">
-        <h1>Bendito Buffet</h1>
-        <span class="header-subtitle">Sistema de Gestion</span>
+      <button
+        class="menu-toggle"
+        :title="menuOpen ? 'Cerrar menú' : 'Abrir menú'"
+        @click="$emit('toggle-menu')"
+      >
+        <i :class="menuOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars'"></i>
+      </button>
+      <router-link to="/panel" class="header-brand" v-if="isAdmin">
+        <img :src="logoSrc" alt="Logo" class="header-logo" />
+        <div>
+          <h1>Bendito Buffet</h1>
+          <span class="header-subtitle">Sistema de Gestion</span>
+        </div>
+      </router-link>
+      <div class="header-brand" v-else>
+        <img :src="logoSrc" alt="Logo" class="header-logo" />
+        <div>
+          <h1>Bendito Buffet</h1>
+          <span class="header-subtitle">Sistema de Gestion</span>
+        </div>
       </div>
     </div>
     <div class="header-right">
@@ -24,13 +40,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import logoSrc from '../../assets/logo.png'
 
+defineProps({
+  menuOpen: { type: Boolean, default: false }
+})
+defineEmits(['toggle-menu'])
+
 const router = useRouter()
 const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.rol === 1)
 const isDarkMode = ref(false)
 
 onMounted(() => {
@@ -70,7 +92,35 @@ const handleLogout = () => {
 .header-left {
   display: flex;
   align-items: center;
+  gap: 0.9rem;
+}
+
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: all 0.18s ease;
+}
+
+.menu-toggle:hover {
+  color: var(--btn-primary);
+  border-color: var(--btn-primary);
+  background: var(--hover-color);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
   gap: 0.75rem;
+  text-decoration: none;
 }
 
 .header-logo {
@@ -164,5 +214,15 @@ const handleLogout = () => {
   color: var(--color-rojo);
   border-color: var(--color-rojo);
   background: rgba(220, 38, 38, 0.08);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 1rem;
+  }
+  .header-user span,
+  .btn-logout span {
+    display: none;
+  }
 }
 </style>

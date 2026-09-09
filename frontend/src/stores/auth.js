@@ -20,6 +20,9 @@ export const useAuthStore = defineStore('auth', () => {
         
         localStorage.setItem('token', token.value)
         localStorage.setItem('user', JSON.stringify(user.value))
+        if (data.data.refresh_token) {
+          localStorage.setItem('refresh_token', data.data.refresh_token)
+        }
         
         return true
       } else {
@@ -40,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = null
       user.value = null
       localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
     }
   }

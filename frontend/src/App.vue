@@ -1,23 +1,28 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
-import AppSidebar from './components/layout/AppSidebar.vue'
+import AppDrawer from './components/layout/AppDrawer.vue'
 import AppFooter from './components/layout/AppFooter.vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 
 const route = useRoute()
 const showLayout = computed(() => !['login', 'home'].includes(route.name))
+const menuOpen = ref(false)
+
+const toggleMenu = () => {
+  menuOpen.value = !menuOpen.value
+}
 </script>
 
 <template>
   <Toast />
   <ConfirmDialog />
   <div class="app-layout" :class="{ 'no-layout': !showLayout }">
-    <AppHeader v-if="showLayout" />
+    <AppHeader v-if="showLayout" :menu-open="menuOpen" @toggle-menu="toggleMenu" />
+    <AppDrawer v-if="showLayout" :open="menuOpen" @close="menuOpen = false" />
     <div class="app-content" v-if="showLayout">
-      <AppSidebar />
       <main class="main-content">
         <router-view />
       </main>
@@ -45,7 +50,6 @@ const showLayout = computed(() => !['login', 'home'].includes(route.name))
 
 .main-content {
   flex: 1;
-  margin-left: 250px;
   padding: 2rem;
   background: var(--bg-main);
   min-height: calc(100vh - 60px - 50px);

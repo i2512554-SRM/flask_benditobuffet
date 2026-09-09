@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -21,12 +21,53 @@ api.interceptors.request.use(
   }
 )
 
+// Refresh automático: si el access token expira, intenta renovarlo una vez
+let refreshingPromise = null
+
+async function renovarToken() {
+  if (!refreshingPromise) {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (!refreshToken) return false
+    refreshingPromise = axios
+      .post(
+        '/api/auth/refresh',
+        {},
+        { headers: { Authorization: `Bearer ${refreshToken}` } }
+      )
+      .then((res) => {
+        const nuevo = res.data?.data?.token
+        if (nuevo) {
+          localStorage.setItem('token', nuevo)
+          return true
+        }
+        return false
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshingPromise = null
+      })
+  }
+  return refreshingPromise
+}
+
 // Interceptor para manejar errores de respuesta
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const original = error.config
+    if (
+      error.response?.status === 401 &&
+      !original._reintento &&
+      !original.url.includes('/auth/login') &&
+      !original.url.includes('/auth/refresh')
+    ) {
+      original._reintento = true
+      const renovado = await renovarToken()
+      if (renovado) {
+        return api(original)
+      }
       localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }

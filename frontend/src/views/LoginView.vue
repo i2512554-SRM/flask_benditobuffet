@@ -102,7 +102,9 @@ const handleLogin = async () => {
       clave: contrasena.value
     })
     success.value = true
-    setTimeout(() => router.push('/panel'), 650)
+    const rol = authStore.user?.rol
+    const destino = rol === 1 ? '/panel' : rol === 3 ? '/cocinero' : rol === 2 ? '/panel-cajera' : rol === 4 ? '/trabajador' : '/'
+    setTimeout(() => router.push(destino), 650)
   } catch (error) {
     errorMsg.value = error?.response?.data?.error || 'Credenciales inválidas'
     shakeKey.value++
