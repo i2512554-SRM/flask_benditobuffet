@@ -88,7 +88,7 @@ const routes = [
     path: '/caja',
     name: 'caja',
     component: () => import('../views/CajaView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: [1, 2] }
   },
   {
     path: '/caja/reportes',
@@ -148,13 +148,13 @@ const routes = [
     path: '/inventario',
     name: 'inventario',
     component: () => import('../views/ModuloInventarioView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/inventario/operaciones',
     name: 'inventario-operaciones',
     component: () => import('../views/InventarioView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/inventario/reportes',
@@ -211,32 +211,28 @@ function homeForRole(rol) {
   return '/'
 }
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+
+  if (authStore.token && !authStore.sessionChecked) {
+    const ok = await authStore.checkSession()
+    if (!ok && to.meta.requiresAuth) return { path: '/login' }
+  }
+
   const rol = authStore.user?.rol
   const home = homeForRole(rol)
 
   if (!authStore.isAuthenticated) {
-    next(to.meta.requiresAuth ? '/login' : undefined)
-    return
+    if (to.meta.requiresAuth) return { path: '/login' }
+    return true
   }
 
-  if (to.name === 'login') {
-    next(home)
-    return
-  }
+  if (to.name === 'login') return { path: home }
 
-  if (to.meta.adminOnly && rol !== 1) {
-    next(home)
-    return
-  }
+  if (to.meta.adminOnly && rol !== 1) return { path: home }
+  if (to.meta.roles && !to.meta.roles.includes(rol)) return { path: home }
 
-  if (to.meta.roles && !to.meta.roles.includes(rol)) {
-    next(home)
-    return
-  }
-
-  next()
+  return true
 })
 
 export default router

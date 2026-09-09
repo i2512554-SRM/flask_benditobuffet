@@ -1,12 +1,29 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, TransaccionCaja, CierreCaja
+from models import db, TransaccionCaja, CierreCaja, Usuario
 from schemas.caja import transaccion_schema, transacciones_schema, cierre_schema, cierres_schema
 
 caja_bp = Blueprint('caja', __name__)
 
+ROLES_PERMITIDOS = (1, 2)
+
+
+def _caja(fn):
+    from functools import wraps
+
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        uid = int(get_jwt_identity())
+        u = Usuario.query.get(uid)
+        if not u or u.id_rol not in ROLES_PERMITIDOS or not u.estado:
+            return jsonify({'success': False, 'error': 'Acceso restringido a caja'}), 403
+        return fn(*args, **kwargs)
+
+    return wrapper
+
 @caja_bp.route('/actual', methods=['GET'])
-@jwt_required()
+@_caja
 def get_caja_actual():
     from datetime import datetime, timedelta
     hoy = datetime.utcnow().date()
@@ -41,7 +58,7 @@ def get_caja_actual():
     })
 
 @caja_bp.route('/abrir', methods=['POST'])
-@jwt_required()
+@_caja
 def abrir_caja():
     from datetime import datetime, timedelta
     hoy = datetime.utcnow().date()
@@ -66,7 +83,7 @@ def abrir_caja():
     return jsonify({'success': True, 'data': cierre_schema.dump(cierre)})
 
 @caja_bp.route('/cerrar', methods=['POST'])
-@jwt_required()
+@_caja
 def cerrar_caja():
     from datetime import datetime, timedelta
     hoy = datetime.utcnow().date()
@@ -91,7 +108,7 @@ def cerrar_caja():
     return jsonify({'success': True, 'data': cierre_schema.dump(cierre)})
 
 @caja_bp.route('/transacciones', methods=['GET'])
-@jwt_required()
+@_caja
 def get_transacciones():
     from datetime import datetime, timedelta
     hoy = datetime.utcnow().date()
@@ -105,7 +122,7 @@ def get_transacciones():
     return jsonify({'success': True, 'data': transacciones_schema.dump(transacciones)})
 
 @caja_bp.route('/transacciones', methods=['POST'])
-@jwt_required()
+@_caja
 def crear_transaccion():
     from datetime import datetime
     data = request.get_json(silent=True) or {}
@@ -135,7 +152,7 @@ def crear_transaccion():
     return jsonify({'success': True, 'data': transaccion_schema.dump(transaccion)})
 
 @caja_bp.route('/historial', methods=['GET'])
-@jwt_required()
+@_caja
 def get_historial():
     cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).all()
     return jsonify({'success': True, 'data': cierres_schema.dump(cierres)})

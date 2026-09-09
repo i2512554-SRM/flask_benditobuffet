@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, time, timedelta
 from bd import db
 from models import (
-    Producto, Inversion, Categoria, Proveedor, ActividadUsuario,
+    Producto, Inversion, Categoria, Proveedor, ActividadUsuario, Usuario,
     CompraInventario, DetalleCompraInventario, InventarioMovimiento,
     SolicitudInsumo, crear_notificacion
 )
@@ -15,8 +15,23 @@ from schemas.inventario import (
 
 inventario_bp = Blueprint('inventario', __name__)
 
+
+def _inventario(fn):
+    from functools import wraps
+
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        uid = int(get_jwt_identity())
+        u = Usuario.query.get(uid)
+        if not u or u.id_rol != 1 or not u.estado:
+            return jsonify({'success': False, 'error': 'Acceso restringido a administración de inventario'}), 403
+        return fn(*args, **kwargs)
+
+    return wrapper
+
 @inventario_bp.route('/resumen', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_resumen():
     total_inventario = db.session.query(
         db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
@@ -49,13 +64,13 @@ def get_resumen():
     })
 
 @inventario_bp.route('/inversiones/<int:id>', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_inversion(id):
     inversion = Inversion.query.get_or_404(id)
     return jsonify({'success': True, 'data': inversion_schema.dump(inversion)})
 
 @inventario_bp.route('/inversiones/<int:id>', methods=['DELETE'])
-@jwt_required()
+@_inventario
 def eliminar_inversion(id):
     inversion = Inversion.query.get_or_404(id)
     admin_id = int(get_jwt_identity())
@@ -65,7 +80,7 @@ def eliminar_inversion(id):
     return jsonify({'success': True, 'message': 'Compra/inversión eliminada'})
 
 @inventario_bp.route('/productos', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_productos():
     query = Producto.query
     q = request.args.get('q', '').strip()
@@ -82,13 +97,13 @@ def get_productos():
     return jsonify({'success': True, 'data': productos_schema.dump(productos)})
 
 @inventario_bp.route('/productos/<int:id>', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_producto(id):
     producto = Producto.query.get_or_404(id)
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
 
 @inventario_bp.route('/productos', methods=['POST'])
-@jwt_required()
+@_inventario
 def crear_producto():
     data = request.get_json()
     from datetime import datetime
@@ -116,7 +131,7 @@ def crear_producto():
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
 
 @inventario_bp.route('/productos/<int:id>', methods=['PUT'])
-@jwt_required()
+@_inventario
 def actualizar_producto(id):
     producto = Producto.query.get_or_404(id)
     data = request.get_json()
@@ -132,7 +147,7 @@ def actualizar_producto(id):
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
 
 @inventario_bp.route('/productos/<int:id>', methods=['DELETE'])
-@jwt_required()
+@_inventario
 def eliminar_producto(id):
     producto = Producto.query.get_or_404(id)
     db.session.delete(producto)
@@ -140,7 +155,7 @@ def eliminar_producto(id):
     return jsonify({'success': True, 'message': 'Producto eliminado'})
 
 @inventario_bp.route('/productos/<int:id>/stock', methods=['PUT'])
-@jwt_required()
+@_inventario
 def actualizar_stock(id):
     producto = Producto.query.get_or_404(id)
     data = request.get_json()
@@ -161,7 +176,7 @@ def actualizar_stock(id):
     return jsonify({'success': True, 'data': producto_schema.dump(producto)})
 
 @inventario_bp.route('/movimientos', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_movimientos():
     query = InventarioMovimiento.query
     prod = request.args.get('producto', '').strip()
@@ -175,19 +190,19 @@ def get_movimientos():
     return jsonify({'success': True, 'data': inventario_movimientos_schema.dump(movimientos)})
 
 @inventario_bp.route('/compras', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_compras():
     compras = CompraInventario.query.order_by(CompraInventario.fecha.desc()).all()
     return jsonify({'success': True, 'data': compras_inventario_schema.dump(compras)})
 
 @inventario_bp.route('/compras/<int:id>', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_compra(id):
     compra = CompraInventario.query.get_or_404(id)
     return jsonify({'success': True, 'data': compra_inventario_schema.dump(compra)})
 
 @inventario_bp.route('/compras', methods=['POST'])
-@jwt_required()
+@_inventario
 def crear_compra():
     data = request.get_json()
     detalle = data.get('detalle') or []
@@ -265,7 +280,7 @@ def crear_compra():
     return jsonify({'success': True, 'data': compra_inventario_schema.dump(compra)}), 201
 
 @inventario_bp.route('/compras/<int:id>', methods=['DELETE'])
-@jwt_required()
+@_inventario
 def eliminar_compra(id):
     compra = CompraInventario.query.get_or_404(id)
     if compra.estado != 'Completada':
@@ -297,13 +312,13 @@ def eliminar_compra(id):
     return jsonify({'success': True, 'message': 'Compra anulada y stock revertido'})
 
 @inventario_bp.route('/inversiones', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_inversiones():
     inversiones = Inversion.query.order_by(Inversion.fecha.desc()).all()
     return jsonify({'success': True, 'data': inversiones_schema.dump(inversiones)})
 
 @inventario_bp.route('/inversiones', methods=['POST'])
-@jwt_required()
+@_inventario
 def crear_inversion():
     data = request.get_json()
     from datetime import datetime
@@ -319,13 +334,13 @@ def crear_inversion():
     return jsonify({'success': True, 'data': inversion_schema.dump(inversion)})
 
 @inventario_bp.route('/categorias', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_categorias():
     categorias = Categoria.query.all()
     return jsonify({'success': True, 'data': [{'id_categoria': c.id_categoria, 'nombre': c.nombre} for c in categorias]})
 
 @inventario_bp.route('/categorias', methods=['POST'])
-@jwt_required()
+@_inventario
 def crear_categoria():
     data = request.get_json()
     from datetime import datetime
@@ -335,13 +350,13 @@ def crear_categoria():
     return jsonify({'success': True, 'data': {'id_categoria': categoria.id_categoria, 'nombre': categoria.nombre}})
 
 @inventario_bp.route('/proveedores', methods=['GET'])
-@jwt_required()
+@_inventario
 def get_proveedores():
     proveedores = Proveedor.query.all()
     return jsonify({'success': True, 'data': [{'id_proveedor': p.id_proveedor, 'nombre': p.nombre} for p in proveedores]})
 
 @inventario_bp.route('/proveedores', methods=['POST'])
-@jwt_required()
+@_inventario
 def crear_proveedor():
     data = request.get_json()
     from datetime import datetime
