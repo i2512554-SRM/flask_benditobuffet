@@ -157,3 +157,20 @@ def refresh():
     current_user = get_jwt_identity()
     access_token = create_access_token(identity=current_user)
     return jsonify({'success': True, 'data': {'token': access_token}})
+
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def me():
+    uid = int(get_jwt_identity())
+    u = Usuario.query.get(uid)
+    if not u or not u.estado:
+        return jsonify({'success': False, 'error': 'Sesión no válida'}), 401
+    return jsonify({
+        'success': True,
+        'data': {
+            'id': u.id_usuario,
+            'usuario': u.usuario,
+            'nombre': u.nombres,
+            'rol': u.rol.id_rol if u.rol else None,
+        }
+    })

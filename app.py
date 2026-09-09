@@ -1,4 +1,5 @@
 import logging
+import secrets
 import requests
 import re
 import os
@@ -20,7 +21,15 @@ load_dotenv()
 from bd import db, init_db
 
 app = Flask(__name__, static_folder=None)
-app.secret_key = os.getenv("SECRET_KEY", "clave_secreta_segura_bendito_buffet")
+_secret_key = os.getenv("SECRET_KEY", "").strip()
+if not _secret_key:
+    _secret_key = secrets.token_hex(32)
+    logging.getLogger(__name__).warning(
+        "SECRET_KEY no definida en .env: se generó una clave aleatoria por instancia."
+    )
+app.secret_key = _secret_key
+app.config['SECRET_KEY'] = _secret_key
+app.config['JWT_SECRET_KEY'] = _secret_key
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=12)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
