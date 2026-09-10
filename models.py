@@ -232,6 +232,7 @@ class CierreCaja(db.Model):
 
     id_cierre = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
+    monto_inicial = db.Column(db.Float, nullable=False, server_default='0', default=0)
     total_ventas = db.Column(db.Float, nullable=False)
     total_gastos = db.Column(db.Float, nullable=False)
     neto = db.Column(db.Float, db.Computed('(total_ventas - total_gastos)'))

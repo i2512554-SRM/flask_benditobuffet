@@ -64,6 +64,7 @@ from api.inventario import inventario_bp
 from api.perfil import perfil_bp
 from api.cocina import cocina_bp
 from api.trabajador import trabajador_bp
+from api.rendimiento import rendimiento_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(caja_bp, url_prefix='/api/caja')
@@ -72,6 +73,7 @@ app.register_blueprint(inventario_bp, url_prefix='/api/inventario')
 app.register_blueprint(perfil_bp)
 app.register_blueprint(cocina_bp)
 app.register_blueprint(trabajador_bp)
+app.register_blueprint(rendimiento_bp, url_prefix='/api')
 
 csrf.exempt(auth_bp)
 csrf.exempt(admin_bp)
@@ -81,6 +83,7 @@ csrf.exempt(inventario_bp)
 csrf.exempt(perfil_bp)
 csrf.exempt(cocina_bp)
 csrf.exempt(trabajador_bp)
+csrf.exempt(rendimiento_bp)
 
 # -------------------------------
 # ERROR HANDLERS (API)
