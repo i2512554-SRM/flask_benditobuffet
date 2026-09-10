@@ -255,6 +255,9 @@ class Producto(db.Model):
     nombre = db.Column(db.String(200), nullable=False)
     precio = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Float, nullable=False)
+    unidad_medida = db.Column(db.String(10), nullable=False, default='Un', server_default='Un')
+    descripcion = db.Column(db.String(255), nullable=True)
+    estado = db.Column(db.Boolean, nullable=False, default=True, server_default='true')
     id_categoria = db.Column(db.BigInteger, db.ForeignKey('categorias.id_categoria'), nullable=False)
     fecha_registro = db.Column(db.DateTime(timezone=True), nullable=False)
     fecha_edicion = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -379,6 +382,9 @@ class InventarioMovimiento(db.Model):
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
     tipo = db.Column(db.String(30), nullable=False)
     cantidad = db.Column(db.Float, nullable=False, default=0)
+    stock_anterior = db.Column(db.Float, nullable=True)
+    stock_posterior = db.Column(db.Float, nullable=True)
+    motivo = db.Column(db.String(255), nullable=True)
     id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=True)
     observacion = db.Column(db.String(255))
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -389,6 +395,10 @@ class InventarioMovimiento(db.Model):
     @property
     def producto(self):
         return self.producto_rel.nombre if self.producto_rel else None
+
+    @property
+    def unidad(self):
+        return self.producto_rel.unidad_medida if self.producto_rel else None
 
     @property
     def usuario(self):

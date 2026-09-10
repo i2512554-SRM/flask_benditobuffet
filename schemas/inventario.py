@@ -55,9 +55,11 @@ class InventarioMovimientoSchema(SQLAlchemyAutoSchema):
         model = InventarioMovimiento
         load_instance = False
         sqla_session = None
+        include_fk = True
 
     producto = fields.String(attribute='producto')
     usuario = fields.String(attribute='usuario')
+    unidad = fields.String(attribute='unidad')
 
 inventario_movimiento_schema = InventarioMovimientoSchema()
 inventario_movimientos_schema = InventarioMovimientoSchema(many=True)

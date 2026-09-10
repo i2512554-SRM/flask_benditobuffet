@@ -149,7 +149,8 @@ const MENU_POR_ROL = {
       iconCls: 'ic-purple',
       children: [
         { to: '/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Módulo' },
-        { to: '/inventario/operaciones', icon: 'fa-solid fa-arrows-rotate', label: 'Operaciones' },
+        { to: '/inventario/operaciones?vista=productos', icon: 'fa-solid fa-box-open', label: 'Productos y Stock' },
+        { to: '/inventario/operaciones?vista=movimientos', icon: 'fa-solid fa-clock-rotate-left', label: 'Entradas, Salidas y Movimientos' },
         { to: '/inventario/reportes', icon: 'fa-solid fa-chart-column', label: 'Reportes' }
       ]
     },
@@ -191,7 +192,7 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-utensils',
       iconCls: 'ic-orange',
       children: [
-        { to: '/cocinero/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Insumos' },
+        { to: '/cocinero/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Inventario' },
         { to: '/cocinero/solicitudes', icon: 'fa-solid fa-list-check', label: 'Mis Solicitudes' },
         { to: '/cocinero/alertas', icon: 'fa-solid fa-triangle-exclamation', label: 'Alertas' }
       ]

@@ -52,8 +52,10 @@ def _serializar_producto(p, umbral=None):
         'nombre': p.nombre,
         'categoria': p.categoria or None,
         'stock': float(p.stock or 0),
-        'unidad': 'unid.',
+        'unidad': p.unidad_medida or 'Un',
+        'unidad_medida': p.unidad_medida or 'Un',
         'estado': _estado_stock(p.stock, umbral),
+        'activo': p.estado,
     }
 
 
@@ -117,7 +119,7 @@ def inventario(cocinero):
             db.func.lower(Categoria.nombre).like(like),
         ))
     productos = query.order_by(Producto.nombre.asc()).all()
-    data = [_serializar_producto(p, umbral) for p in productos]
+    data = [_serializar_producto(p, umbral) for p in productos if p.estado]
     return jsonify({'success': True, 'data': data})
 
 
@@ -126,7 +128,7 @@ def inventario(cocinero):
 def alertas(cocinero):
     umbral = _umbral_stock()
     productos = Producto.query.order_by(Producto.stock.asc()).all()
-    data = [_serializar_producto(p, umbral) for p in productos if float(p.stock or 0) < umbral]
+    data = [_serializar_producto(p, umbral) for p in productos if p.estado and float(p.stock or 0) < umbral]
     return jsonify({'success': True, 'data': data})
 
 
