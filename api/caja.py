@@ -61,6 +61,7 @@ def get_caja_actual():
 @_caja
 def abrir_caja():
     from datetime import datetime, timedelta
+    data = request.get_json(silent=True) or {}
     hoy = datetime.utcnow().date()
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
@@ -70,9 +71,19 @@ def abrir_caja():
     ).first()
     if cierre_hoy:
         return jsonify({'success': False, 'message': 'Ya hay una caja abierta hoy'}), 400
-    
+
+    monto_inicial = 0
+    if 'monto_inicial' in data and data['monto_inicial'] not in (None, ''):
+        try:
+            monto_inicial = float(str(data['monto_inicial']).replace(',', '.'))
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'El monto inicial debe ser un número'}), 400
+        if monto_inicial < 0:
+            return jsonify({'success': False, 'error': 'El monto inicial no puede ser negativo'}), 400
+
     cierre = CierreCaja(
         id_usuario=get_jwt_identity(),
+        monto_inicial=monto_inicial,
         total_ventas=0,
         total_gastos=0,
         estado='abierta',
@@ -115,10 +126,22 @@ def get_transacciones():
     inicio = datetime.combine(hoy, datetime.min.time())
     fin = datetime.combine(hoy + timedelta(days=1), datetime.min.time())
 
+    historico = request.args.get('historico', type=int) == 1
     transacciones = TransaccionCaja.query.filter(
         TransaccionCaja.fecha >= inicio,
         TransaccionCaja.fecha < fin
     ).order_by(TransaccionCaja.fecha.desc()).all()
+
+    if historico:
+        limite = request.args.get('limit', 50, type=int)
+        cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).all()
+        historicos = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).limit(min(limite, 500)).all()
+        return jsonify({'success': True, 'data': {
+            'transacciones': transacciones_schema.dump(transacciones),
+            'historico': cierres_schema.dump(cierres),
+            'ultimos_movimientos': transacciones_schema.dump(historicos),
+        }})
+
     return jsonify({'success': True, 'data': transacciones_schema.dump(transacciones)})
 
 @caja_bp.route('/transacciones', methods=['POST'])

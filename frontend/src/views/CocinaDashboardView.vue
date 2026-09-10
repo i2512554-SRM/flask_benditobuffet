@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h1>¡Hola, {{ data.usuario?.nombres || 'Cocinero' }}! 👋</h1>
-        <p>Bienvenido a tu panel de Cocina</p>
+        <p>Tu cocina a un vistazo: stock y solicitudes</p>
         <div class="hero-badges">
           <span class="rol-badge-cocina"><i class="fa-solid fa-utensils"></i> Cocinero</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ data.fecha || 'Cargando...' }}</span>

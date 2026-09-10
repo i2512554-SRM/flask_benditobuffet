@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, timedelta, timezone
 from calendar import monthrange
 from bd import db
-from models import Rol, Usuario, TransaccionCaja, CierreCaja, Adelanto, ActividadUsuario, IntentoLogin, BloqueoLogin, Producto, SolicitudInsumo, PagoEmpleado, crear_notificacion
+from models import Rol, Usuario, TransaccionCaja, CierreCaja, Adelanto, ActividadUsuario, IntentoLogin, BloqueoLogin, Producto, SolicitudInsumo, PagoEmpleado, Inversion, crear_notificacion
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -117,6 +117,80 @@ def alertas_resumen():
         'bloqueos_activos': bloqueos_activos,
         'movimientos_hoy': movimientos_hoy,
     }})
+
+
+@admin_bp.route('/actividad-reciente', methods=['GET'])
+@admin_required
+def actividad_reciente():
+    limite = request.args.get('limit', 10, type=int)
+    limite = min(limite, 50)
+    items = []
+
+    pagos = PagoEmpleado.query.order_by(PagoEmpleado.fecha_pago.desc()).limit(limite).all()
+    for p in pagos:
+        emp = p.usuario_empleado
+        nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Empleado'
+        items.append({
+            'tipo': 'pago',
+            'titulo': f'Pago {"registrado" if p.estado == "Pagado" else p.estado.lower()}',
+            'descripcion': f'S/ {p.monto:.2f} a {nombre}',
+            'fecha': p.fecha_pago,
+            'icono': 'money',
+        })
+
+    cierres = CierreCaja.query.filter(CierreCaja.estado == 'cerrada').order_by(CierreCaja.fecha_cierre.desc()).limit(limite).all()
+    for c in cierres:
+        emp = Usuario.query.get(c.id_usuario)
+        nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Cajera'
+        items.append({
+            'tipo': 'cierre_caja',
+            'titulo': 'Cierre de caja',
+            'descripcion': f'Ventas S/ {float(c.total_ventas or 0):.2f} · Saldo S/ {float(c.neto or 0):.2f} por {nombre}',
+            'fecha': c.fecha_cierre or c.fecha,
+            'icono': 'cash-register',
+        })
+
+    adelantos = Adelanto.query.order_by(Adelanto.fecha.desc()).limit(limite).all()
+    for a in adelantos:
+        emp = a.usuario_adelanto
+        nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Empleado'
+        items.append({
+            'tipo': 'adelanto',
+            'titulo': f'Solicitud de adelanto {a.estado.lower()}',
+            'descripcion': f'S/ {a.monto:.2f} solicitado por {nombre}',
+            'fecha': a.fecha_gestion or a.fecha,
+            'icono': 'piggy-bank',
+        })
+
+    solicitudes = SolicitudInsumo.query.filter(SolicitudInsumo.estado == 'Pendiente').order_by(SolicitudInsumo.fecha.desc()).limit(limite).all()
+    for s in solicitudes:
+        items.append({
+            'tipo': 'solicitud_insumo',
+            'titulo': 'Solicitud de insumo',
+            'descripcion': f'{s.cantidad:g} × {s.producto} solicitado por {s.solicitante or "cocina"}',
+            'fecha': s.fecha,
+            'icono': 'box-open',
+        })
+
+    inversiones = Inversion.query.order_by(Inversion.fecha.desc()).limit(limite).all()
+    for i in inversiones:
+        items.append({
+            'tipo': 'inversion',
+            'titulo': 'Inversión registrada',
+            'descripcion': f'S/ {i.monto:.2f} — {i.descripcion}' + (f' ({i.proveedor})' if i.proveedor else ''),
+            'fecha': i.fecha,
+            'icono': 'chart-line',
+        })
+
+    items.sort(key=lambda x: x['fecha'] or datetime.min, reverse=True)
+    data = [{
+        'tipo': it['tipo'],
+        'titulo': it['titulo'],
+        'descripcion': it['descripcion'],
+        'icono': it['icono'],
+        'fecha': it['fecha'].strftime('%d/%m/%Y %H:%M') if it['fecha'] else None,
+    } for it in items[:limite]]
+    return jsonify({'success': True, 'data': data})
 
 
 @admin_bp.route('/adelantos', methods=['GET'])

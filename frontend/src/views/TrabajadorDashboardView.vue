@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h1>{{ saludo }}, {{ data.usuario?.nombres || 'Trabajador' }} 👋</h1>
-        <p>Bienvenido a tu panel de Trabajador</p>
+        <p>Tu espacio personal: turnos, pagos y solicitudes</p>
         <div class="hero-badges">
           <span class="rol-badge-trab"><i class="fa-solid fa-user-check"></i> Trabajador</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ data.fecha || 'Cargando...' }}</span>

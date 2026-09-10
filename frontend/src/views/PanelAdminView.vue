@@ -3,7 +3,7 @@
     <div class="page-hero">
       <div class="hero-left">
         <h1>¡Hola, {{ nombre }}! 👋</h1>
-        <p>Bienvenido al panel de administración de Bendito Buffet</p>
+        <p>Resumen operativo del negocio de Bendito Buffet</p>
         <div class="hero-badges">
           <span class="rol-badge"><i class="fa-solid fa-user-shield"></i> Administrador</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ fechaHoy }}</span>
@@ -64,70 +64,100 @@
       </div>
     </div>
 
-    <!-- Acciones rápidas -->
-    <h2 class="seccion-title">Acciones rápidas</h2>
-    <div class="acciones-grid">
-      <router-link to="/caja" class="accion-chip">
-        <i class="fa-solid fa-cash-register"></i> Ir a Caja
-      </router-link>
-      <router-link to="/personal/empleados" class="accion-chip">
-        <i class="fa-solid fa-users"></i> Gestionar Personal
-      </router-link>
-      <router-link to="/inventario/operaciones" class="accion-chip">
-        <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
-      </router-link>
-      <router-link to="/personal/pagos" class="accion-chip">
-        <i class="fa-solid fa-money-bill-wave"></i> Registrar Pago
-      </router-link>
-      <router-link to="/personal/solicitudes" class="accion-chip">
-        <i class="fa-solid fa-clipboard-list"></i> Revisar Solicitudes
-      </router-link>
-    </div>
-
-    <!-- Notificaciones -->
-    <h2 class="seccion-title">Notificaciones</h2>
-    <div class="notif-card">
-      <div v-if="!notificaciones.length" class="notif-empty">
-        <i class="fa-solid fa-circle-check"></i>
-        <span>Todo en orden. No hay alertas pendientes.</span>
-      </div>
-      <div v-for="(n, i) in notificaciones" :key="i" class="notif-item" :class="'notif-' + n.tipo">
-        <i :class="n.icono"></i>
-        <div>
-          <span class="notif-titulo">{{ n.titulo }}</span>
-          <router-link v-if="n.link" :to="n.link" class="notif-link">Revisar →</router-link>
+    <div class="panel-grid">
+      <div class="col-main">
+        <!-- Rendimiento financiero -->
+        <h2 class="seccion-title">Rendimiento financiero</h2>
+        <div class="chart-card">
+          <div class="filtros-bar">
+            <div class="periodo-tabs">
+              <button
+                v-for="p in periodos"
+                :key="p.key"
+                class="filtro-btn"
+                :class="{ active: periodo === p.key }"
+                @click="cambiarPeriodo(p.key)"
+              >
+                {{ p.label }}
+              </button>
+            </div>
+            <div class="serie-toggles">
+              <button
+                v-for="s in series"
+                :key="s.key"
+                class="serie-toggle"
+                :class="{ active: seriesVisibles[s.key], [s.key]: true }"
+                @click="toggleSerie(s.key)"
+              >
+                <span class="dot"></span>{{ s.label }}
+              </button>
+            </div>
+          </div>
+          <LineChartFinanciero :puntos="rendimientoPuntos" :series="seriesActivas" />
         </div>
       </div>
-    </div>
 
-    <!-- Módulos -->
-    <h2 class="seccion-title">Módulos</h2>
-    <div class="modulo-grid">
-      <router-link to="/caja" class="seccion-card">
-        <div class="seccion-icon ic-orange"><i class="fa-solid fa-cash-register"></i></div>
-        <h3>Gestión de Caja</h3>
-        <p>Ventas y movimientos diarios</p>
-      </router-link>
-      <router-link to="/personal" class="seccion-card">
-        <div class="seccion-icon ic-blue"><i class="fa-solid fa-users"></i></div>
-        <h3>Gestión del Personal</h3>
-        <p>Empleados, pagos y turnos</p>
-      </router-link>
-      <router-link to="/inventario" class="seccion-card">
-        <div class="seccion-icon ic-purple"><i class="fa-solid fa-cubes-stacked"></i></div>
-        <h3>Inventario e Inversión</h3>
-        <p>Productos, compras y stock</p>
-      </router-link>
-      <router-link to="/seguridad" class="seccion-card">
-        <div class="seccion-icon ic-red"><i class="fa-solid fa-shield-halved"></i></div>
-        <h3>Seguridad y Accesos</h3>
-        <p>Usuarios y accesos</p>
-      </router-link>
-      <router-link to="/ia" class="seccion-card">
-        <div class="seccion-icon ic-cyan"><i class="fa-solid fa-brain"></i></div>
-        <h3>IA Predictiva</h3>
-        <p>Análisis y predicciones</p>
-      </router-link>
+      <div class="col-side">
+        <!-- Notificaciones -->
+        <h2 class="seccion-title">Notificaciones</h2>
+        <div class="notif-card">
+          <div v-if="!notificaciones.length" class="notif-empty">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Todo en orden. No hay alertas pendientes.</span>
+          </div>
+          <div v-for="(n, i) in notificaciones" :key="i" class="notif-item" :class="'notif-' + n.tipo">
+            <i :class="n.icono"></i>
+            <div class="notif-body">
+              <span class="notif-titulo">{{ n.titulo }}</span>
+              <div class="notif-meta">
+                <span class="prio-pill" :class="'prio-' + n.prioridad">{{ n.prioridad }}</span>
+                <span class="notif-fecha">{{ n.fecha }}</span>
+                <router-link v-if="n.link" :to="n.link" class="notif-link">Revisar →</router-link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones rápidas -->
+        <h2 class="seccion-title">Acciones rápidas</h2>
+        <div class="acciones-grid">
+          <router-link to="/caja/dashboard" class="accion-chip">
+            <i class="fa-solid fa-cash-register"></i> Ir a Caja
+          </router-link>
+          <router-link to="/personal/empleados" class="accion-chip">
+            <i class="fa-solid fa-users"></i> Gestionar Personal
+          </router-link>
+          <router-link to="/inventario/operaciones" class="accion-chip">
+            <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
+          </router-link>
+          <router-link to="/personal/pagos" class="accion-chip">
+            <i class="fa-solid fa-money-bill-wave"></i> Registrar Pago
+          </router-link>
+          <router-link to="/personal/solicitudes" class="accion-chip">
+            <i class="fa-solid fa-clipboard-list"></i> Revisar Solicitudes
+          </router-link>
+        </div>
+
+        <!-- Actividad reciente -->
+        <h2 class="seccion-title">Actividad reciente</h2>
+        <div class="activity-card">
+          <div v-if="!actividad.length" class="actividad-empty">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Sin actividad registrada.</span>
+          </div>
+          <div v-for="(a, i) in actividad" :key="i" class="activity-item">
+            <div class="activity-icon" :class="'act-' + a.tipo">
+              <i :class="actividadIconos[a.tipo] || 'fa-solid fa-circle-info'"></i>
+            </div>
+            <div class="activity-body">
+              <span class="activity-user">{{ a.titulo }}</span>
+              <span class="activity-accion">{{ a.descripcion }}</span>
+            </div>
+            <span class="activity-fecha">{{ a.fecha }}</span>
+          </div>
+          <router-link to="/seguridad/actividad" class="activity-link">Ver actividad de accesos →</router-link>
+        </div>
+      </div>
     </div>
 
     <div class="loading-overlay" v-if="loading">
@@ -139,12 +169,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import LineChartFinanciero from '../components/charts/LineChartFinanciero.vue'
 import api from '../config/axios'
 
 const authStore = useAuthStore()
 const loading = ref(true)
 const stats = ref({ ventas_mes: 0, egresos_mes: 0, neto_mes: 0 })
 const resumenInv = ref({ valor_total: 0 })
+const actividad = ref([])
 const alertas = ref({
   stock_bajo: 0,
   agotados: 0,
@@ -154,6 +186,42 @@ const alertas = ref({
   bloqueos_activos: 0,
   movimientos_hoy: 0
 })
+
+const periodos = [
+  { key: 'dia', label: 'Día' },
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes', label: 'Mes' },
+  { key: 'anio', label: 'Año' }
+]
+const series = [
+  { key: 'ingresos', label: 'Ingresos' },
+  { key: 'egresos', label: 'Egresos' },
+  { key: 'ganancia', label: 'Ganancia' }
+]
+const periodo = ref('dia')
+const seriesVisibles = ref({ ingresos: true, egresos: true, ganancia: true })
+const rendimientoPuntos = ref([])
+
+const seriesActivas = computed(() => series.filter((s) => seriesVisibles.value[s.key]).map((s) => s.key))
+
+const cambiarPeriodo = (key) => {
+  periodo.value = key
+  cargarRendimiento()
+}
+
+const toggleSerie = (key) => {
+  seriesVisibles.value[key] = !seriesVisibles.value[key]
+}
+
+const cargarRendimiento = async () => {
+  try {
+    const res = await api.get(`/rendimiento?periodo=${periodo.value}`)
+    if (res.data.success) rendimientoPuntos.value = res.data.data || []
+  } catch (err) {
+    console.error('Error cargando rendimiento:', err)
+    rendimientoPuntos.value = []
+  }
+}
 
 const nombre = computed(() => authStore.user?.nombre || 'Administrador')
 const fechaHoy = computed(() => {
@@ -167,41 +235,52 @@ const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumF
 const notificaciones = computed(() => {
   const a = alertas.value
   const items = []
+  const hoy = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit' }).format(new Date())
   if (a.adelantos_pendientes > 0) {
-    items.push({ tipo: 'warn', icono: 'fa-solid fa-file-invoice-dollar', titulo: `Hay ${a.adelantos_pendientes} adelanto(s) pendientes de revisión`, link: '/personal/adelantos' })
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-file-invoice-dollar', titulo: `Hay ${a.adelantos_pendientes} adelanto(s) pendientes de revisión`, link: '/personal/adelantos', prioridad: 'Media', fecha: hoy })
   }
   if (a.solicitudes_pendientes > 0) {
-    items.push({ tipo: 'warn', icono: 'fa-solid fa-clipboard-list', titulo: `Hay ${a.solicitudes_pendientes} solicitud(es) de insumos pendientes`, link: '/personal/solicitudes' })
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-clipboard-list', titulo: `Hay ${a.solicitudes_pendientes} solicitud(es) de insumos pendientes`, link: '/personal/solicitudes', prioridad: 'Media', fecha: hoy })
   }
   if (a.stock_bajo > 0) {
-    items.push({ tipo: 'warn', icono: 'fa-solid fa-fill-drip', titulo: `${a.stock_bajo} producto(s) con stock bajo`, link: '/inventario/operaciones?vista=productos' })
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-fill-drip', titulo: `${a.stock_bajo} producto(s) con stock bajo`, link: '/inventario/operaciones?vista=productos', prioridad: 'Media', fecha: hoy })
   }
   if (a.agotados > 0) {
-    items.push({ tipo: 'error', icono: 'fa-solid fa-triangle-exclamation', titulo: `${a.agotados} producto(s) agotados`, link: '/inventario/operaciones?vista=productos' })
+    items.push({ tipo: 'error', icono: 'fa-solid fa-triangle-exclamation', titulo: `${a.agotados} producto(s) agotados`, link: '/inventario/operaciones?vista=productos', prioridad: 'Alta', fecha: hoy })
   }
   if (a.pagos_pendientes > 0) {
-    items.push({ tipo: 'warn', icono: 'fa-solid fa-money-bill-wave', titulo: `Hay ${a.pagos_pendientes} pago(s) pendientes`, link: '/personal/pagos' })
+    items.push({ tipo: 'warn', icono: 'fa-solid fa-money-bill-wave', titulo: `Hay ${a.pagos_pendientes} pago(s) pendientes`, link: '/personal/pagos', prioridad: 'Media', fecha: hoy })
   }
   if (a.bloqueos_activos > 0) {
-    items.push({ tipo: 'error', icono: 'fa-solid fa-shield-halved', titulo: `${a.bloqueos_activos} cuenta(s) bloqueada(s) por seguridad`, link: '/seguridad/monitoreo' })
+    items.push({ tipo: 'error', icono: 'fa-solid fa-shield-halved', titulo: `${a.bloqueos_activos} cuenta(s) bloqueada(s) por seguridad`, link: '/seguridad/monitoreo', prioridad: 'Alta', fecha: hoy })
   }
   if (a.movimientos_hoy > 0) {
-    items.push({ tipo: 'info', icono: 'fa-solid fa-cash-register', titulo: `Se registraron ${a.movimientos_hoy} movimiento(s) de caja hoy`, link: '/caja' })
+    items.push({ tipo: 'info', icono: 'fa-solid fa-cash-register', titulo: `Se registraron ${a.movimientos_hoy} movimiento(s) de caja hoy`, link: '/caja/movimientos', prioridad: 'Baja', fecha: hoy })
   }
   return items
 })
 
+const actividadIconos = {
+  pago: 'fa-solid fa-money-check-dollar',
+  cierre_caja: 'fa-solid fa-cash-register',
+  adelanto: 'fa-solid fa-piggy-bank',
+  solicitud_insumo: 'fa-solid fa-box-open',
+  inversion: 'fa-solid fa-chart-line'
+}
+
 const cargar = async () => {
   loading.value = true
   try {
-    const [statsRes, alertasRes, invRes] = await Promise.all([
+    const [statsRes, alertasRes, invRes, actRes] = await Promise.all([
       api.get('/admin/panel-stats'),
       api.get('/admin/alertas-resumen'),
-      api.get('/inventario/resumen')
+      api.get('/inventario/resumen'),
+      api.get('/admin/actividad-reciente?limit=8')
     ])
     if (statsRes.data.success) stats.value = statsRes.data.data
     if (alertasRes.data.success) alertas.value = alertasRes.data.data
     if (invRes.data.success) resumenInv.value = invRes.data.data
+    if (actRes.data.success) actividad.value = actRes.data.data
   } catch (err) {
     console.error('Error cargando panel admin:', err)
   } finally {
@@ -209,7 +288,10 @@ const cargar = async () => {
   }
 }
 
-onMounted(cargar)
+onMounted(() => {
+  cargar()
+  cargarRendimiento()
+})
 </script>
 
 <style scoped>
@@ -351,12 +433,16 @@ onMounted(cargar)
 
 .notif-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   padding: 0.6rem 0.75rem;
   border-radius: 10px;
   font-size: 0.83rem;
   background: var(--bg-secondary);
+}
+
+.notif-item > i {
+  margin-top: 0.2rem;
 }
 
 .notif-item i {
@@ -381,12 +467,233 @@ onMounted(cargar)
   text-decoration: none;
 }
 
+.notif-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.prio-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+.prio-Alta { background: rgba(220, 38, 38, 0.14); color: var(--color-rojo); }
+.prio-Media { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.prio-Baja { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+
+.notif-fecha {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
 .loading-overlay {
   display: flex;
   justify-content: center;
   padding: 2rem;
   color: var(--btn-primary);
   font-size: 1.5rem;
+}
+
+.chart-card {
+  margin-top: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.filtros-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.periodo-tabs,
+.serie-toggles {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.filtro-btn {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filtro-btn:hover {
+  border-color: var(--btn-primary);
+  color: var(--btn-primary);
+}
+
+.filtro-btn.active {
+  background: var(--btn-primary);
+  border-color: var(--btn-primary);
+  color: #fff;
+}
+
+.serie-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.serie-toggle.active {
+  border-color: currentColor;
+}
+
+.serie-toggle .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.serie-toggle.ingresos { color: #16a34a; }
+.serie-toggle.egresos { color: #dc2626; }
+.serie-toggle.ganancia { color: #ff7b00; }
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.25rem;
+  align-items: start;
+}
+
+.col-main,
+.col-side {
+  min-width: 0;
+}
+
+.activity-card {
+  margin-top: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.75rem;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.actividad-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  font-size: 0.8rem;
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.act-pago { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
+.act-cierre_caja { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.act-adelanto { background: rgba(255, 123, 0, 0.14); color: var(--btn-primary); }
+.act-solicitud_insumo { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+.act-inversion { background: rgba(6, 182, 212, 0.12); color: #06b6d4; }
+
+.activity-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.activity-user {
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-accion {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.activity-fecha {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.activity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--btn-primary);
+  text-decoration: none;
+}
+
+.activity-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1024px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
