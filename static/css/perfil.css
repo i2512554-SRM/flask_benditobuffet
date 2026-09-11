@@ -1,0 +1,258 @@
+.perfil-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-primario-naranja);
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.volver:hover {
+    text-decoration: underline;
+}
+
+.perfil-header {
+    background: var(--color-blanco);
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 30px;
+    border: 1px solid var(--color-gris-suave);
+    position: relative;
+}
+
+.perfil-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: bold;
+    color: white;
+    flex-shrink: 0;
+}
+
+.avatar-administrador {
+    background: linear-gradient(135deg, #FF7B00, #FFB84D);
+}
+
+.avatar-cajera,
+.avatar-cajero {
+    background: linear-gradient(135deg, #4CAF50, #81C784);
+}
+
+.avatar-cocinero {
+    background: linear-gradient(135deg, #2196F3, #64B5F6);
+}
+
+.avatar-trabajador {
+    background: linear-gradient(135deg, #9C27B0, #CE93D8);
+}
+
+.perfil-info {
+    flex: 1;
+}
+
+.perfil-nombre {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.perfil-nombre h1 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--color-negro-suave);
+}
+
+.rol-badge {
+    background: var(--color-primario-naranja);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.perfil-detalles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 10px;
+}
+
+.detalle-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-gris);
+    font-size: 14px;
+}
+
+.detalle-item i {
+    color: var(--color-primario-naranja);
+    font-size: 16px;
+}
+
+.perfil-salario {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: right;
+}
+
+.perfil-salario-label {
+    font-size: 12px;
+    color: var(--color-gris);
+    margin-bottom: 5px;
+}
+
+.perfil-salario-valor {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--color-verde-fuerte);
+}
+
+.contenedor-secciones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.seccion {
+    background: var(--color-blanco);
+    border-radius: 12px;
+    padding: 25px;
+    border: 1px solid var(--color-gris-suave);
+}
+
+.seccion-titulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-negro-suave);
+}
+
+.seccion-titulo i {
+    color: var(--color-primario-naranja);
+    font-size: 20px;
+}
+
+.pago-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--color-gris-suave);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pago-item:last-child {
+    border-bottom: none;
+}
+
+.pago-mes {
+    font-weight: 600;
+    color: var(--color-negro-suave);
+    margin-bottom: 4px;
+}
+
+.pago-fecha {
+    font-size: 12px;
+    color: var(--color-gris);
+}
+
+.pago-monto {
+    font-weight: 600;
+    color: var(--color-negro-suave);
+}
+
+.pago-estado {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: var(--color-verde-claro);
+    color: var(--color-verde-fuerte);
+}
+
+.adelanto-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--color-gris-suave);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.adelanto-item:last-child {
+    border-bottom: none;
+}
+
+.adelanto-concepto {
+    font-weight: 600;
+    color: var(--color-negro-suave);
+    margin-bottom: 4px;
+}
+
+.adelanto-fecha {
+    font-size: 12px;
+    color: var(--color-gris);
+}
+
+.adelanto-monto {
+    text-align: right;
+    font-weight: 600;
+    color: var(--color-error-text);
+}
+
+.btn-solicitar {
+    width: 100%;
+    padding: 12px;
+    background: var(--color-blanco);
+    border: 1px solid var(--color-gris-suave);
+    border-radius: 8px;
+    color: var(--color-negro-suave);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 15px;
+}
+
+.btn-solicitar:hover {
+    background: var(--color-gris-claro);
+}
+
+.seccion-vacia {
+    text-align: center;
+    padding: 30px 15px;
+    color: var(--color-gris);
+}
+
+body.dark-mode .perfil-header,
+body.dark-mode .seccion {
+    background: var(--color-negro-suave);
+    border-color: var(--color-gris-suave);
+}
+
+body.dark-mode .perfil-nombre h1,
+body.dark-mode .pago-mes,
+body.dark-mode .adelanto-concepto,
+body.dark-mode .pago-monto {
+    color: var(--color-blanco);
+}
