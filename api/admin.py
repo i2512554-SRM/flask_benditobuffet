@@ -1,3 +1,4 @@
+from api.fechas import utc, LIMA
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, timedelta, timezone
@@ -22,37 +23,11 @@ def admin_required(fn):
 @admin_bp.route('/panel-stats', methods=['GET'])
 @admin_required
 def get_panel_stats():
-    try:
-        # Obtener mes y año actual
-        now = datetime.now()
-        year = now.year
-        month = now.month
-        
-        # Calcular primer y ultimo dia del mes
-        first_day = date(year, month, 1)
-        last_day = date(year, month, monthrange(year, month)[1])
-        
-        # Obtener transacciones del mes
-        transacciones = TransaccionCaja.query.filter(
-            TransaccionCaja.fecha >= first_day,
-            TransaccionCaja.fecha <= last_day
-        ).all()
-        
-        # Calcular totales
-        ventas_mes = sum(t.monto for t in transacciones if t.tipo == 'Venta')
-        egresos_mes = sum(t.monto for t in transacciones if t.tipo == 'Gasto')
-        neto_mes = ventas_mes - egresos_mes
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'ventas_mes': float(ventas_mes),
-                'egresos_mes': float(egresos_mes),
-                'neto_mes': float(neto_mes)
-            }
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    from api.fechas import ahora, LIMA, periodo_financiero
+    from api.caja import _movimientos, _totales
+    inicio, fin, _ = periodo_financiero('mes', ahora().astimezone(LIMA).date())
+    total = _totales(_movimientos(inicio, fin).all())
+    return jsonify(success=True, data={'ventas_mes': total['ventas'], 'egresos_mes': total['gastos'], 'neto_mes': total['neto']})
 
 
 @admin_bp.route('/roles', methods=['GET'])
@@ -123,10 +98,10 @@ def alertas_resumen():
 @admin_required
 def actividad_reciente():
     limite = request.args.get('limit', 10, type=int)
-    limite = min(limite, 50)
+    limite = max(1, min(limite, 50))
     items = []
 
-    pagos = PagoEmpleado.query.order_by(PagoEmpleado.fecha_pago.desc()).limit(limite).all()
+    pagos = PagoEmpleado.query.options(db.joinedload(PagoEmpleado.usuario_empleado)).order_by(PagoEmpleado.fecha_pago.desc()).limit(limite).all()
     for p in pagos:
         emp = p.usuario_empleado
         nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Empleado'
@@ -150,7 +125,7 @@ def actividad_reciente():
             'icono': 'cash-register',
         })
 
-    adelantos = Adelanto.query.order_by(Adelanto.fecha.desc()).limit(limite).all()
+    adelantos = Adelanto.query.options(db.joinedload(Adelanto.usuario_adelanto)).order_by(Adelanto.fecha.desc()).limit(limite).all()
     for a in adelantos:
         emp = a.usuario_adelanto
         nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Empleado'
@@ -162,7 +137,7 @@ def actividad_reciente():
             'icono': 'piggy-bank',
         })
 
-    solicitudes = SolicitudInsumo.query.filter(SolicitudInsumo.estado == 'Pendiente').order_by(SolicitudInsumo.fecha.desc()).limit(limite).all()
+    solicitudes = SolicitudInsumo.query.options(db.joinedload(SolicitudInsumo.producto_rel), db.joinedload(SolicitudInsumo.usuario_solicitud)).filter(SolicitudInsumo.estado == 'Pendiente').order_by(SolicitudInsumo.fecha.desc()).limit(limite).all()
     for s in solicitudes:
         items.append({
             'tipo': 'solicitud_insumo',
@@ -172,7 +147,7 @@ def actividad_reciente():
             'icono': 'box-open',
         })
 
-    inversiones = Inversion.query.order_by(Inversion.fecha.desc()).limit(limite).all()
+    inversiones = Inversion.query.options(db.joinedload(Inversion.proveedor_rel)).order_by(Inversion.fecha.desc()).limit(limite).all()
     for i in inversiones:
         items.append({
             'tipo': 'inversion',
@@ -182,13 +157,14 @@ def actividad_reciente():
             'icono': 'chart-line',
         })
 
-    items.sort(key=lambda x: x['fecha'] or datetime.min, reverse=True)
+    items.sort(key=lambda x: utc(x['fecha']).timestamp() if x['fecha'] else 0, reverse=True)
     data = [{
         'tipo': it['tipo'],
         'titulo': it['titulo'],
         'descripcion': it['descripcion'],
         'icono': it['icono'],
-        'fecha': it['fecha'].strftime('%d/%m/%Y %H:%M') if it['fecha'] else None,
+        'fecha': utc(it['fecha']).astimezone(LIMA).strftime('%d/%m/%Y %H:%M') if it['fecha'] else None,
+        'destino': {'pago': '/personal/pagos', 'cierre_caja': '/caja/historial', 'adelanto': '/personal/solicitudes', 'solicitud_insumo': '/inventario/operaciones?vista=productos', 'inversion': '/inventario/operaciones?vista=inversiones'}.get(it['tipo'], '/panel'),
     } for it in items[:limite]]
     return jsonify({'success': True, 'data': data})
 
@@ -258,9 +234,9 @@ def gestionar_solicitud(id_adelanto):
 def get_seguridad():
     ahora = datetime.now(timezone.utc)
     dias = request.args.get('dias', 7, type=int)
-    limite = ahora - timedelta(days=min(dias, 90))
+    limite = ahora - timedelta(days=max(1, min(dias, 90)))
 
-    intentos = IntentoLogin.query.filter(IntentoLogin.fecha >= limite).order_by(IntentoLogin.fecha.desc()).limit(200).all()
+    intentos = IntentoLogin.query.options(db.joinedload(IntentoLogin.usuario_rel)).filter(IntentoLogin.fecha >= limite).order_by(IntentoLogin.fecha.desc()).limit(200).all()
     intentos_data = []
     for i in intentos:
         intentos_data.append({
@@ -272,7 +248,7 @@ def get_seguridad():
             'fecha': i.fecha.strftime('%d/%m/%Y %H:%M') if i.fecha else None,
         })
 
-    bloqueos = BloqueoLogin.query.filter(
+    bloqueos = BloqueoLogin.query.options(db.joinedload(BloqueoLogin.usuario_rel).joinedload(Usuario.rol)).filter(
         BloqueoLogin.bloqueado_hasta.isnot(None),
         BloqueoLogin.bloqueado_hasta > ahora
     ).order_by(BloqueoLogin.intentos.desc()).all()

@@ -1,3 +1,5 @@
+from api.fechas import ahora
+from api.validaciones import numero
 import os
 import re
 import uuid
@@ -41,8 +43,7 @@ def _serializar_usuario(usuario):
     turnos = [t.strip() for t in (usuario.turno or '').split(',') if t.strip()]
     foto_perfil = None
     if perfil and perfil.foto_perfil:
-        base = request.host_url.rstrip('/')
-        foto_perfil = f"{base}/uploads/perfiles/{perfil.foto_perfil}"
+        foto_perfil = f"/uploads/perfiles/{perfil.foto_perfil}"
     return {
         'id_usuario': usuario.id_usuario,
         'nombres': usuario.nombres,
@@ -70,7 +71,7 @@ def _serializar_usuario(usuario):
 def get_perfil():
     usuario_id = int(get_jwt_identity())
     usuario = Usuario.query.filter_by(id_usuario=usuario_id).first()
-    if not usuario:
+    if not usuario or not usuario.estado:
         return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
 
     pagos = PagoEmpleado.query.filter_by(id_usuario=usuario_id).order_by(PagoEmpleado.fecha_pago.desc()).limit(6).all()
@@ -131,7 +132,7 @@ def get_perfil():
 def editar_perfil():
     usuario_id = int(get_jwt_identity())
     usuario = Usuario.query.filter_by(id_usuario=usuario_id).first()
-    if not usuario:
+    if not usuario or not usuario.estado:
         return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
 
     contenido_tipo = request.content_type or ''
@@ -156,11 +157,14 @@ def editar_perfil():
     if correo_existente:
         return jsonify({'success': False, 'error': 'El correo ya está registrado en otra cuenta'}), 400
 
+    if telefono and not re.fullmatch(r'[0-9]{9}', telefono):
+        return jsonify(success=False, error='El teléfono debe contener 9 números.'), 400
+
     usuario.correo = correo
     usuario.telefono = telefono
 
     if clave_nueva:
-        usuario.clave = bcrypt.hashpw(clave_nueva.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        return jsonify(success=False, error='Utiliza Cambiar contraseña con tu contraseña actual.'), 400
 
     perfil = usuario.perfil
     if not perfil:
@@ -201,7 +205,7 @@ def editar_perfil():
 def cambiar_contrasena():
     usuario_id = int(get_jwt_identity())
     usuario = Usuario.query.filter_by(id_usuario=usuario_id).first()
-    if not usuario:
+    if not usuario or not usuario.estado:
         return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
 
     data = request.get_json(silent=True) or {}
@@ -242,9 +246,11 @@ def cambiar_contrasena():
 def solicitar_adelanto():
     usuario_id = int(get_jwt_identity())
     usuario = Usuario.query.filter_by(id_usuario=usuario_id).first()
-    if not usuario:
+    if not usuario or not usuario.estado:
         return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
 
+    if usuario.id_rol == 1:
+        return jsonify(success=False, error='Los administradores no solicitan adelantos.'), 403
     data = request.get_json(silent=True) or {}
     motivo = str(data.get('motivo') or '').strip()
     monto_text = str(data.get('monto') or '').strip().replace(',', '.')
@@ -253,7 +259,7 @@ def solicitar_adelanto():
         return jsonify({'success': False, 'error': 'El motivo es obligatorio para solicitar un adelanto'}), 400
 
     try:
-        monto = float(monto_text)
+        monto = numero(monto_text, .01)
         if monto <= 0:
             raise ValueError
     except (ValueError, TypeError):
@@ -263,14 +269,14 @@ def solicitar_adelanto():
         id_usuario=usuario_id,
         motivo=motivo,
         monto=monto,
-        fecha=datetime.now(),
+        fecha=ahora(),
         estado='Pendiente'
     )
     db.session.add(adelanto)
     db.session.commit()
 
     try:
-        rer_accion = ActividadUsuario(id_usuario=usuario_id, accion='Solicito adelanto', fecha=datetime.now())
+        rer_accion = ActividadUsuario(id_usuario=usuario_id, accion='Solicito adelanto', fecha=ahora())
         db.session.add(rer_accion)
         db.session.commit()
     except Exception:
@@ -295,6 +301,8 @@ def cancelar_adelanto(id_adelanto):
     if not adelanto:
         return jsonify({'success': False, 'error': 'Solicitud no encontrada'}), 404
 
+    if adelanto.estado != 'Pendiente':
+        return jsonify(success=False, error='Solo puedes cancelar solicitudes pendientes.'), 409
     adelanto.estado = 'Cancelado'
     db.session.commit()
     return jsonify({'success': True, 'message': 'Solicitud de adelanto cancelada'})

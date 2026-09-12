@@ -121,6 +121,30 @@ class PagoEmpleado(db.Model):
         return f"<PagoEmpleado {self.id_pago} usuario={self.id_usuario} monto={self.monto}>"
 
 
+class SueldoSemanal(db.Model):
+    __tablename__ = 'sueldos_semanales'
+    __table_args__ = (db.UniqueConstraint('id_usuario', 'desde'), db.CheckConstraint('monto >= 0'))
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    desde = db.Column(db.Date, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
+    registrado_por = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
+class DescuentoSemanal(db.Model):
+    __tablename__ = 'descuentos_semanales'
+    __table_args__ = (db.CheckConstraint('monto > 0'),)
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    semana = db.Column(db.Date, nullable=False, index=True)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
+    motivo = db.Column(db.String(255), nullable=False)
+    registrado_por = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+    anulado = db.Column(db.Boolean, nullable=False, default=False)
+
+
 class PagoPersonal(db.Model):
     __tablename__ = 'pagos_personal'
     __table_args__ = (

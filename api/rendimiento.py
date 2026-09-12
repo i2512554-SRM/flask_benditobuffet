@@ -69,41 +69,8 @@ def _buckets(periodo, now):
 @rendimiento_bp.route('/rendimiento', methods=['GET'])
 @_permitido
 def rendimiento():
-    periodo = (request.args.get('periodo') or 'semana').strip().lower()
-    if periodo not in PERIODOS:
-        return jsonify({'success': False, 'error': 'Periodo no válido'}), 400
-
-    uid = int(get_jwt_identity())
-    u = Usuario.query.get(uid)
-    es_admin = u.id_rol == 1
-
-    now = datetime.now(timezone.utc)
-    buckets = _buckets(periodo, now)
-
-    q = TransaccionCaja.query
-    if not es_admin:
-        q = q.filter(TransaccionCaja.id_usuario == uid)
-    q = q.filter(
-        TransaccionCaja.fecha >= buckets[0][1],
-        TransaccionCaja.fecha < buckets[-1][2]
-    )
-    transacciones = q.all()
-
-    resultado = []
-    for etiqueta, bstart, bend in buckets:
-        ingresos = 0.0
-        egresos = 0.0
-        for t in transacciones:
-            if bstart <= t.fecha < bend:
-                if t.tipo == 'Venta':
-                    ingresos += t.monto or 0
-                elif t.tipo == 'Gasto':
-                    egresos += t.monto or 0
-        resultado.append({
-            'etiqueta': etiqueta,
-            'ingresos': round(ingresos, 2),
-            'egresos': round(egresos, 2),
-            'ganancia': round(ingresos - egresos, 2),
-        })
-
-    return jsonify({'success': True, 'data': resultado, 'periodo': periodo})
+    from api.caja import reportes
+    respuesta = reportes.__wrapped__()
+    if isinstance(respuesta, tuple):
+        return respuesta
+    return jsonify(success=True, data=respuesta.get_json()['data']['puntos'])

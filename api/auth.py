@@ -99,6 +99,8 @@ def login():
         _registrar_intento(identificador, ip, 'fallo')
         return jsonify({'success': False, 'error': 'Credenciales inválidas'}), 401
 
+    if not usuario.estado or not usuario.rol or not usuario.rol.estado:
+        return jsonify(success=False, error='Cuenta inactiva'), 401
     clave = data['clave']
     stored = usuario.clave if isinstance(usuario.clave, str) else ''
     valida = False
@@ -155,6 +157,9 @@ def logout():
 @jwt_required(refresh=True)
 def refresh():
     current_user = get_jwt_identity()
+    usuario = db.session.get(Usuario, int(current_user))
+    if not usuario or not usuario.estado:
+        return jsonify(success=False, error='Cuenta inactiva'), 401
     access_token = create_access_token(identity=current_user)
     return jsonify({'success': True, 'data': {'token': access_token}})
 

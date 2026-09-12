@@ -1,3 +1,6 @@
+from api.validaciones import numero
+from sqlalchemy import text
+import uuid
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, timedelta
@@ -32,6 +35,19 @@ def _requiere_roles(*roles):
             u = Usuario.query.get(uid)
             if not u or not u.estado or u.id_rol not in roles:
                 return jsonify({'success': False, 'error': 'Acceso restringido a inventario'}), 403
+            if request.method in ('POST', 'PUT', 'DELETE'):
+                if db.engine.dialect.name == 'postgresql':
+                    db.session.execute(text('SELECT pg_advisory_xact_lock(72451002)'))
+                data = request.get_json(silent=True) or {}
+                try:
+                    for campo in ('stock', 'precio', 'monto', 'cantidad'):
+                        if campo in data and data[campo] is not None:
+                            numero(data[campo], .000001 if campo in ('monto', 'cantidad') else 0)
+                    for linea in data.get('detalle') or []:
+                        numero(linea.get('cantidad'), .000001)
+                        numero(linea.get('precio_unitario'), 0)
+                except (ValueError, TypeError, AttributeError):
+                    return jsonify(success=False, error='Revisa cantidades y precios: deben ser números válidos, sin negativos.'), 400
             return fn(*args, **kwargs)
         return wrapper
     return decorator
@@ -81,7 +97,7 @@ def _registrar_movimiento(id_producto, id_usuario, tipo, cantidad, stock_anterio
 
 
 @inventario_bp.route('/resumen', methods=['GET'])
-@_solo_admin
+@_inventario_stock
 def get_resumen():
     total_inventario = db.session.query(
         db.func.coalesce(db.func.sum(Producto.precio * Producto.stock), 0)
@@ -98,6 +114,10 @@ def get_resumen():
     inversiones_mes = db.session.query(
         db.func.coalesce(db.func.sum(Inversion.monto), 0)
     ).filter(Inversion.fecha >= inicio_mes, Inversion.fecha < fin_mes).scalar() or 0
+    compras_mes = db.session.query(db.func.coalesce(db.func.sum(CompraInventario.total_compra), 0)).filter(
+        CompraInventario.fecha >= inicio_mes, CompraInventario.fecha < fin_mes,
+        CompraInventario.estado == 'Completada').scalar() or 0
+    inversiones_mes += compras_mes
     productos_mes = Producto.query.filter(
         Producto.fecha_registro >= inicio_mes, Producto.fecha_registro < fin_mes
     ).count()
@@ -135,7 +155,7 @@ def eliminar_inversion(id):
 @inventario_bp.route('/productos', methods=['GET'])
 @_inventario_stock
 def get_productos():
-    query = Producto.query
+    query = Producto.query.options(db.joinedload(Producto.categoria_rel))
     q = request.args.get('q', '').strip()
     cat = request.args.get('cat', '').strip()
     activos = request.args.get('activos', '').strip() == '1'
@@ -161,7 +181,7 @@ def get_producto(id):
 
 
 @inventario_bp.route('/productos', methods=['POST'])
-@_solo_admin
+@_inventario_stock
 def crear_producto():
     data = request.get_json()
     nombre = (data.get('nombre') or '').strip()
@@ -215,7 +235,7 @@ def crear_producto():
 
 
 @inventario_bp.route('/productos/<int:id>', methods=['PUT'])
-@_solo_admin
+@_inventario_stock
 def actualizar_producto(id):
     producto = Producto.query.get_or_404(id)
     data = request.get_json()
@@ -386,14 +406,14 @@ def crear_compra():
     if not detalle:
         return jsonify({'success': False, 'error': 'Agrega al menos un producto a la compra'}), 400
     id_proveedor = data.get('id_proveedor')
-    if not Proveedor.query.get(id_proveedor):
+    if id_proveedor and not db.session.get(Proveedor, id_proveedor):
         return jsonify({'success': False, 'error': 'Selecciona un proveedor válido para la compra'}), 400
 
     usuario_id = int(get_jwt_identity())
     n_hoy = CompraInventario.query.filter(
         db.func.date(CompraInventario.fecha) == date.today()
     ).count() + 1
-    codigo = f"COMPRA-{date.today().strftime('%Y%m%d')}-{n_hoy:03d}"
+    codigo = f"COMPRA-{date.today().strftime('%Y%m%d')}-{uuid.uuid4().hex[:10]}"
 
     compra = CompraInventario(
         codigo=codigo,
@@ -433,7 +453,11 @@ def crear_compra():
         pendientes = SolicitudInsumo.query.filter_by(
             id_producto=producto.id_producto, estado='Pendiente'
         ).all()
-        for s in pendientes:
+        disponible = cantidad
+        for s in sorted(pendientes, key=lambda item: item.fecha):
+            if s.cantidad > disponible:
+                continue
+            disponible -= s.cantidad
             s.estado = 'Atendida'
             s.respuesta = f'Stock repuesto con la compra {codigo}'
             crear_notificacion(
@@ -470,7 +494,10 @@ def eliminar_compra(id):
         producto = Producto.query.get(det.id_producto)
         if producto:
             anterior = float(producto.stock or 0)
-            posterior = max(0, anterior - det.cantidad)
+            if anterior < det.cantidad:
+                db.session.rollback()
+                return jsonify(success=False, error='No se puede anular: parte del stock ya fue utilizado.'), 409
+            posterior = anterior - det.cantidad
             producto.stock = posterior
             producto.fecha_edicion = _ahora()
             _registrar_movimiento(
@@ -486,7 +513,6 @@ def eliminar_compra(id):
             )
 
     compra.estado = 'Anulada'
-    compra.fecha = _ahora()
     db.session.add(ActividadUsuario(
         id_usuario=usuario_id,
         accion=f'Anuló compra de inventario {compra.codigo}',
@@ -520,7 +546,7 @@ def crear_inversion():
 
 
 @inventario_bp.route('/categorias', methods=['GET'])
-@_solo_admin
+@_inventario_stock
 def get_categorias():
     categorias = Categoria.query.all()
     return jsonify({'success': True, 'data': [{'id_categoria': c.id_categoria, 'nombre': c.nombre} for c in categorias]})
