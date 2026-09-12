@@ -61,7 +61,7 @@
         </div>
         <div class="stat-content">
           <span class="stat-label">Saldo actual</span>
-          <span class="stat-value">S/. {{ formatMoney(caja.neto_dia) }}</span>
+          <span class="stat-value">S/. {{ formatMoney(caja.saldo_actual) }}</span>
         </div>
       </div>
     </div>
@@ -69,13 +69,14 @@
     <!-- Acciones rápidas -->
     <h2 class="seccion-title">Acciones rápidas</h2>
     <div class="acciones-grid">
-      <button class="accion-chip chip-btn" :class="{ primary: !caja.abierta }" type="button" @click="abrirDialogApertura" :disabled="caja.abierta">
+      <SolicitarAdelanto />
+      <button class="accion-chip chip-btn" :class="{ primary: !caja.abierta }" type="button" @click="abrirDialogApertura" :disabled="$saving || (caja.abierta)">
         <i class="fa-solid fa-door-open"></i> Abrir Caja
       </button>
-      <button class="accion-chip chip-btn" type="button" @click="abrirDialogTransaccion('Venta')" :disabled="!caja.abierta">
+      <button class="accion-chip chip-btn" type="button" @click="abrirDialogTransaccion('Venta')" :disabled="$saving || (!caja.abierta)">
         <i class="fa-solid fa-circle-plus"></i> Registrar Ingreso
       </button>
-      <button class="accion-chip chip-btn" type="button" @click="abrirDialogTransaccion('Gasto')" :disabled="!caja.abierta">
+      <button class="accion-chip chip-btn" type="button" @click="abrirDialogTransaccion('Gasto')" :disabled="$saving || (!caja.abierta)">
         <i class="fa-solid fa-circle-minus"></i> Registrar Egreso
       </button>
       <router-link to="/caja" class="accion-chip">
@@ -89,15 +90,17 @@
       </router-link>
     </div>
 
+    <router-link to="/caja/reportes" class="btn btn-outline">Ver reportes financieros y detalle →</router-link>
+
     <!-- Diálogo: apertura de caja con monto inicial -->
     <Dialog v-model:visible="dialogApertura" header="Abrir caja" :modal="true" :closable="true">
       <div class="field">
         <label for="monto-inicial">Monto inicial (S/.)</label>
-        <InputNumber id="monto-inicial" v-model="montoInicial" mode="currency" currency="PEN" locale="es-PE" :min="0" :minFractionDigits="2" :maxFractionDigits="2" class="w-full" />
+        <InputNumber placeholder="Ej. 100.00" id="monto-inicial" v-model="montoInicial" mode="currency" currency="PEN" locale="es-PE" :min="0" :minFractionDigits="2" :maxFractionDigits="2" class="w-full" />
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogApertura = false" />
-        <Button label="Abrir caja" :loading="guardando" @click="abrirCaja" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogApertura = false" />
+        <Button :disabled="$saving" label="Abrir caja" :loading="guardando" @click="abrirCaja" />
       </template>
     </Dialog>
 
@@ -109,15 +112,16 @@
       </div>
       <div class="field">
         <label for="monto-tx">Monto (S/.)</label>
-        <InputNumber id="monto-tx" v-model="nuevaTransaccion.monto" mode="currency" currency="PEN" locale="es-PE" :min="0" :minFractionDigits="2" :maxFractionDigits="2" class="w-full" />
+        <InputNumber placeholder="Ej. 100.00" id="monto-tx" v-model="nuevaTransaccion.monto" mode="currency" currency="PEN" locale="es-PE" :min="0" :minFractionDigits="2" :maxFractionDigits="2" class="w-full" />
       </div>
+      <div class="field"><label for="metodo-pago">Método de pago</label><Select id="metodo-pago" v-model="nuevaTransaccion.metodo_pago" :options="metodosPago" class="w-full" /></div>
       <div class="field">
-        <label for="descripcion-tx">Descripción</label>
+        <label for="descripcion">Descripción</label>
         <InputText id="descripcion-tx" v-model="nuevaTransaccion.descripcion" class="w-full" placeholder="Detalle del movimiento" />
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogTransaccion = false" />
-        <Button label="Registrar" :loading="guardando" @click="registrarTransaccion" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogTransaccion = false" />
+        <Button :disabled="$saving" label="Registrar" :loading="guardando" @click="registrarTransaccion" />
       </template>
     </Dialog>
 
@@ -126,7 +130,7 @@
     <div class="chart-card">
       <div class="filtros-bar">
         <div class="periodo-tabs">
-          <button
+          <button :disabled="$saving"
             v-for="p in periodos"
             :key="p.key"
             class="filtro-btn"
@@ -137,7 +141,7 @@
           </button>
         </div>
         <div class="serie-toggles">
-          <button
+          <button :disabled="$saving"
             v-for="s in series"
             :key="s.key"
             class="serie-toggle"
@@ -209,6 +213,7 @@
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import DataTable from 'primevue/datatable'
@@ -231,8 +236,9 @@ const caja = ref({ abierta: false, ventas_dia: 0, gastos_dia: 0, neto_dia: 0, tr
 const dialogApertura = ref(false)
 const dialogTransaccion = ref(false)
 const guardando = ref(false)
-const montoInicial = ref(0)
-const nuevaTransaccion = ref({ tipo: 'Venta', monto: 0, descripcion: '' })
+const montoInicial = ref(null)
+const metodosPago = ['Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Otros']
+const nuevaTransaccion = ref({ tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' })
 const tiposTransaccion = [
   { label: 'Venta (Ingreso)', value: 'Venta' },
   { label: 'Gasto (Egreso)', value: 'Gasto' }
@@ -299,10 +305,7 @@ const notificaciones = computed(() => {
 })
 
 const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
-const formatFecha = (val) => {
-  if (!val) return '-'
-  return String(val).slice(0, 16).replace('T', ' ').slice(11)
-}
+const formatFecha = fechaLegible
 
 const cargar = async () => {
   loading.value = true
@@ -317,11 +320,12 @@ const cargar = async () => {
 }
 
 const abrirDialogApertura = () => {
-  montoInicial.value = 0
+  montoInicial.value = null
   dialogApertura.value = true
 }
 
 const abrirCaja = async () => {
+  if (guardando.value) return
   const monto = Number(montoInicial.value || 0)
   guardando.value = true
   try {
@@ -340,11 +344,12 @@ const abrirCaja = async () => {
 }
 
 const abrirDialogTransaccion = (tipo) => {
-  nuevaTransaccion.value = { tipo, monto: 0, descripcion: '' }
+  nuevaTransaccion.value = { tipo, metodo_pago: 'Efectivo', monto: null, descripcion: '' }
   dialogTransaccion.value = true
 }
 
 const registrarTransaccion = async () => {
+  if (guardando.value) return
   const monto = Number(nuevaTransaccion.value.monto)
   if (!monto || monto <= 0) {
     toast.add({ severity: 'warn', summary: 'Ingrese un monto mayor que cero', life: 3000 })
@@ -359,12 +364,13 @@ const registrarTransaccion = async () => {
     const res = await api.post('/caja/transacciones', {
       tipo: nuevaTransaccion.value.tipo,
       monto,
+      metodo_pago: nuevaTransaccion.value.metodo_pago,
       descripcion: nuevaTransaccion.value.descripcion.trim()
     })
     if (res.data.success) {
       toast.add({ severity: 'success', summary: 'Movimiento registrado', life: 2500 })
       dialogTransaccion.value = false
-      nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
+      nuevaTransaccion.value = { tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' }
       await cargar()
       await cargarRendimiento()
     }

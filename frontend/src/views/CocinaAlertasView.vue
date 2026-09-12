@@ -6,7 +6,7 @@
         <h1>Alertas de stock</h1>
         <p>Productos que necesitan atención para la preparación del buffet</p>
       </div>
-      <button class="btn btn-outline" @click="load">
+      <button :disabled="$saving" class="btn btn-outline" @click="load">
         <i class="fa-solid fa-arrows-rotate"></i> Actualizar
       </button>
     </div>
@@ -73,6 +73,9 @@
 </template>
 
 <script setup>
+import Tag from 'primevue/tag'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
 import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import api from '../config/axios'

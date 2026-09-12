@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <router-link to="/panel" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver al Panel
-      </router-link>
+      <VolverBtn to="/panel" />
       <h1>Inventario e Inversión</h1>
       <p>Control de productos, compras, inversiones y movimientos de almacén</p>
     </div>
@@ -15,7 +13,7 @@
         <p>Registro, edición y desactivación de productos con sus unidades.</p>
         <span class="go-arrow"><i class="fa-solid fa-arrow-right"></i> Ingresar</span>
       </router-link>
-      <router-link to="/inventario/operaciones?vista=productos" class="seccion-card">
+      <router-link to="/inventario/operaciones?vista=productos&accion=entrada" class="seccion-card">
         <div class="seccion-icon ic-blue"><i class="fa-solid fa-right-left"></i></div>
         <h3>Entradas y Salidas</h3>
         <p>Agregar stock y registrar salidas de los productos del almacén.</p>
@@ -27,16 +25,10 @@
         <p>Historial con stock anterior/posterior, motivo y responsable.</p>
         <span class="go-arrow"><i class="fa-solid fa-arrow-right"></i> Ingresar</span>
       </router-link>
-      <router-link to="/inventario/operaciones?vista=compras" class="seccion-card">
+      <router-link v-if="auth.userRole === 1" to="/inventario/operaciones?vista=compras" class="seccion-card">
         <div class="seccion-icon ic-green"><i class="fa-solid fa-cart-shopping"></i></div>
-        <h3>Compras</h3>
-        <p>Registro de compras a proveedores con detalle.</p>
-        <span class="go-arrow"><i class="fa-solid fa-arrow-right"></i> Ingresar</span>
-      </router-link>
-      <router-link to="/inventario/operaciones?vista=inversiones" class="seccion-card">
-        <div class="seccion-icon ic-purple"><i class="fa-solid fa-chart-pie"></i></div>
-        <h3>Inversiones</h3>
-        <p>Registro y seguimiento de inversiones realizadas.</p>
+        <h3>Inversiones (compras)</h3>
+        <p>Compra de productos con cantidad y precio; proveedor opcional.</p>
         <span class="go-arrow"><i class="fa-solid fa-arrow-right"></i> Ingresar</span>
       </router-link>
       <router-link to="/inventario/reportes" class="seccion-card">
@@ -48,3 +40,7 @@
     </div>
   </div>
 </template>
+<script setup>
+import { useAuthStore } from '../stores/auth'
+const auth = useAuthStore()
+</script>

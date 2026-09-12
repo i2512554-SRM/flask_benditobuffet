@@ -12,10 +12,10 @@
 
     <div class="toolbar">
       <div class="segment">
-        <button class="seg-btn" :class="{ active: ambito === 'hoy' }" @click="ambito = 'hoy'">Hoy</button>
-        <button class="seg-btn" :class="{ active: ambito === 'historico' }" @click="ambito = 'historico'">Histórico</button>
+        <button :disabled="$saving" class="seg-btn" :class="{ active: ambito === 'hoy' }" @click="ambito = 'hoy'">Hoy</button>
+        <button :disabled="$saving" class="seg-btn" :class="{ active: ambito === 'historico' }" @click="ambito = 'historico'">Histórico</button>
       </div>
-      <button class="btn btn-outline btn-sm" @click="cargar">
+      <button :disabled="$saving" class="btn btn-outline btn-sm" @click="cargar">
         <i class="fa-solid fa-arrows-rotate"></i> Actualizar
       </button>
     </div>
@@ -64,6 +64,7 @@
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -79,13 +80,7 @@ const filas = computed(() =>
 )
 
 const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
-const formatFecha = (val) => {
-  if (!val) return '-'
-  const s = String(val)
-  const dia = s.slice(0, 10)
-  const hora = s.slice(11, 16)
-  return `${dia} ${hora}`
-}
+const formatFecha = fechaLegible
 
 const cargar = async () => {
   loading.value = true

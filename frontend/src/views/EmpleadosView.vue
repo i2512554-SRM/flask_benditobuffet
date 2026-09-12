@@ -6,7 +6,7 @@
         <h1>Empleados</h1>
         <p>Gestión del personal del restaurante</p>
       </div>
-      <Button label="Agregar Empleado" icon="pi pi-plus" @click="agregarDialog" />
+      <Button :disabled="$saving" label="Agregar Empleado" icon="pi pi-plus" @click="agregarDialog" />
     </div>
 
     <!-- Skeleton -->
@@ -58,8 +58,8 @@
           <Column header="Acciones" style="min-width: 15rem">
             <template #body="slotProps">
               <span class="acciones-row">
-                <Button label="Editar" icon="pi pi-pencil" severity="info" text rounded class="btn-accion" title="Editar" @click="editar(slotProps.data)" />
-                <Button
+                <Button :disabled="$saving" label="Editar" icon="pi pi-pencil" severity="info" text rounded class="btn-accion" title="Editar" @click="editar(slotProps.data)" />
+                <Button :disabled="$saving"
                   v-if="slotProps.data.estado"
                   label="Desactivar"
                   icon="pi pi-ban"
@@ -70,7 +70,7 @@
                   title="Desactivar usuario"
                   @click="cambiarEstado(slotProps.data, false)"
                 />
-                <Button
+                <Button :disabled="$saving"
                   v-else
                   label="Reactivar"
                   icon="pi pi-check"
@@ -96,17 +96,17 @@
         <div class="field col-12">
           <label for="dni">DNI</label>
           <div class="dni-row">
-            <InputText id="dni" v-model="form.dni" maxlength="8" class="w-full" placeholder="8 dígitos" @keyup.enter="consultarDni" />
-            <Button label="Consultar RENIEC" icon="pi pi-search" severity="secondary" :loading="consultandoDni" @click="consultarDni" />
+            <InputText id="dni" v-model="form.dni" @input="limpiarCampo('dni', $event)" inputmode="numeric" maxlength="8" class="w-full" placeholder="8 dígitos" @keyup.enter="consultarDni" />
+            <Button :disabled="$saving" label="Consultar RENIEC" icon="pi pi-search" severity="secondary" :loading="consultandoDni" @click="consultarDni" />
           </div>
         </div>
         <div class="field col-6">
           <label for="nombres">Nombres</label>
-          <InputText id="nombres" v-model="form.nombres" class="w-full" />
+          <InputText id="nombres" v-model="form.nombres" @input="limpiarCampo('nombres', $event)" class="w-full" />
         </div>
         <div class="field col-6">
           <label for="apellido">Apellidos</label>
-          <InputText id="apellido" v-model="form.apellido" class="w-full" />
+          <InputText id="apellido" v-model="form.apellido" @input="limpiarCampo('apellido', $event)" class="w-full" />
         </div>
         <div class="field col-6">
           <label for="correo">Correo</label>
@@ -114,7 +114,7 @@
         </div>
         <div class="field col-6">
           <label for="telefono">Teléfono</label>
-          <InputText id="telefono" v-model="form.telefono" class="w-full" />
+          <InputText id="telefono" v-model="form.telefono" @input="limpiarCampo('telefono', $event)" inputmode="numeric" maxlength="9" class="w-full" />
         </div>
         <div class="field col-6">
           <label for="rol">Rol</label>
@@ -125,9 +125,10 @@
           <MultiSelect id="turno" v-model="form.turno" :options="turnos" optionLabel="label" optionValue="value" class="w-full" placeholder="Uno o varios turnos" />
         </div>
       </div>
+      <div class="field" v-if="!editing.id_usuario"><label for="clave-empleado">Contraseña inicial *</label><InputText id="clave-empleado" v-model="form.clave" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" class="w-full" /></div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogVisible = false" />
-        <Button label="Guardar" :loading="guardando" @click="guardar" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
+        <Button :disabled="$saving" label="Guardar" :loading="guardando" @click="guardar" />
       </template>
     </Dialog>
   </div>
@@ -154,6 +155,14 @@ const loading = ref(true)
 const dialogVisible = ref(false)
 const editing = ref({})
 const form = ref({})
+function limpiarCampo(campo, evento) {
+  const valor = evento.target.value
+  const limpio = ['dni', 'telefono'].includes(campo)
+    ? valor.replace(/[^0-9]/g, '').slice(0, campo === 'dni' ? 8 : 9)
+    : valor.replace(/[^\p{L} '-]/gu, '')
+  evento.target.value = limpio
+  form.value[campo] = limpio
+}
 const guardando = ref(false)
 const consultandoDni = ref(false)
 const filtros = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
@@ -164,7 +173,6 @@ const roles = [
   { id_rol: 4, nombre: 'Mozo' }
 ]
 const turnos = [
-  { label: 'Mañana', value: 'Mañana' },
   { label: 'Tarde', value: 'Tarde' },
   { label: 'Noche', value: 'Noche' }
 ]
@@ -195,13 +203,13 @@ const cargar = async () => {
 
 const agregarDialog = () => {
   editing.value = {}
-  form.value = { dni: '', nombres: '', apellido: '', correo: '', telefono: '', id_rol: 2, turno: [] }
+  form.value = { clave: '', dni: '', nombres: '', apellido: '', correo: '', telefono: '', id_rol: 2, turno: [] }
   dialogVisible.value = true
 }
 
 const editar = (emp) => {
   editing.value = emp
-  form.value = { ...emp, turno: turnoList(emp.turno) }
+  form.value = { ...emp, turno: turnoList(emp.turno).filter(t => t !== 'Mañana') }
   dialogVisible.value = true
 }
 
@@ -233,6 +241,13 @@ const consultarDni = async () => {
 }
 
 const guardar = async () => {
+  if (guardando.value) return
+  if (!/^[0-9]{8}$/.test(form.value.dni || '') || !/^[\p{L} '-]+$/u.test(form.value.nombres || '') || !/^[\p{L} '-]+$/u.test(form.value.apellido || '') || (form.value.telefono && !/^[0-9]{9}$/.test(form.value.telefono))) {
+    toast.add({severity:'warn', summary:'Revisa DNI (8 números), nombres y teléfono (9 números).', life:4000}); return
+  }
+  if (!editing.value.id_usuario && (form.value.clave || '').length < 8) {
+    toast.add({severity:'warn', summary:'Ingresa una contraseña de al menos 8 caracteres.', life:4000}); return
+  }
   if (!form.value.dni || !form.value.nombres || !form.value.apellido) {
     toast.add({ severity: 'warn', summary: 'DNI, nombres y apellidos son obligatorios', life: 3500 })
     return
@@ -242,6 +257,7 @@ const guardar = async () => {
     return
   }
   const payload = {
+    clave: form.value.clave,
     dni: form.value.dni,
     nombres: form.value.nombres,
     apellido: form.value.apellido,

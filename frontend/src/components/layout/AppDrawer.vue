@@ -163,7 +163,6 @@ const MENU_POR_ROL = {
         { to: '/seguridad', icon: 'fa-solid fa-shield-halved', label: 'Seguridad y Accesos' },
         { to: '/seguridad/monitoreo', icon: 'fa-solid fa-eye', label: 'Monitoreo' },
         { to: '/seguridad/roles', icon: 'fa-solid fa-user-shield', label: 'Roles' },
-        { to: '/seguridad/actividad', icon: 'fa-solid fa-list-check', label: 'Actividad' }
       ]
     },
     { id: 'ia', item: { to: '/ia', label: 'IA Predictiva', icon: 'fa-solid fa-brain', iconCls: 'ic-cyan' } }
@@ -179,7 +178,8 @@ const MENU_POR_ROL = {
         { to: '/caja/dashboard', icon: 'fa-solid fa-chart-pie', label: 'Dashboard de Caja' },
         { to: '/caja', icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
         { to: '/caja/movimientos', icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
-        { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' }
+        { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
+        { to: '/caja/reportes', icon: 'fa-solid fa-chart-line', label: 'Reportes Financieros' }
       ]
     },
     { id: 'miarea', label: 'Mi Área', icon: 'fa-solid fa-user', iconCls: 'ic-blue', children: areaItems }
@@ -192,7 +192,7 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-utensils',
       iconCls: 'ic-orange',
       children: [
-        { to: '/cocinero/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Inventario' },
+        { to: '/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Inventario' },
         { to: '/cocinero/solicitudes', icon: 'fa-solid fa-list-check', label: 'Mis Solicitudes' },
         { to: '/cocinero/alertas', icon: 'fa-solid fa-triangle-exclamation', label: 'Alertas' }
       ]

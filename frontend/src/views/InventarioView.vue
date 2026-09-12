@@ -1,20 +1,16 @@
 <template>
   <div class="inventario-view">
     <div class="page-hero">
-      <router-link to="/inventario" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver a Inventario e Inversión
-      </router-link>
+      <VolverBtn to="/inventario" />
       <h1>Operaciones de Inventario</h1>
-      <p>Control de productos, entradas, salidas, compras, inversiones y movimientos de almacén</p>
+      <p>Productos, unidades y stock. Las inversiones registran compras; las entradas de stock no registran gastos.</p>
     </div>
 
     <div class="actions">
-      <Button label="Nuevo producto" icon="pi pi-plus" @click="agregarDialog" />
-      <Button label="Agregar stock" icon="pi pi-arrow-down" severity="secondary" @click="abrirAgregarStock()" />
-      <Button label="Registrar salida" icon="pi pi-arrow-up" severity="secondary" @click="abrirRegistrarSalida()" />
-      <Button label="Registrar compra" icon="pi pi-cart-plus" severity="secondary" @click="openCompra" />
-      <Button label="Registrar inversión" icon="pi pi-chart-line" severity="secondary" @click="openInversion" />
-      <Button label="Gestionar proveedores" icon="pi pi-truck" severity="secondary" @click="openProveedores" />
+      <Button :disabled="$saving" label="Nuevo producto" icon="pi pi-plus" @click="agregarDialog" />
+      <Button :disabled="$saving" label="Entrada sin compra" icon="pi pi-arrow-down" severity="secondary" @click="abrirAgregarStock()" />
+      <Button :disabled="$saving" label="Registrar salida" icon="pi pi-arrow-up" severity="secondary" @click="abrirRegistrarSalida()" />
+      <Button :disabled="$saving" v-if="esAdmin" label="Registrar inversión (compra)" icon="pi pi-cart-plus" severity="secondary" @click="openCompra" />
     </div>
 
     <div class="stats-grid">
@@ -37,10 +33,10 @@
     </div>
 
     <div class="view-toggle">
-      <Button label="Productos" :class="{ active: vista === 'productos' }" severity="secondary" plain @click="vista = 'productos'" />
-      <Button label="Compras" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="vista = 'compras'" />
-      <Button label="Inversiones" :class="{ active: vista === 'inversiones' }" severity="secondary" plain @click="vista = 'inversiones'" />
-      <Button label="Movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain @click="vista = 'movimientos'" />
+      <Button :disabled="$saving" label="Productos" :class="{ active: vista === 'productos' }" severity="secondary" plain @click="vista = 'productos'" />
+      <Button :disabled="$saving" v-if="esAdmin" label="Inversiones (compras)" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="vista = 'compras'" />
+      <Button :disabled="$saving" v-if="esAdmin && inversiones.length" label="Registros anteriores" :class="{ active: vista === 'inversiones' }" severity="secondary" plain @click="vista = 'inversiones'" />
+      <Button :disabled="$saving" label="Movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain @click="vista = 'movimientos'" />
     </div>
 
     <div class="table-card" v-if="vista === 'productos'">
@@ -77,11 +73,11 @@
         <Column header="Acciones" :exportable="false">
           <template #body="slotProps">
             <div class="row-actions">
-              <Button icon="pi pi-eye" severity="info" text rounded @click="verProducto(slotProps.data)" />
-              <Button icon="pi pi-pencil" severity="secondary" text rounded @click="editar(slotProps.data)" />
-              <Button icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirAgregarStock(slotProps.data)" />
-              <Button icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirRegistrarSalida(slotProps.data)" />
-              <Button :icon="slotProps.data.estado ? 'pi pi-ban' : 'pi pi-check'" :severity="slotProps.data.estado ? 'danger' : 'success'" text rounded :title="slotProps.data.estado ? 'Desactivar' : 'Activar'" @click="toggleEstado(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-eye" severity="info" text rounded @click="verProducto(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-pencil" severity="secondary" text rounded @click="editar(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirAgregarStock(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirRegistrarSalida(slotProps.data)" />
+              <Button v-if="esAdmin" :disabled="$saving" :icon="slotProps.data.estado ? 'pi pi-ban' : 'pi pi-check'" :severity="slotProps.data.estado ? 'danger' : 'success'" text rounded :title="slotProps.data.estado ? 'Desactivar' : 'Activar'" @click="toggleEstado(slotProps.data)" />
             </div>
           </template>
         </Column>
@@ -89,7 +85,7 @@
     </div>
 
     <div class="table-card" v-if="vista === 'compras'">
-      <h2>Compras de inventario</h2>
+      <h2>Inversiones en productos</h2>
       <DataTable :value="compras" :paginator="true" :rows="10" class="mt-4">
         <Column field="codigo" header="Código" sortable></Column>
         <Column field="fecha" header="Fecha" sortable>
@@ -105,8 +101,8 @@
         <Column field="estado" header="Estado" sortable></Column>
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button icon="pi pi-eye" severity="info" text rounded @click="verCompra(slotProps.data)" />
-            <Button icon="pi pi-trash" severity="danger" text rounded @click="eliminarCompra(slotProps.data)" />
+            <Button :disabled="$saving" icon="pi pi-eye" severity="info" text rounded @click="verCompra(slotProps.data)" />
+            <Button :disabled="$saving" icon="pi pi-trash" severity="danger" text rounded @click="eliminarCompra(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
@@ -127,8 +123,8 @@
         </Column>
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button icon="pi pi-eye" severity="info" text rounded @click="verInversion(slotProps.data)" />
-            <Button icon="pi pi-trash" severity="danger" text rounded @click="eliminarInversion(slotProps.data)" />
+            <Button :disabled="$saving" icon="pi pi-eye" severity="info" text rounded @click="verInversion(slotProps.data)" />
+            <Button :disabled="$saving" icon="pi pi-trash" severity="danger" text rounded @click="eliminarInversion(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
@@ -183,7 +179,7 @@
         </div>
         <div class="field col-6">
           <label for="unidad_medida">Unidad de medida</label>
-          <Select id="unidad_medida" v-model="form.unidad_medida" :options="unidades" optionLabel="label" optionValue="valor" class="w-full" :disabled="!!editing.id_producto || form.stock > 0" />
+          <Select id="unidad_medida" v-model="form.unidad_medida" :options="unidades" optionLabel="label" optionValue="valor" class="w-full" placeholder="Selecciona Kg, Un o Lt" />
         </div>
         <div class="field col-6">
           <label for="estado">Estado</label>
@@ -195,11 +191,11 @@
         </div>
         <div class="field col-6">
           <label for="precio">Precio</label>
-          <InputNumber id="precio" v-model="form.precio" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="precio" v-model="form.precio" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
         <div class="field col-6" v-if="!editing.id_producto">
           <label for="stock">Stock inicial</label>
-          <InputNumber id="stock" v-model="form.stock" :min="0" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="stock" v-model="form.stock" :min="0" class="w-full" />
         </div>
         <div class="field col-12">
           <label for="descripcion">Descripción</label>
@@ -209,11 +205,11 @@
       <div v-if="duplicadoInfo" class="dup-advice">
         <i class="pi pi-exclamation-triangle"></i>
         <span>El producto "{{ duplicadoInfo.nombre }}" ya existe en el sistema. Si deseas aumentar su cantidad usa "Agregar stock".</span>
-        <Button label="Ir a Agregar stock" icon="pi pi-arrow-down" size="small" @click="irAgregarStock()" />
+        <Button :disabled="$saving" label="Ir a Agregar stock" icon="pi pi-arrow-down" size="small" @click="irAgregarStock()" />
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="productoDialog = false" />
-        <Button label="Guardar" @click="guardarProducto" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="productoDialog = false" />
+        <Button :disabled="$saving" label="Guardar" @click="guardarProducto" />
       </template>
     </Dialog>
 
@@ -240,7 +236,7 @@
         </div>
         <div class="field col-6">
           <label for="stock-cantidad">Cantidad *</label>
-          <InputNumber id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
         </div>
         <div class="field col-12" v-if="stockModo === 'entrada'">
           <label for="stock-motivo">Motivo (opcional)</label>
@@ -256,8 +252,8 @@
         <span>{{ stockWarning }}</span>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="stockDialog = false" />
-        <Button label="Confirmar" @click="confirmarStock" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="stockDialog = false" />
+        <Button :disabled="$saving" label="Confirmar" @click="confirmarStock" />
       </template>
     </Dialog>
 
@@ -272,25 +268,25 @@
         <div class="d-row"><span class="d-label">Descripción</span><span>{{ productoVisto.descripcion || '-' }}</span></div>
       </div>
       <template #footer>
-        <Button label="Cerrar" severity="secondary" @click="productoVerDialog = false" />
+        <Button :disabled="$saving" label="Cerrar" severity="secondary" @click="productoVerDialog = false" />
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="compraDialog" header="Registrar compra de inventario" :modal="true" :style="{ width: '620px' }">
+    <Dialog v-model:visible="compraDialog" header="Registrar inversión en productos" :modal="true" :style="{ width: '620px' }">
       <div class="formgrid grid">
         <div class="field col-12">
-          <label for="proveedor">Proveedor *</label>
+          <label for="proveedor">Proveedor (opcional)</label>
           <Select id="proveedor" v-model="compraForm.id_proveedor" :options="proveedores" optionLabel="nombre" optionValue="id_proveedor" class="w-full" showClear />
         </div>
         <div class="field col-12">
           <label>Detalle de productos</label>
           <div v-for="(linea, idx) in compraForm.detalle" :key="idx" class="detalle-row">
             <Select v-model="linea.id_producto" :options="productosActivos" filter optionLabel="nombre" optionValue="id_producto" placeholder="Producto" class="w-full" />
-            <InputNumber v-model="linea.cantidad" placeholder="Cant." :min="0" class="w-full" />
-            <InputNumber v-model="linea.precio_unitario" placeholder="P. unit." mode="currency" currency="PEN" locale="es-PE" :min="0" class="w-full" />
-            <Button icon="pi pi-trash" severity="danger" text rounded @click="quitarLinea(idx)" />
+            <InputNumber :maxFractionDigits="2" v-model="linea.cantidad" placeholder="Cant." :min="0" class="w-full" />
+            <InputNumber :maxFractionDigits="2" v-model="linea.precio_unitario" placeholder="P. unit." mode="currency" currency="PEN" locale="es-PE" :min="0" class="w-full" />
+            <Button :disabled="$saving" icon="pi pi-trash" severity="danger" text rounded @click="quitarLinea(idx)" />
           </div>
-          <Button label="Agregar línea" icon="pi pi-plus" severity="secondary" text @click="agregarLinea" class="mt-1" />
+          <Button :disabled="$saving" label="Agregar línea" icon="pi pi-plus" severity="secondary" text @click="agregarLinea" class="mt-1" />
         </div>
         <div class="field col-12">
           <label for="notas">Notas</label>
@@ -298,8 +294,8 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="compraDialog = false" />
-        <Button label="Guardar compra" :disabled="!compraForm.detalle.length" @click="guardarCompra" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="compraDialog = false" />
+        <Button label="Guardar inversión" :disabled="$saving || (!compraForm.detalle.length)" @click="guardarCompra" />
       </template>
     </Dialog>
 
@@ -315,7 +311,7 @@
         </div>
         <div class="field col-6">
           <label for="monto">Monto</label>
-          <InputNumber id="monto" v-model="inversionForm.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="monto" v-model="inversionForm.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
         <div class="field col-12">
           <label for="notas">Notas</label>
@@ -323,8 +319,8 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="inversionDialog = false" />
-        <Button label="Guardar" @click="guardarInversion" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="inversionDialog = false" />
+        <Button :disabled="$saving" label="Guardar" @click="guardarInversion" />
       </template>
     </Dialog>
 
@@ -346,7 +342,7 @@
           <label for="prov-mail">Correo</label>
           <InputText id="prov-mail" v-model="provForm.correo" placeholder="Opcional" class="w-full" />
         </div>
-        <Button label="Agregar proveedor" icon="pi pi-plus" @click="guardarProveedor" class="w-full" />
+        <Button :disabled="$saving" label="Agregar proveedor" icon="pi pi-plus" @click="guardarProveedor" class="w-full" />
       </div>
       <DataTable :value="proveedores" :rows="8" class="mt-3">
         <Column field="nombre" header="Proveedor"></Column>
@@ -390,7 +386,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { formatFecha as fechaLegible } from '../utils/format'
+import { ref, computed, onMounted, watch }  from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
@@ -402,9 +399,12 @@ import Textarea from 'primevue/textarea'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import Checkbox from 'primevue/checkbox'
+import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
 const route = useRoute()
+const auth = useAuthStore()
+const esAdmin = computed(() => auth.userRole === 1)
 const toast = useToast()
 const productos = ref([])
 const categorias = ref([])
@@ -446,8 +446,8 @@ const stockProducto = computed(() => productosActivos.value.find(p => p.id_produ
 
 const fmt = (v) => Number(v || 0).toFixed(2)
 const fmt2 = (v) => Number(v || 0).toFixed(2)
-const fmtFecha = (v) => v ? String(v).slice(0, 10) : '-'
-const fmtFechaHora = (v) => v ? String(v).slice(0, 16).replace('T', ' ') : '-'
+const fmtFecha = fechaLegible
+const fmtFechaHora = fechaLegible
 const unidadLabel = (u) => u === 'Kg' ? 'Kg' : u === 'Lt' ? 'Lt' : 'Un'
 const fmtStock = (v) => Number(v || 0) % 1 === 0 ? String(Number(v || 0)) : Number(v || 0).toFixed(2)
 const firmarCantidad = (v) => {
@@ -505,7 +505,7 @@ const recargarTodo = () => Promise.all([cargarProductos(), cargarMovimientos(), 
 const agregarDialog = () => {
   editing.value = {}
   duplicadoInfo.value = null
-  form.value = { nombre: '', unidad_medida: 'Un', estado: true, id_categoria: null, precio: 0, stock: 0, descripcion: '' }
+  form.value = { nombre: '', unidad_medida: null, estado: true, id_categoria: null, precio: null, stock: null, descripcion: '' }
   productoDialog.value = true
 }
 
@@ -522,6 +522,7 @@ const verProducto = (prod) => {
 }
 
 const guardarProducto = async () => {
+  if (!form.value.unidad_medida) { toast.add({severity:'warn', summary:'Selecciona la unidad de medida.', life:3000}); return }
   try {
     if (editing.value.id_producto) {
       await api.put(`/inventario/productos/${editing.value.id_producto}`, form.value)
@@ -563,7 +564,7 @@ const toggleEstado = async (prod) => {
 }
 
 const cargarActivos = async () => {
-  if (productosActivos.value.length === 0) {
+  if (true) {
     const res = await api.get('/inventario/productos', { params: { activos: '1' } })
     if (res.data.success) productos.value = res.data.data
   }
@@ -622,12 +623,12 @@ const confirmarStock = async () => {
 
 const openCompra = () => {
   cargarActivos()
-  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: 1, precio_unitario: 0 }], notas: '' }
+  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '' }
   compraDialog.value = true
 }
 
 const agregarLinea = () => {
-  compraForm.value.detalle.push({ id_producto: null, cantidad: 1, precio_unitario: 0 })
+  compraForm.value.detalle.push({ id_producto: null, cantidad: null, precio_unitario: null })
 }
 
 const quitarLinea = (idx) => {
@@ -639,10 +640,6 @@ const guardarCompra = async () => {
     const lineas = compraForm.value.detalle.filter(l => l.id_producto && l.cantidad > 0)
     if (!lineas.length) {
       toast.add({ severity: 'warn', summary: 'Agrega al menos un producto con cantidad', life: 3000 })
-      return
-    }
-    if (!compraForm.value.id_proveedor) {
-      toast.add({ severity: 'warn', summary: 'Selecciona un proveedor para la compra', life: 3000 })
       return
     }
     await api.post('/inventario/compras', {
@@ -682,7 +679,7 @@ const eliminarCompra = async (compra) => {
 }
 
 const openInversion = () => {
-  inversionForm.value = { descripcion: '', id_proveedor: null, monto: 0, notas: '' }
+  inversionForm.value = { descripcion: '', id_proveedor: null, monto: null, notas: '' }
   inversionDialog.value = true
 }
 
@@ -730,10 +727,13 @@ const guardarProveedor = async () => {
 
 onMounted(async () => {
   await Promise.all([
-    cargarProductos(), cargarCategorias(), cargarCompras(), cargarInversiones(),
-    cargarMovimientos(), cargarProveedores(), cargarResumen()
+    cargarProductos(), cargarCategorias(), cargarMovimientos(), cargarResumen(),
+    ...(esAdmin.value ? [cargarCompras(), cargarInversiones(), cargarProveedores()] : [])
   ])
+  if(route.query.accion === 'entrada') abrirAgregarStock()
+  if(route.query.accion === 'nuevo') agregarDialog()
 })
+watch(() => route.query.vista, v => { if(vistaValida.includes(v)) vista.value=v })
 </script>
 
 <style scoped>

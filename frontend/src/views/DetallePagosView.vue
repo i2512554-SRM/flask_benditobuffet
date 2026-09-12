@@ -18,7 +18,7 @@
         <div class="stat-value">S/. {{ fmt(totales.adelantos) }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Neto</div>
+        <div class="stat-label">Total entregado</div>
         <div class="stat-value">S/. {{ fmt(totales.neto) }}</div>
       </div>
       <div class="stat-card">
@@ -28,15 +28,15 @@
     </div>
 
     <div class="view-toggle">
-      <Button label="Pagos Registrados" :class="{ active: vista === 'pagos' }" severity="secondary" plain @click="vista = 'pagos'" />
-      <Button label="Pagos Personal" :class="{ active: vista === 'personal' }" severity="secondary" plain @click="vista = 'personal'" />
-      <Button label="Adelantos" :class="{ active: vista === 'adelantos' }" severity="secondary" plain @click="vista = 'adelantos'" />
+      <Button :disabled="$saving" label="Pagos Registrados" :class="{ active: vista === 'pagos' }" severity="secondary" plain @click="vista = 'pagos'" />
+      <Button :disabled="$saving" label="Pagos Personal" :class="{ active: vista === 'personal' }" severity="secondary" plain @click="vista = 'personal'" />
+      <Button :disabled="$saving" label="Adelantos" :class="{ active: vista === 'adelantos' }" severity="secondary" plain @click="vista = 'adelantos'" />
     </div>
 
     <div class="table-card" v-if="vista === 'pagos'">
       <h2>Pagos registrados</h2>
       <DataTable :value="detalle.pagos || []" :paginator="true" :rows="10" class="mt-4">
-        <Column field="fecha" header="Fecha" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="monto" header="Monto" sortable>
           <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
         </Column>
@@ -54,7 +54,7 @@
     <div class="table-card" v-if="vista === 'personal'">
       <h2>Pagos de personal</h2>
       <DataTable :value="detalle.pagos_personal || []" :paginator="true" :rows="10" class="mt-4">
-        <Column field="fecha" header="Fecha" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="tipo" header="Tipo" sortable>
           <template #body="slotProps">{{ slotProps.data.tipo || 'Pago' }}</template>
         </Column>
@@ -67,7 +67,7 @@
     <div class="table-card" v-if="vista === 'adelantos'">
       <h2>Adelantos</h2>
       <DataTable :value="detalle.adelantos || []" :paginator="true" :rows="10" class="mt-4">
-        <Column field="fecha" header="Fecha" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="motivo" header="Motivo" sortable></Column>
         <Column field="monto" header="Monto" sortable>
           <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
@@ -86,7 +86,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { formatFecha as fechaLegible } from '../utils/format'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
@@ -101,7 +102,7 @@ const vista = ref('pagos')
 const mesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 const fmt = (v) => Number(v || 0).toFixed(2)
-const totales = () => detalle.value.totales || { pagado: 0, adelantos: 0, neto: 0 }
+const totales = computed(() => detalle.value.totales || { pagado: 0, adelantos: 0, neto: 0 })
 
 onMounted(async () => {
   const id = route.params.id

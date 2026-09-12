@@ -5,7 +5,7 @@
         <h1>Historial de Cierres</h1>
         <p>Cierres anteriores de caja con sus montos y saldo</p>
       </div>
-      <button class="btn btn-outline" @click="cargar">
+      <button :disabled="$saving" class="btn btn-outline" @click="cargar">
         <i class="fa-solid fa-arrows-rotate"></i> Actualizar
       </button>
     </div>
@@ -96,6 +96,7 @@
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -110,13 +111,7 @@ const totalGastos = computed(() => cierres.value.reduce((acc, c) => acc + Number
 const totalNeto = computed(() => totalVentas.value - totalGastos.value)
 
 const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
-const formatFecha = (val) => {
-  if (!val) return '-'
-  const s = String(val)
-  const dia = s.slice(0, 10)
-  const hora = s.slice(11, 16)
-  return `${dia} ${hora}`
-}
+const formatFecha = fechaLegible
 
 const cargar = async () => {
   loading.value = true

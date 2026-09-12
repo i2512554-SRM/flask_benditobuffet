@@ -29,7 +29,7 @@
               :disabled="loading || success"
               required
             />
-            <button
+            <button :disabled="$saving"
               type="button"
               class="toggle-pass"
               :class="{ active: showPassword }"
@@ -44,7 +44,7 @@
             type="submit"
             class="btn"
             :class="{ 'is-loading': loading, 'is-success': success }"
-            :disabled="loading || success"
+            :disabled="$saving || (loading || success)"
           >
             <span class="btn-content">
               <span v-if="loading" class="spinner" aria-hidden="true"></span>

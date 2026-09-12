@@ -6,7 +6,7 @@
         <h1>Notificaciones</h1>
         <p>Avisos enviados por la administración</p>
       </div>
-      <button class="btn btn-outline" :disabled="!noLeidas" @click="marcarLeidas">
+      <button class="btn btn-outline" :disabled="$saving || (!noLeidas)" @click="marcarLeidas">
         <i class="fa-solid fa-check-double"></i> Marcar todas como leídas
       </button>
     </div>

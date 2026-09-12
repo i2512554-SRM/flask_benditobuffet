@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <router-link to="/panel" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver al Panel
-      </router-link>
+      <VolverBtn to="/panel" />
       <h1>Gestión del Personal</h1>
       <p>Administra a tu equipo: empleados, pagos, turnos, adelantos y solicitudes</p>
     </div>

@@ -48,7 +48,7 @@ const COLORS = {
 const seriesList = [
   { key: 'ingresos', label: 'Ingresos' },
   { key: 'egresos', label: 'Egresos' },
-  { key: 'ganancia', label: 'Ganancia' }
+  { key: 'ganancia', label: 'Balance' }
 ]
 
 const chartData = computed(() => {
@@ -61,9 +61,9 @@ const chartData = computed(() => {
         label: s.label,
         data: props.puntos.map((p) => Number(p[s.key] || 0)),
         borderColor: color,
-        backgroundColor: color,
+        backgroundColor: s.key === 'ganancia' ? 'rgba(255, 123, 0, 0.12)' : color,
         fill: s.key === 'ganancia',
-        tension: 0.35,
+        tension: 0.15,
         pointRadius: 3,
         pointHoverRadius: 5,
         borderWidth: 2
@@ -83,15 +83,15 @@ const chartOptions = {
         usePointStyle: true,
         boxWidth: 8,
         padding: 16,
-        color: 'var(--text-muted)',
+        color: '#64748b',
         font: { size: 11 }
       }
     },
     tooltip: {
-      backgroundColor: 'var(--bg-card)',
-      titleColor: 'var(--text-main)',
-      bodyColor: 'var(--text-main)',
-      borderColor: 'var(--border-color)',
+      backgroundColor: '#ffffff',
+      titleColor: '#172033',
+      bodyColor: '#172033',
+      borderColor: '#e2e8f0',
       borderWidth: 1,
       padding: 10,
       cornerRadius: 8,
@@ -104,13 +104,13 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: 'var(--text-muted)', maxTicksLimit: 8, font: { size: 10 } }
+      ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 10 } }
     },
     y: {
-      grid: { color: 'var(--border-color)', drawBorder: false },
+      grid: { color: '#e2e8f0', drawBorder: false },
       border: { display: false },
       ticks: {
-        color: 'var(--text-muted)',
+        color: '#64748b',
         font: { size: 10 },
         callback: (v) => 'S/' + Number(v).toLocaleString('es-PE')
       }

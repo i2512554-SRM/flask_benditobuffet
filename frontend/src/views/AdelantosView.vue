@@ -4,7 +4,7 @@
     <h1>Adelantos de Salario</h1>
     
     <div class="actions">
-      <Button label="Registrar Adelanto" icon="pi pi-plus" @click="registrarDialog" />
+      <Button :disabled="$saving" label="Registrar Adelanto" icon="pi pi-plus" @click="registrarDialog" />
     </div>
     
     <DataTable :value="adelantos" :paginator="true" :rows="10" class="mt-4">
@@ -31,7 +31,7 @@
         </div>
         <div class="field col-6">
           <label for="monto">Monto</label>
-          <InputNumber id="monto" v-model="form.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="monto" v-model="form.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
         <div class="field col-12">
           <label for="motivo">Motivo</label>
@@ -39,8 +39,8 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogVisible = false" />
-        <Button label="Guardar" @click="guardar" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
+        <Button :disabled="$saving" label="Guardar" @click="guardar" />
       </template>
     </Dialog>
   </div>
@@ -79,7 +79,7 @@ const cargarEmpleados = async () => {
 }
 
 const registrarDialog = () => {
-  form.value = { id_usuario: null, monto: 0, motivo: '' }
+  form.value = { id_usuario: null, monto: null, motivo: '' }
   dialogVisible.value = true
 }
 

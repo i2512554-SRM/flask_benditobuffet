@@ -451,3 +451,5 @@ tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+input:focus::placeholder, textarea:focus::placeholder { color: transparent; }
+button:disabled { cursor: wait; opacity: .6; }

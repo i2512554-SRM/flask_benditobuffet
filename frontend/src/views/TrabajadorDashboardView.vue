@@ -10,11 +10,12 @@
         </div>
       </div>
       <div class="header-actions">
+        <SolicitarAdelanto @enviado="load" />
         <router-link to="/trabajador/notificaciones" class="btn btn-outline">
           <i class="fa-solid fa-bell"></i> Notificaciones
           <span v-if="resumen.notificaciones_no_leidas" class="notif-badge">{{ resumen.notificaciones_no_leidas }}</span>
         </router-link>
-        <button class="btn btn-outline" @click="load">
+        <button :disabled="$saving" class="btn btn-outline" @click="load">
           <i class="fa-solid fa-arrows-rotate"></i> Actualizar
         </button>
       </div>
@@ -145,7 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../config/axios'
 
 const data = ref({})
-const ultimoPago = ref({ monto: 0, fecha: null })
+const ultimoPago = ref({ monto: null, fecha: null })
 const resumen = computed(() => data.value.resumen || { total_pagado: 0, pagos: 0, adelantos_pendientes: 0, notificaciones_no_leidas: 0 })
 
 const saludo = computed(() => {

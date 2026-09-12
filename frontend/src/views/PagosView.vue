@@ -7,8 +7,8 @@
         <p class="subtitle">Control mensual de salarios, adelantos y netos.</p>
       </div>
       <div class="actions">
-        <Button label="Registrar pago" icon="pi pi-plus" @click="openRegistrar('pago')" />
-        <Button label="Registrar adelanto" icon="pi pi-plus" severity="secondary" @click="openRegistrar('adelanto')" />
+        <Button :disabled="$saving" label="Registrar pago" icon="pi pi-plus" @click="openRegistrar('pago')" />
+        <Button :disabled="$saving" label="Registrar adelanto" icon="pi pi-plus" severity="secondary" @click="openRegistrar('adelanto')" />
       </div>
     </div>
 
@@ -29,12 +29,12 @@
     <div class="filters">
       <label>Mes</label>
       <DatePicker v-model="mesSeleccionado" view="month" date-format="mm/yy" :max-date="new Date()" @update:model-value="cargarDatos" />
-      <Button label="Consultar" icon="pi pi-search" :loading="loading" @click="cargarDatos" />
+      <Button :disabled="$saving" label="Consultar" icon="pi pi-search" :loading="loading" @click="cargarDatos" />
     </div>
 
     <div class="view-toggle">
-      <Button label="Empleados" :class="{ active: vista === 'empleados' }" severity="secondary" plain @click="vista = 'empleados'" />
-      <Button label="Historial" :class="{ active: vista === 'historial' }" severity="secondary" plain @click="vista = 'historial'" />
+      <Button :disabled="$saving" label="Empleados" :class="{ active: vista === 'empleados' }" severity="secondary" plain @click="vista = 'empleados'" />
+      <Button :disabled="$saving" label="Historial" :class="{ active: vista === 'historial' }" severity="secondary" plain @click="vista = 'historial'" />
     </div>
 
     <!-- Skeleton -->
@@ -67,7 +67,7 @@
           </Column>
           <Column header="Acción">
             <template #body="slotProps">
-              <Button label="Historial" size="small" severity="secondary" @click="$router.push(`/personal/pagos/empleado/${slotProps.data.id_usuario}`)" />
+              <Button :disabled="$saving" label="Historial" size="small" severity="secondary" @click="$router.push(`/personal/pagos/empleado/${slotProps.data.id_usuario}`)" />
             </template>
           </Column>
           <template #empty>
@@ -84,7 +84,7 @@
       <div v-if="!loading && vista === 'historial'" class="table-card">
         <h2>Historial de pagos</h2>
         <DataTable :value="historial" :paginator="true" :rows="10" dataKey="id_pago" stripedRows class="mt-4">
-          <Column field="fecha" header="Fecha" sortable></Column>
+          <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
           <Column field="empleado" header="Empleado" sortable></Column>
           <Column field="monto" header="Monto" sortable>
             <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
@@ -113,7 +113,7 @@
         <template v-if="modal === 'pago'">
           <div class="field col-6">
             <label for="tipo">Tipo de pago</label>
-            <InputText id="tipo" v-model="form.tipo" class="w-full" placeholder="Salario, Bono, Extra" />
+            <Select id="tipo" v-model="form.tipo" :options="['Salario semanal', 'Bono', 'Horas extra', 'Otros']" class="w-full" /><InputText v-if="form.tipo === 'Otros'" v-model="form.otroTipo" placeholder="Especifica el tipo" />
           </div>
           <div class="field col-6">
             <label for="estado">Estado</label>
@@ -128,7 +128,7 @@
         </template>
         <div class="field col-6">
           <label for="monto">Monto</label>
-          <InputNumber id="monto" v-model="form.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="monto" v-model="form.monto" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
         <div class="field col-6">
           <label for="fecha">Fecha</label>
@@ -140,14 +140,15 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogVisible = false" />
-        <Button label="Guardar" :loading="guardando" @click="guardar" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
+        <Button :disabled="$saving" label="Guardar" :loading="guardando" @click="guardar" />
       </template>
     </Dialog>
   </div>
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useRouter } from 'vue-router'
@@ -195,7 +196,7 @@ const fmt = (v) => Number(v || 0).toLocaleString('es-PE', { minimumFractionDigit
 const statCards = computed(() => [
   { label: 'Total pagado', valor: 'S/. ' + fmt(totales.value.pagado), icon: 'fa-solid fa-sack-dollar', tone: 'pagos' },
   { label: 'Total adelantos', valor: 'S/. ' + fmt(totales.value.adelantos), icon: 'fa-solid fa-hand-holding-dollar', tone: 'adelantos' },
-  { label: 'Neto del mes', valor: 'S/. ' + fmt(totales.value.neto), icon: 'fa-solid fa-scale-balanced', tone: 'neto' },
+  { label: 'Total entregado del mes', valor: 'S/. ' + fmt(totales.value.neto), icon: 'fa-solid fa-scale-balanced', tone: 'neto' },
   { label: 'Empleados activos', valor: String(empleadosActivos.value), icon: 'fa-solid fa-users', tone: 'empleados' },
   { label: 'Próximo pago', valor: proximoPago.value !== null && proximoPago.value !== undefined ? proximoPago.value + ' días' : 'Sin pendientes', icon: 'fa-solid fa-calendar-day', tone: 'proximo' }
 ])
@@ -229,9 +230,9 @@ const openRegistrar = (tipo) => {
   modal.value = tipo
   form.value = {
     id_usuario: null,
-    monto: 0,
+    monto: null,
     fecha: new Date(),
-    tipo: 'Salario',
+    tipo: 'Salario semanal',
     estado: 'Pagado',
     descripcion: '',
     motivo: ''
@@ -240,6 +241,13 @@ const openRegistrar = (tipo) => {
 }
 
 const guardar = async () => {
+  if (guardando.value) return
+  if (form.value.tipo === 'Otros' && !form.value.otroTipo?.trim()) {
+    toast.add({ severity: 'warn', summary: 'Especifica el tipo de pago.', life: 3000 }); return
+  }
+  if (!Number.isFinite(form.value.monto) || form.value.monto <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingresa un monto positivo.', life: 3000 }); return
+  }
   if (!form.value.id_usuario) {
     toast.add({ severity: 'warn', summary: 'Seleccione un empleado', life: 3000 })
     return
@@ -251,7 +259,7 @@ const guardar = async () => {
   guardando.value = true
   try {
     if (modal.value === 'pago') {
-      await api.post('/personal/pagos', form.value)
+      await api.post('/personal/pagos', { ...form.value, tipo: form.value.tipo === 'Otros' ? form.value.otroTipo : form.value.tipo })
     } else {
       await api.post('/personal/pagos/adelanto', form.value)
     }

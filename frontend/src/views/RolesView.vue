@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <router-link to="/seguridad" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver a Seguridad
-      </router-link>
+      <VolverBtn to="/seguridad" />
       <h1>Roles del Sistema</h1>
       <p>Roles de acceso y cantidad de usuarios asignados</p>
     </div>

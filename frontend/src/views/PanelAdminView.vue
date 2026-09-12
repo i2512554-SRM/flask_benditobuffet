@@ -9,7 +9,7 @@
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ fechaHoy }}</span>
         </div>
       </div>
-      <button class="btn btn-outline" @click="cargar">
+      <button :disabled="$saving" class="btn btn-outline" @click="cargar">
         <i class="fa-solid fa-arrows-rotate"></i> Actualizar
       </button>
     </div>
@@ -71,7 +71,7 @@
         <div class="chart-card">
           <div class="filtros-bar">
             <div class="periodo-tabs">
-              <button
+              <button :disabled="$saving"
                 v-for="p in periodos"
                 :key="p.key"
                 class="filtro-btn"
@@ -82,7 +82,7 @@
               </button>
             </div>
             <div class="serie-toggles">
-              <button
+              <button :disabled="$saving"
                 v-for="s in series"
                 :key="s.key"
                 class="serie-toggle"
@@ -93,7 +93,7 @@
               </button>
             </div>
           </div>
-          <LineChartFinanciero :puntos="rendimientoPuntos" :series="seriesActivas" />
+          <LineChartFinanciero :puntos="rendimientoPuntos" :series="seriesActivas" /><router-link to="/caja/reportes" class="btn btn-outline">Ver reporte detallado →</router-link>
         </div>
       </div>
 
@@ -150,12 +150,12 @@
               <i :class="actividadIconos[a.tipo] || 'fa-solid fa-circle-info'"></i>
             </div>
             <div class="activity-body">
-              <span class="activity-user">{{ a.titulo }}</span>
+              <router-link :to="a.destino" class="activity-user">{{ a.titulo }}</router-link>
               <span class="activity-accion">{{ a.descripcion }}</span>
             </div>
             <span class="activity-fecha">{{ a.fecha }}</span>
           </div>
-          <router-link to="/seguridad/actividad" class="activity-link">Ver actividad de accesos →</router-link>
+
         </div>
       </div>
     </div>

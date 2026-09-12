@@ -25,7 +25,7 @@
         <p class="subtitle">Revisa tu informacion profesional, historial de pagos y movimientos recientes.</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline" @click="toggleEdit">
+        <button :disabled="$saving" class="btn btn-outline" @click="toggleEdit">
           {{ editMode ? 'Volver al perfil' : 'Editar perfil' }}
         </button>
       </div>
@@ -77,7 +77,7 @@
         </div>
 
         <div class="profile-tabs">
-          <button
+          <button :disabled="$saving"
             v-for="tab in tabs"
             :key="tab.key"
             class="btn btn-outline"
@@ -142,7 +142,7 @@
             <h2>Adelantos</h2>
             <p>Solicita un adelanto rapido y sencillo.</p>
           </div>
-          <button class="btn btn-primary" @click="toggleAdelantoForm">
+          <button :disabled="$saving" class="btn btn-primary" @click="toggleAdelantoForm">
             {{ adelantoFormVisible ? 'Cerrar formulario' : 'Solicitar adelanto' }}
           </button>
         </div>
@@ -157,7 +157,7 @@
             <input type="text" v-model="adelantoForm.monto" placeholder="Ej. 150.00" class="input" />
           </div>
           <div class="form-actions">
-            <button class="btn btn-primary" @click="solicitarAdelanto" :disabled="solicitando">
+            <button class="btn btn-primary" @click="solicitarAdelanto" :disabled="$saving || (solicitando)">
               Enviar solicitud
             </button>
           </div>
@@ -187,7 +187,7 @@
                 </td>
                 <td data-label="Respuesta">{{ adelanto.respuesta_admin || '—' }}</td>
                 <td data-label="Accion">
-                  <button
+                  <button :disabled="$saving"
                     v-if="adelanto.estado === 'Pendiente'"
                     class="btn btn-outline btn-sm"
                     @click="cancelarAdelanto(adelanto)"
@@ -214,7 +214,7 @@
       <div class="edit-form">
         <div class="form-row">
           <label>Foto de perfil</label>
-          <img v-if="usuario.perfil.foto_perfil" :src="usuario.perfil.foto_perfil" class="edit-avatar" alt="Foto" />
+          <img v-if="fotoPreview || usuario.perfil.foto_perfil" :src="fotoPreview || usuario.perfil.foto_perfil" class="edit-avatar" alt="Foto" />
           <input type="file" accept="image/png,image/jpeg,image/webp" @change="onFotoChange" class="input" />
         </div>
         <div class="form-row">
@@ -223,18 +223,14 @@
         </div>
         <div class="form-row">
           <label>Telefono</label>
-          <input type="text" v-model="editarForm.telefono" placeholder="Ej. 987654321" class="input" />
-        </div>
-        <div class="form-row">
-          <label>Nueva contrasena (opcional)</label>
-          <input type="password" v-model="editarForm.clave" placeholder="Dejar vacio para no cambiar" class="input" />
+          <input type="text" v-model="editarForm.telefono" inputmode="numeric" maxlength="9" @input="$event.target.value = $event.target.value.replace(/[^0-9]/g, ''); editarForm.telefono = $event.target.value" placeholder="Ej. 987654321" class="input" />
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" @click="guardarPerfil" :disabled="guardando">Guardar cambios</button>
-          <button class="btn btn-outline" @click="toggleEdit">Cancelar</button>
+          <button class="btn btn-primary" @click="guardarPerfil" :disabled="$saving || (guardando)">Guardar cambios</button>
+          <button :disabled="$saving" class="btn btn-outline" @click="toggleEdit">Cancelar</button>
         </div>
         <hr class="divider" />
-        <button class="btn btn-outline" @click="openContrasenaModal">
+        <button :disabled="$saving" class="btn btn-outline" @click="openContrasenaModal">
           <i class="fa-solid fa-key"></i> Cambiar contrasena
         </button>
       </div>
@@ -243,7 +239,7 @@
     <!-- Modal cambiar contrasena -->
     <div v-if="modalContrasena" class="overlay" @click.self="modalContrasena = false">
       <div class="modal-card">
-        <button class="close-btn" @click="modalContrasena = false" aria-label="Cerrar">&times;</button>
+        <button :disabled="$saving" class="close-btn" @click="modalContrasena = false" aria-label="Cerrar">&times;</button>
         <h2>Cambiar contrasena</h2>
         <label>Contrasena actual</label>
         <input type="password" v-model="contrasenaForm.contrasena_actual" placeholder="Ingresa tu contrasena actual" class="input" />
@@ -251,16 +247,17 @@
         <input type="password" v-model="contrasenaForm.contrasena_nueva" placeholder="Ingresa tu nueva contrasena" class="input" />
         <label>Verificar contrasena nueva</label>
         <input type="password" v-model="contrasenaForm.contrasena_verificar" placeholder="Repite tu nueva contrasena" class="input" />
-        <button class="btn btn-primary" @click="cambiarContrasena" :disabled="guardando">Cambiar contrasena</button>
+        <button class="btn btn-primary" @click="cambiarContrasena" :disabled="$saving || (guardando)">Cambiar contrasena</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
 const toast = useToast()
@@ -277,16 +274,19 @@ const adelantoFormVisible = ref(false)
 const modalContrasena = ref(false)
 const solicitando = ref(false)
 const guardando = ref(false)
+const fotoPreview = ref(null)
+onBeforeUnmount(() => { if (fotoPreview.value) URL.revokeObjectURL(fotoPreview.value) })
 
 const adelantoForm = ref({ motivo: '', monto: '' })
 const editarForm = ref({ correo: '', telefono: '', clave: '', foto: null })
 const contrasenaForm = ref({ contrasena_actual: '', contrasena_nueva: '', contrasena_verificar: '' })
 
-const tabs = [
+const auth = useAuthStore()
+const tabs = computed(() => [
   { key: 'resumen', label: 'Resumen' },
   { key: 'pagos', label: 'Pagos' },
   { key: 'adelantos', label: 'Adelantos' }
-]
+].filter(t => auth.userRole !== 1 || t.key === 'resumen'))
 
 const initials = computed(() => {
   const n = (usuario.value.nombres || '')[0] || ''
@@ -334,16 +334,18 @@ const toggleAdelantoForm = () => {
 }
 
 const onFotoChange = (e) => {
+  if (fotoPreview.value) URL.revokeObjectURL(fotoPreview.value)
   editarForm.value.foto = e.target.files[0] || null
+  fotoPreview.value = editarForm.value.foto ? URL.createObjectURL(editarForm.value.foto) : null
 }
 
 const guardarPerfil = async () => {
+  if (guardando.value) return
   guardando.value = true
   try {
     const fd = new FormData()
     fd.append('correo', editarForm.value.correo)
     fd.append('telefono', editarForm.value.telefono)
-    if (editarForm.value.clave) fd.append('clave', editarForm.value.clave)
     if (editarForm.value.foto) fd.append('foto_perfil', editarForm.value.foto)
 
     const res = await api.put('/perfil', fd)
@@ -363,6 +365,7 @@ const guardarPerfil = async () => {
 }
 
 const solicitarAdelanto = async () => {
+  if (solicitando.value) return
   if (!adelantoForm.value.motivo) {
     toast.add({ severity: 'warn', summary: 'Aviso', detail: 'El motivo es obligatorio', life: 3000 })
     return

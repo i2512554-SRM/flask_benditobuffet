@@ -3,15 +3,16 @@
     <VolverBtn to="/personal" />
     <div class="page-header animate-item">
       <div>
-        <h1>Cálculo de Salarios</h1>
-        <p>Liquidación mensual: sueldo base, pagos realizados y adelantos aprobados</p>
+        <h1>Sueldos y pagos semanales</h1>
+        <p>Sueldo fijo menos adelantos aprobados, descuentos y pagos realizados. De lunes a domingo.</p>
       </div>
       <div class="actions">
-        <DatePicker v-model="mesSeleccionado" view="month" date-format="mm/yy" placeholder="Seleccionar mes" class="mes-picker" />
-        <Button label="Recalcular" icon="pi pi-refresh" :loading="loading" @click="calcularMes" />
+        <DatePicker v-model="mesSeleccionado" date-format="dd/mm/yy" placeholder="Selecciona un día de la semana" @update:model-value="calcularMes" class="mes-picker" />
+        <Button :disabled="$saving" label="Actualizar historial" icon="pi pi-refresh" :loading="loading" @click="calcularMes" />
       </div>
     </div>
 
+<p>{{ rango }}</p>
     <!-- Resumen -->
     <div class="stats-grid">
       <TransitionGroup name="pop">
@@ -55,34 +56,57 @@
               </div>
             </template>
           </Column>
-          <Column field="sueldo_base" header="Sueldo Base" sortable>
-            <template #body="slotProps">S/. {{ formatMoney(slotProps.data.sueldo_base) }}</template>
-          </Column>
+          <Column header="Sueldo semanal"><template #body="{ data }">{{ data.sueldo_base == null ? 'Sin configurar' : 'S/. ' + formatMoney(data.sueldo_base) }}</template></Column>
           <Column field="total_pagos" header="Pagos" sortable>
             <template #body="slotProps">S/. {{ formatMoney(slotProps.data.total_pagos) }}</template>
           </Column>
           <Column field="total_adelantos" header="Adelantos" sortable>
             <template #body="slotProps">S/. {{ formatMoney(slotProps.data.total_adelantos) }}</template>
           </Column>
-          <Column field="neto" header="Neto entregado" sortable>
+          <Column field="neto" header="Total entregado" sortable>
             <template #body="slotProps">
               <strong class="neto-val">S/. {{ formatMoney(slotProps.data.neto) }}</strong>
             </template>
           </Column>
-          <Column field="diferencia_sueldo" header="Pendiente vs Sueldo" sortable>
-            <template #body="slotProps">
-              <span :class="['tag-diff', slotProps.data.diferencia_sueldo <= 0 ? 'tag-ok' : 'tag-pend']">
-                {{ slotProps.data.diferencia_sueldo <= 0 ? 'Completo' : 'Falta S/. ' + formatMoney(slotProps.data.diferencia_sueldo) }}
-              </span>
-            </template>
-          </Column>
+          <Column header="Descuentos"><template #body="{ data }">
+            <div v-for="d in data.descuentos" :key="d.id" class="descuento">
+              <span>{{ d.motivo }}: S/. {{ formatMoney(d.monto) }}</span>
+              <Button label="Anular" severity="secondary" size="small" :disabled="$saving" @click="confirmarAnulacion(d)" />
+            </div>
+            <span v-if="!data.descuentos?.length">Sin descuentos</span>
+          </template></Column>
+          <Column header="Saldo pendiente"><template #body="{ data }">
+            <strong>{{ data.saldo == null ? 'Configure el sueldo' : 'S/. ' + formatMoney(data.saldo) }}</strong>
+            <small v-if="data.saldo < 0">Importe entregado o descontado superior al sueldo</small>
+          </template></Column>
+          <Column header="Acciones"><template #body="{ data }">
+            <Button label="Sueldo" size="small" :disabled="$saving" @click="abrir(data, 'sueldo')" />
+            <Button label="Descuento" size="small" severity="secondary" :disabled="$saving" @click="abrir(data, 'descuentos')" />
+          </template></Column>
           <template #empty>
-            <div class="empty-state">No hay datos para este mes.</div>
+            <div class="empty-state">No hay datos para esta semana.</div>
           </template>
         </DataTable>
       </div>
     </Transition>
 
+    <Dialog v-model:visible="dialogo" modal :header="tipo === 'sueldo' ? 'Configurar sueldo semanal' : 'Registrar descuento'" :style="{ width: 'min(95vw, 440px)' }">
+      <form class="form-nomina" @submit.prevent="guardar">
+        <p>{{ empleado?.empleado }} · {{ rango }}</p>
+        <p v-if="tipo === 'sueldo'">Este monto rige desde la semana seleccionada hasta el siguiente cambio de sueldo. No modifica semanas anteriores.</p>
+        <label for="monto-nomina">Monto</label>
+        <InputNumber inputId="monto-nomina" v-model="monto" :min="tipo === 'sueldo' ? 0 : 0.01" :maxFractionDigits="2" placeholder="Ej. 350.00" />
+        <template v-if="tipo === 'descuentos'">
+          <label for="motivo-nomina">Motivo del descuento</label>
+          <InputText id="motivo-nomina" v-model="motivo" required maxlength="255" placeholder="Ej. Platos, falta del martes…" />
+        </template>
+        <Button type="submit" label="Guardar" :loading="guardando" :disabled="$saving || guardando || monto == null" />
+      </form>
+    </Dialog>
+    <Dialog v-model:visible="anulacionVisible" header="Anular descuento" modal :style="{ width: 'min(95vw, 420px)' }">
+      <p>Se retirará del cálculo el descuento «{{ descuentoAnular?.motivo }}». La anulación quedará registrada.</p>
+      <Button label="Confirmar anulación" :disabled="$saving" @click="anular" />
+    </Dialog>
     <!-- Estado vacío -->
     <Transition name="fade">
       <div v-if="!loading && !salarios.length" class="empty-card">
@@ -101,13 +125,43 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
+import Dialog from 'primevue/dialog'
+import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
 import { useToast } from 'primevue/usetoast'
+import { fechaLocal, formatFecha } from '../utils/format'
 import api from '../config/axios'
 
 const toast = useToast()
+const rango = ref('')
 const salarios = ref([])
 const mesSeleccionado = ref(new Date())
 const loading = ref(false)
+const dialogo = ref(false), empleado = ref(null), tipo = ref('sueldo'), monto = ref(null), motivo = ref(''), guardando = ref(false)
+const anulacionVisible = ref(false), descuentoAnular = ref(null)
+function abrir(fila, accion) {
+  empleado.value = fila; tipo.value = accion; monto.value = accion === 'sueldo' ? fila.sueldo_base : null
+  motivo.value = ''; dialogo.value = true
+}
+async function guardar() {
+  if (guardando.value || monto.value == null) return
+  guardando.value = true
+  try {
+    await api.post('/personal/salarios/' + tipo.value, { id_usuario: empleado.value.id_usuario,
+      fecha: fechaLocal(mesSeleccionado.value), monto: monto.value, motivo: motivo.value })
+    dialogo.value = false; await calcularMes()
+    toast.add({ severity: 'success', summary: 'Registro guardado', life: 2500 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'No se pudo guardar', detail: e.response?.data?.message || 'Intenta nuevamente', life: 4000 })
+  } finally { guardando.value = false }
+}
+function confirmarAnulacion(d) { descuentoAnular.value = d; anulacionVisible.value = true }
+async function anular() {
+  try {
+    await api.post(`/personal/salarios/descuentos/${descuentoAnular.value.id}/anular`)
+    anulacionVisible.value = false; await calcularMes()
+  } catch { toast.add({ severity: 'error', summary: 'No se pudo anular', life: 3000 }) }
+}
 
 const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
 
@@ -122,7 +176,6 @@ const resumenCards = computed(() => {
   const totalAdel = salarios.value.reduce((s, x) => s + (x.total_adelantos || 0), 0)
   const totalNeto = salarios.value.reduce((s, x) => s + (x.neto || 0), 0)
   return [
-    { label: 'Sueldos base', valor: totalBase, icon: 'fa-solid fa-wallet', tone: 'base' },
     { label: 'Total pagado', valor: totalPagos, icon: 'fa-solid fa-sack-dollar', tone: 'pagos' },
     { label: 'Adelantos', valor: totalAdel, icon: 'fa-solid fa-hand-holding-dollar', tone: 'adelantos' },
     { label: 'Neto entregado', valor: totalNeto, icon: 'fa-solid fa-check-double', tone: 'neto' }
@@ -132,9 +185,9 @@ const resumenCards = computed(() => {
 const calcularMes = async () => {
   loading.value = true
   try {
-    const mes = mesSeleccionado.value.getMonth() + 1
-    const anio = mesSeleccionado.value.getFullYear()
-    const res = await api.get(`/personal/salarios?mes=${mes}&anio=${anio}`)
+    if (!mesSeleccionado.value) return
+    const res = await api.get('/personal/salarios', { params: { fecha: fechaLocal(mesSeleccionado.value) } })
+    rango.value = formatFecha(res.data.inicio) + ' — ' + formatFecha(res.data.fin)
     if (res.data.success) {
       salarios.value = res.data.data
     } else {
@@ -151,6 +204,9 @@ onMounted(calcularMes)
 </script>
 
 <style scoped>
+.form-nomina { display: grid; gap: .8rem; }
+.descuento { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+small { display: block; }
 .salarios-view { padding: 2rem; }
 
 .page-header {

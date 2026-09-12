@@ -1,3 +1,6 @@
+import { pendingWrites } from './config/pending'
+import VolverBtn from './components/ui/VolverBtn.vue'
+import SolicitarAdelanto from './components/ui/SolicitarAdelanto.vue'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
@@ -33,6 +36,9 @@ const BenditoPreset = definePreset(Aura, {
 
 const app = createApp(App)
 
+app.component('VolverBtn', VolverBtn)
+app.component('SolicitarAdelanto', SolicitarAdelanto)
+app.mixin({ computed: { $saving: () => pendingWrites.value > 0 } })
 app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {

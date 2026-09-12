@@ -6,7 +6,7 @@
         <h1>Solicitudes de Adelantos</h1>
         <p>Revisa y gestiona las solicitudes de adelanto del personal</p>
       </div>
-      <Button label="Actualizar" icon="pi pi-refresh" severity="secondary" :loading="loading" @click="cargar" />
+      <Button :disabled="$saving" label="Actualizar" icon="pi pi-refresh" severity="secondary" :loading="loading" @click="cargar" />
     </div>
 
     <!-- Skeleton -->
@@ -52,8 +52,8 @@
           <Column header="Acciones" style="min-width: 220px">
             <template #body="slotProps">
               <div v-if="slotProps.data.estado === 'Pendiente'" class="acciones-row">
-                <Button label="Aprobar" icon="pi pi-check" severity="success" size="small" @click="abrirModal(slotProps.data, 'aprobar')" />
-                <Button label="Rechazar" icon="pi pi-times" severity="danger" size="small" outlined @click="abrirModal(slotProps.data, 'rechazar')" />
+                <Button :disabled="$saving" label="Aprobar" icon="pi pi-check" severity="success" size="small" @click="abrirModal(slotProps.data, 'aprobar')" />
+                <Button :disabled="$saving" label="Rechazar" icon="pi pi-times" severity="danger" size="small" outlined @click="abrirModal(slotProps.data, 'rechazar')" />
               </div>
               <span v-else class="gestionado">
                 <i class="fa-solid fa-circle-check"></i> Gestionado
@@ -74,8 +74,8 @@
       <p class="modal-desc">Agrega una respuesta opcional para el empleado:</p>
       <Textarea v-model="respuesta" rows="4" placeholder="Ej: Adelanto aprobado, se acreditará en tu próximo pago..." maxlength="500" class="w-full" />
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogVisible = false" />
-        <Button
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
+        <Button :disabled="$saving"
           :label="modalAccion === 'aprobar' ? 'Aprobar' : 'Rechazar'"
           :severity="modalAccion === 'aprobar' ? 'success' : 'danger'"
           :loading="gestionando"

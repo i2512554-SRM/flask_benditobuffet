@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <router-link to="/inventario" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver a Inventario
-      </router-link>
+      <VolverBtn to="/inventario" />
       <h1>Reportes de Inventario</h1>
       <p>Resumen del valor del almacén y tendencias del mes</p>
     </div>
@@ -40,6 +38,28 @@
       </div>
     </div>
 
+    <p v-if="error" role="alert">{{ error }}</p>
+    <section class="report-detail" v-if="!loading && !error">
+      <h2>Existencias por producto</h2>
+      <DataTable :value="productos" paginator :rows="10" stripedRows>
+        <Column field="nombre" header="Producto" sortable />
+        <Column field="unidad_medida" header="Unidad" />
+        <Column field="stock" header="Stock" sortable />
+        <Column header="Valor actual"><template #body="{data}">S/ {{ formatMoney(data.precio * data.stock) }}</template></Column>
+        <template #empty>No hay productos registrados.</template>
+      </DataTable>
+      <h2>Movimientos recientes</h2>
+      <DataTable :value="movimientos" paginator :rows="10" stripedRows>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ formatFecha(data.fecha) }}</template></Column>
+        <Column field="producto" header="Producto" />
+        <Column field="tipo" header="Tipo" />
+        <Column field="cantidad" header="Cantidad" />
+        <Column field="unidad" header="Unidad" />
+        <Column field="stock_posterior" header="Stock resultante" />
+        <Column field="usuario" header="Responsable" />
+        <template #empty>No hay movimientos registrados.</template>
+      </DataTable>
+    </section>
     <div class="loading-overlay" v-if="loading">
       <i class="fa-solid fa-spinner fa-spin"></i>
     </div>
@@ -48,9 +68,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import { formatFecha } from '../utils/format'
 import api from '../config/axios'
 
 const loading = ref(true)
+const productos = ref([]), movimientos = ref([]), error = ref('')
 const resumen = ref({
   valor_total: 0,
   inversiones_mes: 0,
@@ -64,9 +88,13 @@ const formatMoney = (val) => Number(val || 0).toLocaleString('es-PE', { minimumF
 const load = async () => {
   loading.value = true
   try {
-    const res = await api.get('/inventario/resumen')
+    error.value = ''
+    const [res, prod, mov] = await Promise.all([api.get('/inventario/resumen'), api.get('/inventario/productos'), api.get('/inventario/movimientos')])
+    productos.value = prod.data.data || []
+    movimientos.value = mov.data.data || []
     if (res.data.success) resumen.value = res.data.data
   } catch (err) {
+    error.value = 'No se pudo cargar el reporte de inventario. Intenta nuevamente.'
     console.error('Error loading reportes inventario:', err)
   } finally {
     loading.value = false
@@ -77,6 +105,8 @@ onMounted(load)
 </script>
 
 <style scoped>
+.report-detail { margin-top: 1.5rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; }
+.report-detail h2 { margin: 1rem 0; }
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

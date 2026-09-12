@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <router-link to="/seguridad" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver a Seguridad
-      </router-link>
+      <VolverBtn to="/seguridad" />
       <h1>Historial de Actividad</h1>
       <p>Registro detallado de las acciones realizadas por los usuarios</p>
     </div>

@@ -7,8 +7,8 @@
         <p>Disponibilidad de ingredientes y productos del restaurante</p>
       </div>
       <div class="header-actions">
-        <Button label="Agregar stock" icon="pi pi-arrow-down" severity="secondary" size="small" @click="abrirStock('entrada')" />
-        <Button label="Registrar salida" icon="pi pi-arrow-up" severity="secondary" size="small" @click="abrirStock('salida')" />
+        <Button :disabled="$saving" label="Agregar stock" icon="pi pi-arrow-down" severity="secondary" size="small" @click="abrirStock('entrada')" />
+        <Button :disabled="$saving" label="Registrar salida" icon="pi pi-arrow-up" severity="secondary" size="small" @click="abrirStock('salida')" />
         <router-link to="/cocinero/solicitudes" class="btn btn-outline">
           <i class="fa-solid fa-plus"></i> Solicitar insumo
         </router-link>
@@ -16,8 +16,8 @@
     </div>
 
     <div class="view-tabs">
-      <Button :label="`Insumos (${insumos.length})`" :class="{ active: vista === 'insumos' }" severity="secondary" plain size="small" @click="vista = 'insumos'" />
-      <Button label="Historial de movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain size="small" @click="cargarMovimientos(); vista = 'movimientos'" />
+      <Button :disabled="$saving" :label="`Insumos (${insumos.length})`" :class="{ active: vista === 'insumos' }" severity="secondary" plain size="small" @click="vista = 'insumos'" />
+      <Button :disabled="$saving" label="Historial de movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain size="small" @click="cargarMovimientos(); vista = 'movimientos'" />
     </div>
 
     <div class="table-card" v-if="vista === 'insumos'">
@@ -59,9 +59,9 @@
         <Column header="Acción" style="min-width: 15rem">
           <template #body="slotProps">
             <div class="row-actions">
-              <Button icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirStock('entrada', slotProps.data)" />
-              <Button icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirStock('salida', slotProps.data)" />
-              <Button
+              <Button :disabled="$saving" icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirStock('entrada', slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirStock('salida', slotProps.data)" />
+              <Button :disabled="$saving"
                 v-if="slotProps.data.estado !== 'Disponible'"
                 label="Solicitar"
                 icon="pi pi-basket"
@@ -147,7 +147,7 @@
         </div>
         <div class="field col-6">
           <label for="stock-cantidad">Cantidad *</label>
-          <InputNumber id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
+          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
         </div>
         <div class="field col-12">
           <label for="stock-motivo">{{ stockModo === 'entrada' ? 'Motivo (opcional)' : 'Motivo *' }}</label>
@@ -159,8 +159,8 @@
         <span>{{ stockWarning }}</span>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="stockDialog = false" />
-        <Button label="Confirmar" @click="confirmarStock" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="stockDialog = false" />
+        <Button :disabled="$saving" label="Confirmar" @click="confirmarStock" />
       </template>
     </Dialog>
   </div>

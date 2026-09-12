@@ -112,7 +112,7 @@ const routes = [
     path: '/caja/reportes',
     name: 'caja-reportes',
     component: () => import('../views/CajaReportesView.vue'),
-    meta: { requiresAuth: true, adminOnly: true }
+    meta: { requiresAuth: true, roles: [1, 2] }
   },
   {
     path: '/personal',
@@ -166,19 +166,19 @@ const routes = [
     path: '/inventario',
     name: 'inventario',
     component: () => import('../views/ModuloInventarioView.vue'),
-    meta: { requiresAuth: true, adminOnly: true }
+    meta: { requiresAuth: true, roles: [1, 3] }
   },
   {
     path: '/inventario/operaciones',
     name: 'inventario-operaciones',
     component: () => import('../views/InventarioView.vue'),
-    meta: { requiresAuth: true, adminOnly: true }
+    meta: { requiresAuth: true, roles: [1, 3] }
   },
   {
     path: '/inventario/reportes',
     name: 'inventario-reportes',
     component: () => import('../views/InventarioReportesView.vue'),
-    meta: { requiresAuth: true, adminOnly: true }
+    meta: { requiresAuth: true, roles: [1, 3] }
   },
   {
     path: '/seguridad',
@@ -201,7 +201,7 @@ const routes = [
   {
     path: '/seguridad/actividad',
     name: 'seguridad-actividad',
-    component: () => import('../views/ActividadView.vue'),
+    redirect: '/seguridad/monitoreo',
     meta: { requiresAuth: true, adminOnly: true }
   },
   {

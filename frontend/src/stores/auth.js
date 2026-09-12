@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.get('/auth/me')
       const info = response.data?.data
       if (response.data?.success && info) {
-        guardarSesion(token.value, {
+        guardarSesion(localStorage.getItem('token'), {
           id: info.id,
           nombre: info.nombre,
           rol: info.rol
@@ -84,7 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const refreshToken = async () => {
     try {
-      const response = await api.post('/auth/refresh')
+      const response = await api.post('/auth/refresh', {}, { headers: { Authorization: `Bearer ${localStorage.getItem('refresh_token')}` } })
       const data = response.data
 
       if (data.success) {

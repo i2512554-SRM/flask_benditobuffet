@@ -1,9 +1,7 @@
 <template>
   <div class="seguridad-view">
     <div class="page-hero">
-      <router-link to="/seguridad" class="btn btn-outline btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Volver a Seguridad y Accesos
-      </router-link>
+      <VolverBtn to="/seguridad" />
       <h1>Seguridad del Sistema</h1>
       <p>Monitoreo de intentos de login, bloqueos y actividad sospechosa.</p>
     </div>
@@ -43,7 +41,7 @@
         </Column>
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button label="Desbloquear" icon="pi pi-unlock" severity="warning" size="small" @click="desbloquear(slotProps.data)" />
+            <Button :disabled="$saving" label="Desbloquear" icon="pi pi-unlock" severity="warning" size="small" @click="desbloquear(slotProps.data)" />
           </template>
         </Column>
       </DataTable>

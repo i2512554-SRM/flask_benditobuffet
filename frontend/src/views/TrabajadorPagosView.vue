@@ -6,15 +6,13 @@
         <h1>Mis pagos</h1>
         <p>Historial de pagos y solicitudes de adelanto</p>
       </div>
-      <router-link to="/perfil" class="btn btn-outline">
-        <i class="fa-solid fa-hand-holding-dollar"></i> Solicitar adelanto
-      </router-link>
+      <SolicitarAdelanto @enviado="load" />
     </div>
 
     <div class="table-card">
       <h2 class="section-title"><i class="fa-solid fa-money-check-dollar"></i> Pagos registrados</h2>
       <DataTable :value="data.pagos || []" :paginator="true" :rows="10" dataKey="id_pago" responsiveLayout="scroll">
-        <Column field="fecha" header="Fecha" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="monto" header="Monto">
           <template #body="slotProps">
             <strong>S/. {{ formatMoney(slotProps.data.monto) }}</strong>
@@ -42,7 +40,7 @@
     <div class="table-card">
       <h2 class="section-title"><i class="fa-solid fa-file-invoice-dollar"></i> Adelantos</h2>
       <DataTable :value="data.adelantos || []" :paginator="true" :rows="10" dataKey="id_adelanto" responsiveLayout="scroll">
-        <Column field="fecha" header="Fecha" sortable></Column>
+        <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="motivo" header="Motivo"></Column>
         <Column field="monto" header="Monto">
           <template #body="slotProps">
@@ -71,8 +69,12 @@
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, onMounted } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Tag from 'primevue/tag'
 import api from '../config/axios'
 
 const data = ref({})

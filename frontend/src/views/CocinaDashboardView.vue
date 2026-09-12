@@ -13,7 +13,7 @@
         <router-link to="/cocinero/solicitudes" class="btn btn-outline">
           <i class="fa-solid fa-plus"></i> Solicitar insumo
         </router-link>
-        <button class="btn btn-outline" @click="load">
+        <button :disabled="$saving" class="btn btn-outline" @click="load">
           <i class="fa-solid fa-arrows-rotate"></i> Actualizar
         </button>
       </div>
@@ -63,16 +63,17 @@
     </div>
 
     <div class="section-block">
-      <h2>Acciones rápidas</h2>
+      <h2>Acciones rápidas</h2><router-link to="/inventario/operaciones?accion=nuevo" class="btn btn-primary">Agregar producto</router-link>
       <div class="acciones-grid">
-        <router-link to="/cocinero/inventario" class="accion-chip">
+        <SolicitarAdelanto />
+        <router-link to="/inventario/operaciones?vista=productos" class="accion-chip">
           <i class="fa-solid fa-carrot"></i> Ver Insumos
         </router-link>
         <router-link to="/cocinero/alertas" class="accion-chip">
           <i class="fa-solid fa-chart-line"></i> Consultar Stock
         </router-link>
-        <router-link to="/cocinero/inventario" class="accion-chip">
-          <i class="fa-solid fa-burger"></i> Ver Productos
+        <router-link to="/inventario/operaciones?vista=productos" class="accion-chip">
+          <i class="fa-solid fa-burger"></i> Productos y stock
         </router-link>
         <router-link to="/cocinero/solicitudes" class="accion-chip">
           <i class="fa-solid fa-plus"></i> Realizar Solicitud
@@ -103,12 +104,12 @@
     </div>
 
     <div class="module-grid">
-      <router-link to="/cocinero/inventario" class="module-card">
+      <router-link to="/inventario/operaciones?vista=productos" class="module-card">
         <div class="module-icon tone-green"><i class="fa-solid fa-carrot"></i></div>
         <h3>Insumos</h3>
         <p>Consultar ingredientes disponibles</p>
       </router-link>
-      <router-link to="/cocinero/inventario" class="module-card">
+      <router-link to="/inventario/operaciones?vista=productos" class="module-card">
         <div class="module-icon tone-blue"><i class="fa-solid fa-burger"></i></div>
         <h3>Productos</h3>
         <p>Consultar productos registrados</p>
@@ -144,6 +145,9 @@
 </template>
 
 <script setup>
+import Tag from 'primevue/tag'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
 import { ref, computed, onMounted } from 'vue'
 import api from '../config/axios'
 

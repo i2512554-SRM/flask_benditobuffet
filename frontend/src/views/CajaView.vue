@@ -4,17 +4,17 @@
     <div class="page-hero">
       <h1>Gestión de Caja</h1>
       <p>Apertura, ingresos, egresos, cierre e historial de movimientos en una sola pantalla</p>
-      <router-link v-if="isAdmin" to="/caja/reportes" class="btn btn-outline btn-reports">
+      <router-link to="/caja/reportes" class="btn btn-outline btn-reports">
         <i class="fa-solid fa-chart-line"></i> Reportes Financieros
       </router-link>
     </div>
     
     <div class="actions">
-      <Button label="Abrir Caja" icon="pi pi-plus" @click="abrirCajaDialog" :disabled="cajaAbierta" />
-      <Button label="Cerrar Caja" icon="pi pi-times" severity="danger" @click="cerrarCajaDialog" :disabled="!cajaAbierta" />
-      <Button label="Registrar Ingreso" icon="pi pi-plus" @click="registrarIngresoDialog" :disabled="!cajaAbierta" />
-      <Button label="Registrar Egreso" icon="pi pi-minus" severity="warning" @click="registrarEgresoDialog" :disabled="!cajaAbierta" />
-      <Button label="Historial" icon="pi pi-history" @click="historialDialog" />
+      <Button label="Abrir Caja" icon="pi pi-plus" @click="abrirCajaDialog" :disabled="$saving || (cajaAbierta)" />
+      <Button label="Cerrar Caja" icon="pi pi-times" severity="danger" @click="cerrarCajaDialog" :disabled="$saving || (!cajaAbierta)" />
+      <Button label="Registrar Ingreso" icon="pi pi-plus" @click="registrarIngresoDialog" :disabled="$saving || (!cajaAbierta)" />
+      <Button label="Registrar Egreso" icon="pi pi-minus" severity="warning" @click="registrarEgresoDialog" :disabled="$saving || (!cajaAbierta)" />
+      <Button :disabled="$saving" label="Historial" icon="pi pi-history" @click="historialDialog" />
     </div>
     
     <div v-if="cajaAbierta" class="status-box">
@@ -25,17 +25,17 @@
     </div>
     
     <DataTable :value="transacciones" class="mt-4">
-      <Column field="fecha" header="Fecha"></Column>
+      <Column field="fecha" header="Fecha"><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
       <Column field="tipo" header="Tipo"></Column>
       <Column field="monto" header="Monto"></Column>
       <Column field="descripcion" header="Descripcion"></Column>
     </DataTable>
     
     <Dialog v-model:visible="dialogAbierta" header="Abrir Caja" :modal="true">
-      <p>Se abrira la caja del dia. Las ventas y gastos se registraran a continuacion.</p>
+      <label>Monto inicial (opcional)</label><InputNumber v-model="montoInicial" placeholder="Ej. 100.00" :min="0" :maxFractionDigits="2" />
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogAbierta = false" />
-        <Button label="Abrir" @click="abrirCaja" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogAbierta = false" />
+        <Button :disabled="$saving" label="Abrir" @click="abrirCaja" />
       </template>
     </Dialog>
     
@@ -46,15 +46,16 @@
       </div>
       <div class="field">
         <label for="monto">Monto</label>
-        <InputNumber id="monto" v-model="nuevaTransaccion.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" />
+        <InputNumber placeholder="Ej. 100.00" id="monto" v-model="nuevaTransaccion.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" />
       </div>
+      <div class="field"><label for="metodo-pago">Método de pago</label><Select id="metodo-pago" v-model="nuevaTransaccion.metodo_pago" :options="metodosPago" class="w-full" /></div>
       <div class="field">
         <label for="descripcion">Descripcion</label>
         <InputText id="descripcion" v-model="nuevaTransaccion.descripcion" />
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogTransaccion = false" />
-        <Button label="Registrar" @click="registrarTransaccion" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogTransaccion = false" />
+        <Button :disabled="$saving" label="Registrar" @click="registrarTransaccion" />
       </template>
     </Dialog>
     
@@ -66,25 +67,25 @@
         <p>Neto del dia: S/. {{ netoDia }}</p>
       </div>
       <template #footer>
-        <Button label="Cancelar" severity="secondary" @click="dialogCierre = false" />
-        <Button label="Cerrar Caja" severity="danger" @click="cerrarCaja" />
+        <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogCierre = false" />
+        <Button :disabled="$saving" label="Cerrar Caja" severity="danger" @click="cerrarCaja" />
       </template>
     </Dialog>
     
     <Dialog v-model:visible="dialogHistorial" header="Historial de Cajas" :modal="true" :style="{ width: '80vw' }">
       <DataTable :value="historial" class="mt-4">
-        <Column field="fecha" header="Fecha"></Column>
+        <Column field="fecha" header="Fecha"><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="total_ventas" header="Ventas"></Column>
         <Column field="total_gastos" header="Gastos"></Column>
         <Column field="neto" header="Neto"></Column>
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button icon="pi pi-eye" severity="info" @click="verDetalle(slotProps.data)" />
+            <Button :disabled="$saving" icon="pi pi-eye" severity="info" @click="verDetalle(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
       <template #footer>
-        <Button label="Cerrar" severity="secondary" @click="dialogHistorial = false" />
+        <Button :disabled="$saving" label="Cerrar" severity="secondary" @click="dialogHistorial = false" />
       </template>
     </Dialog>
 
@@ -92,7 +93,7 @@
       <div v-if="detalleSeleccionada" class="detalle-caja">
         <div class="dc-row">
           <span class="dc-label">Fecha</span>
-          <span class="dc-value">{{ detalleSeleccionada.fecha || '—' }}</span>
+          <span class="dc-value">{{ fechaLegible(detalleSeleccionada.fecha) }}</span>
         </div>
         <div class="dc-row">
           <span class="dc-label">Estado</span>
@@ -112,13 +113,14 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Cerrar" severity="secondary" @click="dialogDetalle = false" />
+        <Button :disabled="$saving" label="Cerrar" severity="secondary" @click="dialogDetalle = false" />
       </template>
     </Dialog>
   </div>
 </template>
 
 <script setup>
+import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -141,15 +143,17 @@ const isAdmin = computed(() => authStore.user?.rol === 1)
 const transacciones = ref([])
 const historial = ref([])
 const cajaActual = ref({ abierta: false, cierre: null, ventas_dia: 0, gastos_dia: 0, neto_dia: 0, transacciones: [] })
+const montoInicial = ref(null)
 const dialogAbierta = ref(false)
 const dialogTransaccion = ref(false)
 const dialogCierre = ref(false)
 const dialogHistorial = ref(false)
 const dialogDetalle = ref(false)
 const detalleSeleccionada = ref(null)
+const metodosPago = ['Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Otros']
 const nuevaTransaccion = ref({
-  tipo: 'Venta',
-  monto: 0,
+  tipo: 'Venta', metodo_pago: 'Efectivo',
+  monto: null,
   descripcion: ''
 })
 
@@ -214,6 +218,7 @@ const cargarCajaActual = async () => {
     const response = await api.get('/caja/actual')
     if (response.data.success) {
       cajaActual.value = response.data.data
+      transacciones.value = response.data.data.transacciones || []
     }
   } catch (error) {
     console.error('Error cargando caja:', error)
@@ -236,12 +241,12 @@ const abrirCajaDialog = () => {
 }
 
 const registrarIngresoDialog = () => {
-  nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
+  nuevaTransaccion.value = { tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' }
   dialogTransaccion.value = true
 }
 
 const registrarEgresoDialog = () => {
-  nuevaTransaccion.value = { tipo: 'Gasto', monto: 0, descripcion: '' }
+  nuevaTransaccion.value = { tipo: 'Gasto', metodo_pago: 'Efectivo', monto: null, descripcion: '' }
   dialogTransaccion.value = true
 }
 
@@ -279,13 +284,13 @@ const estadoLabel = (e) => (e === 'abierta' ? 'Abierta' : e === 'cerrada' ? 'Cer
 
 const abrirCaja = async () => {
   try {
-    const response = await api.post('/caja/abrir', {})
+    const response = await api.post('/caja/abrir', { monto_inicial: montoInicial.value || 0 })
     if (response.data.success) {
       await cargarCajaActual()
       dialogAbierta.value = false
     }
   } catch (error) {
-    console.error('Error abriendo caja:', error)
+    toast.add({ severity: 'error', summary: error.response?.data?.error || 'No se pudo completar la operación', life: 4000 })
   }
 }
 
@@ -303,13 +308,14 @@ const registrarTransaccion = async () => {
     const response = await api.post('/caja/transacciones', {
       tipo: nuevaTransaccion.value.tipo,
       monto,
+      metodo_pago: nuevaTransaccion.value.metodo_pago,
       descripcion: nuevaTransaccion.value.descripcion.trim()
     })
     if (response.data.success) {
       await cargarTransacciones()
       await cargarCajaActual()
       dialogTransaccion.value = false
-      nuevaTransaccion.value = { tipo: 'Venta', monto: 0, descripcion: '' }
+      nuevaTransaccion.value = { tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' }
       toast.add({ severity: 'success', summary: 'Transacción registrada', life: 2500 })
     }
   } catch (error) {
@@ -326,7 +332,7 @@ const cerrarCaja = async () => {
       dialogCierre.value = false
     }
   } catch (error) {
-    console.error('Error cerrando caja:', error)
+    toast.add({ severity: 'error', summary: error.response?.data?.error || 'No se pudo completar la operación', life: 4000 })
   }
 }
 </script>

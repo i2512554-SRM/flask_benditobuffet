@@ -1,39 +1,14 @@
-<template>
-  <router-link v-if="to" :to="to" class="volver-btn">
-    <i class="fa-solid fa-arrow-left"></i> {{ etiqueta }}
-  </router-link>
-  <button v-else class="volver-btn" type="button" @click="goBack">
-    <i class="fa-solid fa-arrow-left"></i> {{ etiqueta }}
-  </button>
-</template>
-
+<template><button class="volver-btn" type="button" @click="goBack"><i class="fa-solid fa-arrow-left"></i> Volver</button></template>
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-
-const props = defineProps({
-  to: { type: [String, Object], default: null },
-  etiqueta: { type: String, default: 'Volver' }
-})
-
+import { useRouter } from 'vue-router'
+const props = defineProps({ to: { type: [String, Object], default: '/' }, etiqueta: String })
 const router = useRouter()
-const route = useRoute()
-const historyPop = ref(false)
-
-const goBack = () => {
-  if (historyPop.value || window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/')
-  }
+function goBack() {
+  const back = window.history.state?.back
+  if (typeof back === 'string' && back.startsWith('/') && !back.startsWith('//') && back !== '/login') router.back()
+  else router.push(props.to || '/')
 }
-
-const guard = () => { historyPop.value = true }
-
-onMounted(() => window.addEventListener('popstate', guard))
-onUnmounted(() => window.removeEventListener('popstate', guard))
 </script>
-
 <style scoped>
 .volver-btn {
   display: inline-flex;

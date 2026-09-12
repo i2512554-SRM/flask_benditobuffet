@@ -6,7 +6,7 @@
         <h1>Turnos de Trabajo</h1>
         <p>Asigna y gestiona el turno de cada empleado</p>
       </div>
-      <Button label="Actualizar" icon="pi pi-refresh" severity="secondary" :loading="loading" @click="cargar" />
+      <Button :disabled="$saving" label="Actualizar" icon="pi pi-refresh" severity="secondary" :loading="loading" @click="cargar" />
     </div>
 
     <!-- Skeleton -->
@@ -79,7 +79,6 @@ const loading = ref(true)
 const guardandoId = ref(null)
 
 const turnos = [
-  { label: 'Mañana', value: 'Mañana' },
   { label: 'Tarde', value: 'Tarde' },
   { label: 'Noche', value: 'Noche' }
 ]

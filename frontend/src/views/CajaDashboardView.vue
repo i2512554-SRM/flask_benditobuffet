@@ -61,7 +61,7 @@
         </div>
         <div class="stat-content">
           <span class="stat-label">Saldo actual</span>
-          <span class="stat-value">S/. {{ formatMoney(caja.neto_dia) }}</span>
+          <span class="stat-value">S/. {{ formatMoney(caja.saldo_actual) }}</span>
         </div>
       </div>
     </div>
@@ -93,7 +93,7 @@
         </div>
         <i class="fa-solid fa-chevron-right modulo-arrow"></i>
       </router-link>
-      <router-link v-if="rol === 1" to="/caja/reportes" class="modulo-card">
+      <router-link to="/caja/reportes" class="modulo-card">
         <div class="modulo-icon ic-orange"><i class="fa-solid fa-chart-line"></i></div>
         <div>
           <span class="modulo-titulo">Reportes Financieros</span>

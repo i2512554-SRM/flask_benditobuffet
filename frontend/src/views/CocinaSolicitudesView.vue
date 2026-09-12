@@ -26,14 +26,14 @@
           </div>
           <div class="form-group">
             <label>Cantidad</label>
-            <InputNumber v-model="form.cantidad" :min="1" :step="1" mode="decimal" class="w-full" placeholder="0" />
+            <InputNumber :maxFractionDigits="2" v-model="form.cantidad" :min="1" :step="1" mode="decimal" class="w-full" placeholder="0" />
           </div>
           <div class="form-group">
             <label>Observación (opcional)</label>
             <InputText v-model="form.observacion" placeholder="Ej. para el buffet de mañana" class="w-full" />
           </div>
           <div class="form-actions col-12">
-            <Button type="submit" label="Enviar solicitud" icon="pi pi-check" severity="success" />
+            <Button :disabled="$saving" type="submit" label="Enviar solicitud" icon="pi pi-check" severity="success" />
           </div>
         </form>
       </div>
@@ -72,6 +72,12 @@
 </template>
 
 <script setup>
+import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import Tag from 'primevue/tag'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -83,7 +89,7 @@ const toast = useToast()
 
 const insumos = ref([])
 const solicitudes = ref([])
-const form = ref({ id_producto: null, cantidad: 1, observacion: '' })
+const form = ref({ id_producto: null, cantidad: null, observacion: '' })
 
 const severidad = (e) => (e === 'Atendida' ? 'success' : e === 'Rechazada' ? 'danger' : 'warning')
 
@@ -119,7 +125,7 @@ const enviar = async () => {
     const res = await api.post('/cocina/solicitudes', payload)
     if (res.data.success) {
       toast.add({ severity: 'success', summary: 'Solicitud enviada', detail: 'Se notificará al administrador.', life: 3500 })
-      form.value = { id_producto: null, cantidad: 1, observacion: '' }
+      form.value = { id_producto: null, cantidad: null, observacion: '' }
       loadSolicitudes()
     }
   } catch (err) {
