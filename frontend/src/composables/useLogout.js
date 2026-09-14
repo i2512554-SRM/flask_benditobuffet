@@ -1,15 +1,25 @@
 import { useRouter } from 'vue-router'
 import { useConfirm } from 'primevue/useconfirm'
 import { useAuthStore } from '../stores/auth'
+import { useToast } from 'primevue/usetoast'
 
 export function useLogout() {
   const router = useRouter()
   const authStore = useAuthStore()
   const confirm = useConfirm()
+  const toast = useToast()
 
-  const cerrarSesion = () => {
-    authStore.logout()
-    router.replace('/login')
+  const cerrarSesion = async () => {
+    try {
+      await authStore.logout()
+      router.replace('/login')
+    } catch (error) {
+      if (error.response?.status === 401) {
+        authStore.limpiarSesion(); router.replace('/login')
+      } else {
+        toast.add({ severity: 'error', summary: 'No se pudo cerrar la sesión', detail: 'Comprueba la conexión e intenta nuevamente.', life: 4000 })
+      }
+    }
   }
 
   const confirmarCierre = () => {

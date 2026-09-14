@@ -71,12 +71,13 @@
     </Transition>
 
     <Dialog v-model:visible="dialogVisible" :header="modalAccion === 'aprobar' ? 'Aprobar adelanto' : 'Rechazar adelanto'" :modal="true" :style="{ width: '500px' }">
+      <p v-if="modalAccion === 'aprobar'">Confirma únicamente cuando entregues el adelanto. Se descontará en la semana actual y la decisión no podrá cambiarse desde esta pantalla.</p>
       <p class="modal-desc">Agrega una respuesta opcional para el empleado:</p>
-      <Textarea v-model="respuesta" rows="4" placeholder="Ej: Adelanto aprobado, se acreditará en tu próximo pago..." maxlength="500" class="w-full" />
+      <Textarea v-model="respuesta" rows="4" placeholder="Observación para el empleado" maxlength="500" class="w-full" />
       <template #footer>
         <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
         <Button :disabled="$saving"
-          :label="modalAccion === 'aprobar' ? 'Aprobar' : 'Rechazar'"
+          :label="modalAccion === 'aprobar' ? 'Confirmar entrega' : 'Rechazar'"
           :severity="modalAccion === 'aprobar' ? 'success' : 'danger'"
           :loading="gestionando"
           @click="gestionar"

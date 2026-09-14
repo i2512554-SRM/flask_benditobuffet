@@ -77,8 +77,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const logout = () => {
-    api.post('/auth/logout').catch(() => {})
+  const logout = async () => {
+    await api.post('/auth/logout')
     limpiarSesion()
   }
 
@@ -108,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     refreshToken,
-    checkSession
+    checkSession,
+    limpiarSesion
   }
 })

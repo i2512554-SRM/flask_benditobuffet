@@ -70,8 +70,8 @@
               </strong>
             </div>
             <div class="info-block">
-              <span>Salario mensual</span>
-              <strong>{{ usuario.perfil.salario != null ? 'S/. ' + formatMoney(usuario.perfil.salario) : 'No registrado' }}</strong>
+              <span>Sueldo semanal</span>
+              <strong>{{ usuario.perfil.sueldo_semanal != null ? 'S/. ' + formatMoney(usuario.perfil.sueldo_semanal) : 'No configurado' }}</strong>
             </div>
           </div>
         </div>

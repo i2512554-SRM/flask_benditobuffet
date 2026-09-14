@@ -76,7 +76,8 @@
             <span v-if="!data.descuentos?.length">Sin descuentos</span>
           </template></Column>
           <Column header="Saldo pendiente"><template #body="{ data }">
-            <strong>{{ data.saldo == null ? 'Configure el sueldo' : 'S/. ' + formatMoney(data.saldo) }}</strong>
+            <strong>{{ data.pagos_por_clasificar ? 'Clasificar pagos antiguos' : data.saldo == null ? 'Configure el sueldo' : 'S/. ' + formatMoney(data.saldo) }}</strong>
+            <router-link v-if="data.pagos_por_clasificar" to="/personal/pagos">Revisar pagos</router-link>
             <small v-if="data.saldo < 0">Importe entregado o descontado superior al sueldo</small>
           </template></Column>
           <Column header="Acciones"><template #body="{ data }">
@@ -139,7 +140,9 @@ const mesSeleccionado = ref(new Date())
 const loading = ref(false)
 const dialogo = ref(false), empleado = ref(null), tipo = ref('sueldo'), monto = ref(null), motivo = ref(''), guardando = ref(false)
 const anulacionVisible = ref(false), descuentoAnular = ref(null)
+const claveOperacion = ref('')
 function abrir(fila, accion) {
+  claveOperacion.value = crypto.randomUUID()
   empleado.value = fila; tipo.value = accion; monto.value = accion === 'sueldo' ? fila.sueldo_base : null
   motivo.value = ''; dialogo.value = true
 }
@@ -148,7 +151,7 @@ async function guardar() {
   guardando.value = true
   try {
     await api.post('/personal/salarios/' + tipo.value, { id_usuario: empleado.value.id_usuario,
-      fecha: fechaLocal(mesSeleccionado.value), monto: monto.value, motivo: motivo.value })
+      fecha: fechaLocal(mesSeleccionado.value), monto: monto.value, motivo: motivo.value, clave_operacion: claveOperacion.value })
     dialogo.value = false; await calcularMes()
     toast.add({ severity: 'success', summary: 'Registro guardado', life: 2500 })
   } catch (e) {
@@ -182,11 +185,14 @@ const resumenCards = computed(() => {
   ]
 })
 
+let consultaActual = 0
 const calcularMes = async () => {
+  const consulta = ++consultaActual
   loading.value = true
   try {
     if (!mesSeleccionado.value) return
     const res = await api.get('/personal/salarios', { params: { fecha: fechaLocal(mesSeleccionado.value) } })
+    if (consulta !== consultaActual) return
     rango.value = formatFecha(res.data.inicio) + ' — ' + formatFecha(res.data.fin)
     if (res.data.success) {
       salarios.value = res.data.data
@@ -194,9 +200,11 @@ const calcularMes = async () => {
       toast.add({ severity: 'error', summary: 'No se pudo calcular', detail: res.data.error || '', life: 3500 })
     }
   } catch (e) {
+    if (consulta !== consultaActual) return
+    salarios.value = []
     toast.add({ severity: 'error', summary: 'Error al calcular salarios', life: 3500 })
   } finally {
-    loading.value = false
+    if (consulta === consultaActual) loading.value = false
   }
 }
 

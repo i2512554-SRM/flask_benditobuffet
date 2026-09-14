@@ -94,6 +94,10 @@
               <Tag :value="slotProps.data.estado" :severity="slotProps.data.estado === 'Pagado' ? 'success' : 'warning'" />
             </template>
           </Column>
+          <Column field="tipo" header="Concepto"><template #body="{ data }">{{ data.tipo || (String(data.id_pago).startsWith('adelanto-') ? 'Adelanto' : 'Por clasificar') }}</template></Column>
+          <Column header="Acciones"><template #body="{ data }">
+            <Button v-if="typeof data.id_pago === 'number' && (data.estado === 'Pendiente' || !data.tipo)" :disabled="$saving" :label="data.estado === 'Pendiente' ? 'Completar o cancelar' : 'Clasificar pago'" size="small" @click="abrirActualizacion(data)" />
+          </template></Column>
           <template #empty>
             <div class="empty-state">
               <i class="fa-solid fa-receipt"></i>
@@ -135,6 +139,10 @@
           <DatePicker id="fecha" v-model="form.fecha" date-format="yy-mm-dd" :max-date="new Date()" class="w-full" />
         </div>
         <div class="field col-12" v-if="modal === 'pago'">
+          <label>Semana que corresponde al pago</label>
+          <DatePicker v-model="form.semana" date-format="dd/mm/yy" placeholder="Selecciona un día de esa semana" class="w-full" />
+        </div>
+        <div class="field col-12" v-if="modal === 'pago'">
           <label for="descripcion">Descripción</label>
           <InputText id="descripcion" v-model="form.descripcion" class="w-full" />
         </div>
@@ -144,11 +152,26 @@
         <Button :disabled="$saving" label="Guardar" :loading="guardando" @click="guardar" />
       </template>
     </Dialog>
+    <Dialog v-model:visible="actualizacionVisible" header="Actualizar pago" modal :style="{ width: 'min(95vw, 440px)' }">
+      <form @submit.prevent="guardarActualizacion" class="form-actualizacion">
+        <p>{{ pagoActualizar?.empleado }} · S/ {{ fmt(pagoActualizar?.monto) }}</p>
+        <label>Concepto</label>
+        <Select v-model="actualizacion.tipo" :options="['Salario semanal', 'Bono', 'Horas extra', 'Otros']" placeholder="Selecciona el concepto" />
+        <label>Semana del sueldo (selecciona cualquier día de esa semana)</label>
+        <input type="date" v-model="actualizacion.semana" required :disabled="Boolean(pagoActualizar?.semana) && pagoActualizar?.estado !== 'Pendiente'" />
+        <template v-if="pagoActualizar?.estado === 'Pendiente'">
+          <label>Estado</label>
+          <Select v-model="actualizacion.estado" :options="['Pagado', 'Cancelado']" />
+          <p>Al completar se registrará la fecha actual de entrega, conservando la semana seleccionada.</p>
+        </template>
+        <Button type="submit" label="Guardar" :disabled="$saving || !actualizacion.tipo" :loading="guardando" />
+      </form>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
-import { formatFecha as fechaLegible } from '../utils/format'
+import { formatFecha as fechaLegible, fechaLocal } from '../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useRouter } from 'vue-router'
@@ -184,6 +207,24 @@ const mesSeleccionado = ref(new Date())
 const form = ref({})
 const loading = ref(true)
 const guardando = ref(false)
+const actualizacionVisible = ref(false), pagoActualizar = ref(null), actualizacion = ref({})
+function abrirActualizacion(pago) {
+  pagoActualizar.value = pago
+  actualizacion.value = { tipo: pago.tipo || null, estado: pago.estado === 'Pendiente' ? 'Pagado' : pago.estado,
+    semana: pago.semana || pago.fecha }
+  actualizacionVisible.value = true
+}
+async function guardarActualizacion() {
+  if (guardando.value) return
+  guardando.value = true
+  try {
+    await api.put(`/personal/pagos/${pagoActualizar.value.id_pago}`, actualizacion.value)
+    actualizacionVisible.value = false; await cargarDatos()
+    toast.add({ severity: 'success', summary: 'Pago actualizado', life: 2500 })
+  } catch(e) {
+    toast.add({ severity: 'error', summary: 'No se pudo actualizar', detail: e.response?.data?.message || 'Intenta nuevamente.', life: 4000 })
+  } finally { guardando.value = false }
+}
 
 const totales = computed(() => pagos.value.totales || { pagado: 0, adelantos: 0, neto: 0 })
 const empleadosActivos = computed(() => pagos.value.empleados_activos || 0)
@@ -259,9 +300,11 @@ const guardar = async () => {
   guardando.value = true
   try {
     if (modal.value === 'pago') {
-      await api.post('/personal/pagos', { ...form.value, tipo: form.value.tipo === 'Otros' ? form.value.otroTipo : form.value.tipo })
+      await api.post('/personal/pagos', { ...form.value, fecha: fechaLocal(form.value.fecha),
+        semana: fechaLocal(form.value.semana || form.value.fecha),
+        descripcion: form.value.tipo === 'Otros' ? `${form.value.otroTipo}: ${form.value.descripcion || ''}` : form.value.descripcion })
     } else {
-      await api.post('/personal/pagos/adelanto', form.value)
+      await api.post('/personal/pagos/adelanto', { ...form.value, fecha: fechaLocal(form.value.fecha) })
     }
     toast.add({ severity: 'success', summary: modal.value === 'pago' ? 'Pago registrado' : 'Adelanto registrado', life: 3000 })
     dialogVisible.value = false
@@ -279,6 +322,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.form-actualizacion { display: grid; gap: .8rem; }
 .pagos-view { padding: 2rem; }
 
 .page-header {

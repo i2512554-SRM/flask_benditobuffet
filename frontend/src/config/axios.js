@@ -40,11 +40,11 @@ async function renovarToken() {
       .post(
         '/api/auth/refresh',
         {},
-        { headers: { Authorization: `Bearer ${refreshToken}` } }
+        { headers: { Authorization: `Bearer ${refreshToken}` }, timeout: 20000 }
       )
       .then((res) => {
         const nuevo = res.data?.data?.token
-        if (nuevo) {
+        if (nuevo && localStorage.getItem('refresh_token') === refreshToken) {
           localStorage.setItem('token', nuevo)
           return true
         }
@@ -69,6 +69,7 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       !original._reintento &&
       !original.url.includes('/auth/login') &&
+      !original.url.includes('/auth/logout') &&
       !original.url.includes('/auth/refresh')
     ) {
       original._reintento = true

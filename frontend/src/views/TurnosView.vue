@@ -113,7 +113,7 @@ const cargar = async () => {
 
 const cambiarTurno = async (emp, nuevoTurno) => {
   const valor = (nuevoTurno || []).join(',')
-  if (!nuevoTurno || !nuevoTurno.length || valor === emp.turno) return
+  if (valor === (emp.turno || '')) return
   const anterior = emp.turno
   emp.turno = valor
   guardandoId.value = emp.id_usuario
