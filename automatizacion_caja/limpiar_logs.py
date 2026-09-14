@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Revisa accesos antiguos de intentos_login según RETENCION_LOGS_DIAS (90 días).
-Conserva el historial de operaciones actividad_usuario.
+Conserva operaciones de negocio y respalda los accesos antes de eliminarlos.
 Uso: python -m automatizacion_caja.limpiar_logs
 Para eliminar con respaldo: añadir --aplicar --respaldo logs/respaldos
 Se puede programar con cron o el Programador de tareas de Windows.
@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 from bd import db
-from models import IntentoLogin
+from models import IntentoLogin, ActividadUsuario, SesionUsuario
 import argparse
 import json
 from pathlib import Path
@@ -34,8 +34,13 @@ def limpiar_accesos(dias=90, aplicar=False, respaldo=None, instante=None):
     if aplicar and not respaldo:
         raise ValueError('Debe indicar una carpeta de respaldo')
     corte = (instante or datetime.now(timezone.utc)) - timedelta(days=dias)
-    consulta = IntentoLogin.query.filter(IntentoLogin.fecha < corte)
-    total = consulta.count()
+    consultas = [
+        (IntentoLogin, IntentoLogin.query.filter(IntentoLogin.fecha < corte)),
+        (ActividadUsuario, ActividadUsuario.query.filter(ActividadUsuario.fecha < corte,
+            ActividadUsuario.accion.in_(['Inició sesión', 'Inicio sesion', 'Inició sesion', 'Consulta DNI']))),
+        (SesionUsuario, SesionUsuario.query.filter(SesionUsuario.expira < corte)),
+    ]
+    total = sum(consulta.count() for _, consulta in consultas)
     if not aplicar or not total:
         return {'encontrados': total, 'eliminados': 0, 'corte': corte.isoformat()}
     carpeta = Path(respaldo)
@@ -43,28 +48,31 @@ def limpiar_accesos(dias=90, aplicar=False, respaldo=None, instante=None):
     archivo = carpeta / f'accesos-{uuid4().hex}.jsonl'
     eliminados = 0
     with archivo.open('x', encoding='utf-8') as salida:
-        while True:
-            lote = consulta.order_by(IntentoLogin.id).limit(1000).all()
-            if not lote:
-                break
-            for registro in lote:
-                salida.write(json.dumps({'id': registro.id, 'identificador': registro.identificador,
-                    'ip': registro.ip, 'resultado': registro.resultado,
-                    'fecha': registro.fecha.isoformat()}, ensure_ascii=False) + '\n')
-            salida.flush()
-            os.fsync(salida.fileno())
-            try:
-                cantidad = IntentoLogin.query.filter(IntentoLogin.id.in_([r.id for r in lote])).delete(synchronize_session=False)
-                db.session.commit()
-                eliminados += cantidad
-            except Exception:
-                db.session.rollback()
-                raise
+        for modelo, consulta in consultas:
+            clave = list(modelo.__table__.primary_key.columns)[0]
+            while True:
+                lote = consulta.order_by(clave).limit(1000).all()
+                if not lote:
+                    break
+                for registro in lote:
+                    datos = {c.name: getattr(registro, c.name) for c in modelo.__table__.columns}
+                    datos['tabla'] = modelo.__tablename__
+                    salida.write(json.dumps(datos, ensure_ascii=False,
+                        default=lambda valor: valor.isoformat()) + '\n')
+                salida.flush()
+                os.fsync(salida.fileno())
+                try:
+                    cantidad = modelo.query.filter(clave.in_([getattr(r, clave.name) for r in lote])).delete(synchronize_session=False)
+                    db.session.commit()
+                    eliminados += cantidad
+                except Exception:
+                    db.session.rollback()
+                    raise
     return {'encontrados': total, 'eliminados': eliminados, 'corte': corte.isoformat(), 'respaldo': str(archivo)}
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Revisar accesos antiguos; aplicar solo con respaldo. Conserva actividad_usuario.')
+    parser = argparse.ArgumentParser(description='Revisar accesos antiguos; aplicar solo con respaldo. Conserva operaciones de negocio.')
     parser.add_argument('--dias', type=int, default=int(os.getenv('RETENCION_LOGS_DIAS', '90')))
     parser.add_argument('--aplicar', action='store_true')
     parser.add_argument('--respaldo', type=Path)

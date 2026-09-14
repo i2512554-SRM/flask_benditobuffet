@@ -46,6 +46,10 @@ init_db(app)
 bcrypt = Bcrypt(app)
 csrf = CSRFProtect(app)
 jwt = JWTManager(app)
+from api.sesiones import configurar_sesiones
+configurar_sesiones(jwt)
+from api.errores_bd import configurar_errores_bd
+configurar_errores_bd(app)
 ma = Marshmallow(app)
 logging.basicConfig(level=logging.INFO)
 
@@ -111,25 +115,8 @@ def internal_error(error):
 # -------------------------------
 # API: DNI LOOKUP
 # -------------------------------
-@app.route("/api/dni/<dni>")
-def api_consultar_dni(dni):
-    if not re.match(r'^\d{8}$', dni):
-        return jsonify({"error": "DNI invalido"}), 400
-    token = os.getenv("DNI_API_TOKEN", "").strip()
-    if not token:
-        return jsonify({"error": "La consulta DNI no esta disponible: falta configurar el token RENIEC (DNI_API_TOKEN) en el archivo .env"}), 503
-    try:
-        respuesta = requests.get(
-            f"https://dniruc.apisperu.com/api/v1/dni/{dni}",
-            params={"token": token},
-            timeout=10,
-        )
-        cuerpo = respuesta.json()
-        if respuesta.status_code != 200 or cuerpo.get("success") is False:
-            return jsonify({"error": f"La API RENIEC rechazo la consulta: {cuerpo.get('message') or 'verifica el token DNI_API_TOKEN'}"}), 502
-        return jsonify(cuerpo), respuesta.status_code
-    except requests.RequestException:
-        return jsonify({"error": "Error de conexion con la API de RENIEC"}), 502
+from api.dni import consultar_dni
+app.add_url_rule('/api/dni/<dni>', view_func=consultar_dni)
 
 # -------------------------------
 # SERVIR VUE SPA

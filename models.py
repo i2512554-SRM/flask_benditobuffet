@@ -114,6 +114,9 @@ class PagoEmpleado(db.Model):
     fecha_pago = db.Column(db.DateTime(timezone=True), nullable=False)
     estado = db.Column(db.String(80), nullable=False)
     descripcion = db.Column(db.String(255))
+    tipo = db.Column(db.String(100))
+    semana = db.Column(db.Date)
+    id_pago_personal = db.Column(db.BigInteger, db.ForeignKey('pagos_personal.id_pago'), unique=True)
 
     usuario_empleado = db.relationship('Usuario', foreign_keys=[id_usuario])
 
@@ -143,6 +146,24 @@ class DescuentoSemanal(db.Model):
     registrado_por = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
     anulado = db.Column(db.Boolean, nullable=False, default=False)
+    clave_operacion = db.Column(db.String(36), unique=True)
+
+
+class SesionUsuario(db.Model):
+    __tablename__ = 'sesiones_usuario'
+    id = db.Column(db.String(36), primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    huella_clave = db.Column(db.String(64), nullable=False)
+    expira = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    revocada = db.Column(db.Boolean, nullable=False, default=False)
+
+
+class AtencionInsumo(db.Model):
+    __tablename__ = 'atenciones_insumos'
+    __table_args__ = (db.UniqueConstraint('id_compra', 'id_solicitud'),)
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=False, index=True)
+    id_solicitud = db.Column(db.BigInteger, db.ForeignKey('solicitudes_insumos.id_solicitud'), nullable=False)
 
 
 class PagoPersonal(db.Model):

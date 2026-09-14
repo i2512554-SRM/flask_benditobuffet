@@ -1,4 +1,5 @@
-from api.validaciones import numero
+from api.validaciones import numero, cantidad_decimal
+from models import AtencionInsumo
 from sqlalchemy import text
 import uuid
 from flask import Blueprint, request, jsonify
@@ -43,8 +44,11 @@ def _requiere_roles(*roles):
                     for campo in ('stock', 'precio', 'monto', 'cantidad'):
                         if campo in data and data[campo] is not None:
                             numero(data[campo], .000001 if campo in ('monto', 'cantidad') else 0)
+                            if campo in ('stock', 'cantidad'):
+                                cantidad_decimal(data[campo])
                     for linea in data.get('detalle') or []:
                         numero(linea.get('cantidad'), .000001)
+                        cantidad_decimal(linea.get('cantidad'))
                         numero(linea.get('precio_unitario'), 0)
                 except (ValueError, TypeError, AttributeError):
                     return jsonify(success=False, error='Revisa cantidades y precios: deben ser números válidos, sin negativos.'), 400
@@ -155,17 +159,17 @@ def eliminar_inversion(id):
 @inventario_bp.route('/productos', methods=['GET'])
 @_inventario_stock
 def get_productos():
-    query = Producto.query.options(db.joinedload(Producto.categoria_rel))
+    query = Producto.query.options(db.joinedload(Producto.categoria_rel)).outerjoin(Categoria, Producto.id_categoria == Categoria.id_categoria)
     q = request.args.get('q', '').strip()
     cat = request.args.get('cat', '').strip()
     activos = request.args.get('activos', '').strip() == '1'
     if cat:
-        query = query.join(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.func.lower(Categoria.nombre) == cat.lower())
+        query = query.filter(db.func.lower(Categoria.nombre) == cat.lower())
     if activos:
         query = query.filter(Producto.estado == True)
     if q:
         like = f"%{q.lower()}%"
-        query = query.outerjoin(Categoria, Producto.id_categoria == Categoria.id_categoria).filter(db.or_(
+        query = query.filter(db.or_(
             db.func.lower(Producto.nombre).like(like),
             db.func.lower(Categoria.nombre).like(like),
         ))
@@ -296,13 +300,13 @@ def entrada_stock(id):
         return jsonify({'success': False, 'error': 'El producto está inactivo y no puede recibir stock'}), 400
     data = request.get_json() or {}
     try:
-        cantidad = float(data.get('cantidad', 0))
+        cantidad = cantidad_decimal(data.get('cantidad', 0))
     except (TypeError, ValueError):
         cantidad = 0
     if cantidad <= 0:
         return jsonify({'success': False, 'error': 'La cantidad a agregar debe ser mayor a cero'}), 400
 
-    anterior = float(producto.stock or 0)
+    anterior = cantidad_decimal(producto.stock or 0, existente=True)
     posterior = anterior + cantidad
     motivo = (data.get('motivo') or '').strip() or 'Ingreso de stock'
     producto.stock = posterior
@@ -324,13 +328,13 @@ def salida_stock(id):
         return jsonify({'success': False, 'error': 'El producto está inactivo y no puede registrar salidas'}), 400
     data = request.get_json() or {}
     try:
-        cantidad = float(data.get('cantidad', 0))
+        cantidad = cantidad_decimal(data.get('cantidad', 0))
     except (TypeError, ValueError):
         cantidad = 0
     if cantidad <= 0:
         return jsonify({'success': False, 'error': 'La cantidad a retirar debe ser mayor a cero'}), 400
 
-    anterior = float(producto.stock or 0)
+    anterior = cantidad_decimal(producto.stock or 0, existente=True)
     if cantidad > anterior:
         return jsonify({'success': False, 'error': 'No hay suficiente stock disponible.'}), 400
 
@@ -434,9 +438,9 @@ def crear_compra():
         if not producto:
             db.session.rollback()
             return jsonify({'success': False, 'error': 'Producto no encontrado para la compra'}), 400
-        cantidad = float(linea.get('cantidad') or 0)
+        cantidad = cantidad_decimal(linea.get('cantidad') or 0)
         precio = float(linea.get('precio_unitario') or 0)
-        subtotal = cantidad * precio
+        subtotal = float(cantidad) * precio
         total += subtotal
         det = DetalleCompraInventario(
             id_compra=compra.id_compra,
@@ -445,7 +449,7 @@ def crear_compra():
             precio_unitario=precio,
         )
         db.session.add(det)
-        anterior = float(producto.stock or 0)
+        anterior = cantidad_decimal(producto.stock or 0, existente=True)
         posterior = anterior + cantidad
         producto.stock = posterior
         producto.fecha_edicion = _ahora()
@@ -455,10 +459,12 @@ def crear_compra():
         ).all()
         disponible = cantidad
         for s in sorted(pendientes, key=lambda item: item.fecha):
-            if s.cantidad > disponible:
+            requerida = cantidad_decimal(s.cantidad, existente=True)
+            if requerida > disponible:
                 continue
-            disponible -= s.cantidad
+            disponible -= requerida
             s.estado = 'Atendida'
+            db.session.add(AtencionInsumo(id_compra=compra.id_compra, id_solicitud=s.id_solicitud))
             s.respuesta = f'Stock repuesto con la compra {codigo}'
             crear_notificacion(
                 s.id_usuario,
@@ -493,11 +499,12 @@ def eliminar_compra(id):
     for det in compra.detalle:
         producto = Producto.query.get(det.id_producto)
         if producto:
-            anterior = float(producto.stock or 0)
-            if anterior < det.cantidad:
+            anterior = cantidad_decimal(producto.stock or 0, existente=True)
+            cantidad = cantidad_decimal(det.cantidad, existente=True)
+            if anterior < cantidad:
                 db.session.rollback()
                 return jsonify(success=False, error='No se puede anular: parte del stock ya fue utilizado.'), 409
-            posterior = anterior - det.cantidad
+            posterior = anterior - cantidad
             producto.stock = posterior
             producto.fecha_edicion = _ahora()
             _registrar_movimiento(
@@ -512,6 +519,12 @@ def eliminar_compra(id):
                 id_compra=compra.id_compra
             )
 
+    for atencion in AtencionInsumo.query.filter_by(id_compra=id).all():
+        solicitud = db.session.get(SolicitudInsumo, atencion.id_solicitud)
+        if solicitud and solicitud.estado == 'Atendida':
+            solicitud.estado = 'Pendiente'
+            solicitud.respuesta = f'Pendiente nuevamente: se anuló la compra {compra.codigo}'
+            crear_notificacion(solicitud.id_usuario, 'Solicitud de insumo pendiente', solicitud.respuesta)
     compra.estado = 'Anulada'
     db.session.add(ActividadUsuario(
         id_usuario=usuario_id,

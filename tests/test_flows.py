@@ -19,6 +19,11 @@ from api.inventario import inventario_bp
 from api.trabajador import trabajador_bp
 from api.admin import admin_bp
 from api.rendimiento import rendimiento_bp
+from api.auth import auth_bp
+from api.cocina import cocina_bp
+from api.sesiones import crear_sesion, configurar_sesiones
+from api.dni import consultar_dni
+from api.errores_bd import configurar_errores_bd
 
 
 @compiles(BigInteger, 'sqlite')
@@ -30,18 +35,21 @@ def instante(d):
     return datetime.fromisoformat(d).replace(tzinfo=timezone.utc)
 
 
-class FlujosTest(unittest.TestCase):
+class BaseFlujos(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.app = Flask(__name__)
         self.app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI='sqlite://',
                                JWT_SECRET_KEY='test-only-key-at-least-thirty-two-characters', UPLOAD_FOLDER=self.folder.name)
         db.init_app(self.app)
-        JWTManager(self.app)
+        configurar_sesiones(JWTManager(self.app))
+        configurar_errores_bd(self.app)
+        self.tokens = {}
         for bp, prefix in [(caja_bp, '/api/caja'), (personal_bp, '/api/personal'),
                            (inventario_bp, '/api/inventario'), (perfil_bp, None),
-                           (trabajador_bp, None), (admin_bp, None), (rendimiento_bp, '/api')]:
+                           (trabajador_bp, None), (admin_bp, None), (rendimiento_bp, '/api'), (auth_bp, None), (cocina_bp, None)]:
             self.app.register_blueprint(bp, **({'url_prefix': prefix} if prefix else {}))
+        self.app.add_url_rule('/api/dni/<dni>', view_func=consultar_dni)
         self.ctx = self.app.app_context()
         self.ctx.push()
         db.create_all()
@@ -63,7 +71,9 @@ class FlujosTest(unittest.TestCase):
         self.folder.cleanup()
 
     def call(self, method, path, role=1, **kwargs):
-        headers={'Authorization': 'Bearer ' + create_access_token(identity=str(role))}
+        if role not in self.tokens:
+            self.tokens[role] = crear_sesion(db.session.get(Usuario, role))
+        headers={'Authorization': 'Bearer ' + self.tokens[role][0]}
         return getattr(self.client, method)('/api' + path, headers=headers, **kwargs)
 
     def producto(self, stock=10):
@@ -71,6 +81,7 @@ class FlujosTest(unittest.TestCase):
                      fecha_registro=datetime.now(timezone.utc), fecha_edicion=datetime.now(timezone.utc), estado=True)
         db.session.add(p); db.session.commit()
 
+class FlujosTest(BaseFlujos):
     def test_dos_aperturas_no_duplican_ventas(self):
         with patch('api.caja.ahora', return_value=instante('2026-09-10T15:00:00')):
             self.assertEqual(self.call('post', '/caja/abrir', json={}).status_code, 200)
@@ -182,13 +193,13 @@ class FlujosTest(unittest.TestCase):
         self.assertEqual(self.call('put','/perfil',role=2,json={'correo':'u2@example.test','clave':'new-password'}).status_code,400)
 
     def test_sueldo_fijo_descuentos_y_vigencia(self):
-        datos = {'id_usuario': 2, 'fecha': '2026-09-10', 'monto': 350}
+        datos = {'id_usuario': 2, 'fecha': '2026-09-10', 'monto': 350, 'clave_operacion': '45b74608-2507-40cc-a660-32f92d51e3c5'}
         self.assertEqual(self.call('post', '/personal/salarios/sueldo', role=2, json=datos).status_code, 403)
         self.assertEqual(self.call('post', '/personal/salarios/sueldo', json=datos).status_code, 200)
         self.assertEqual(self.call('post', '/personal/salarios/descuentos', json={**datos, 'monto': 15, 'motivo': 'Platos'}).status_code, 200)
         self.assertEqual(self.call('post', '/personal/salarios/descuentos', json={**datos, 'monto': -5, 'motivo': 'Falta'}).status_code, 400)
         db.session.add_all([
-            PagoEmpleado(id_usuario=2, monto=100, fecha_pago=instante('2026-09-09T12:00:00'), estado='Pagado'),
+            PagoEmpleado(id_usuario=2, monto=100, fecha_pago=instante('2026-09-09T12:00:00'), estado='Pagado', tipo='Salario semanal'),
             Adelanto(id_usuario=2, monto=20, motivo='Viaje', fecha=instante('2026-09-09T12:00:00'), estado='Aprobado'),
             Adelanto(id_usuario=2, monto=90, motivo='Pendiente', fecha=instante('2026-09-09T12:00:00'), estado='Pendiente')])
         db.session.commit()

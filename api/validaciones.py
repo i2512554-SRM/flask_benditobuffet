@@ -1,5 +1,6 @@
 import math
 import re
+from decimal import Decimal, InvalidOperation
 
 
 def validar_personal(data, crear=False):
@@ -30,3 +31,16 @@ def numero(valor, minimo=0):
     if not math.isfinite(resultado) or resultado < minimo:
         raise ValueError('Número fuera de rango')
     return resultado
+
+
+def cantidad_decimal(valor, minimo=0, existente=False):
+    try:
+        cantidad = Decimal(str(valor))
+        if not cantidad.is_finite() or cantidad < Decimal(str(minimo)) or cantidad > Decimal('999999999.999'):
+            raise ValueError('Cantidad fuera de rango')
+        redondeado = cantidad.quantize(Decimal('.001'))
+        if not existente and redondeado != cantidad:
+            raise ValueError('La cantidad admite hasta tres decimales')
+        return redondeado
+    except (InvalidOperation, TypeError):
+        raise ValueError('Cantidad no válida')

@@ -40,13 +40,18 @@ def _totales(movimientos):
     return {'ventas': float(ventas.quantize(Decimal('.01'))), 'gastos': float(gastos.quantize(Decimal('.01'))),
             'neto': float((ventas - gastos).quantize(Decimal('.01')))}
 
-def _historial():
-    cierres = CierreCaja.query.order_by(CierreCaja.fecha.desc()).limit(200).all()
+def _historial(inicio=None, fin_periodo=None):
+    query = CierreCaja.query
+    if inicio is not None:
+        query = query.filter(CierreCaja.fecha >= inicio, CierreCaja.fecha < fin_periodo)
+    query = query.order_by(CierreCaja.fecha.desc(), CierreCaja.id_cierre.desc())
+    cierres = query.all() if inicio is not None else query.limit(200).all()
     if not cierres:
         return []
     movimientos = _movimientos(min(c.fecha for c in cierres), ahora()).all()
     resultado = []
-    siguiente_apertura = None
+    siguiente = CierreCaja.query.filter(CierreCaja.fecha > cierres[0].fecha).order_by(CierreCaja.fecha).first()
+    siguiente_apertura = utc(siguiente.fecha) if siguiente else None
     for c in cierres:
         item = cierre_schema.dump(c)
         fin = utc(c.fecha_cierre) if c.fecha_cierre else ahora()
@@ -167,4 +172,4 @@ def reportes():
         'ventas_mes': totales['ventas'], 'egresos_mes': totales['gastos'], 'neto_mes': totales['neto'],
         'inicio': inicio.isoformat(), 'fin': fin.isoformat(), 'puntos': puntos,
         'transacciones': transacciones_schema.dump(movimientos),
-        'cierres': [c for c in _historial() if inicio <= utc(datetime.fromisoformat(c['fecha'])) < fin]})
+        'cierres': _historial(inicio, fin)})

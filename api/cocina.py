@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
 from bd import db
+from api.validaciones import cantidad_decimal
 from models import (
     Usuario, Producto, Categoria, SolicitudInsumo, ActividadUsuario, crear_notificacion
 )
@@ -149,11 +150,11 @@ def crear_solicitud(cocinero):
     data = request.get_json(silent=True) or {}
     id_producto = data.get('id_producto')
     producto = Producto.query.get(id_producto) if id_producto else None
-    if not producto:
+    if not producto or not producto.estado:
         return jsonify({'success': False, 'error': 'Selecciona un producto o insumo válido'}), 400
 
     try:
-        cantidad = float(data.get('cantidad') or 0)
+        cantidad = float(cantidad_decimal(data.get('cantidad') or 0, .001))
         if cantidad <= 0:
             raise ValueError
     except (ValueError, TypeError):

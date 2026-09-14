@@ -1,4 +1,4 @@
-from api.fechas import utc, LIMA
+from api.fechas import utc, LIMA, ahora
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, timedelta, timezone
@@ -193,9 +193,11 @@ def listar_solicitudes():
 @admin_bp.route('/adelantos/<int:id_adelanto>', methods=['PUT'])
 @admin_required
 def gestionar_solicitud(id_adelanto):
-    adelanto = Adelanto.query.get(id_adelanto)
+    adelanto = Adelanto.query.filter_by(id_adelanto=id_adelanto).with_for_update().first()
     if not adelanto:
         return jsonify({'success': False, 'error': 'Solicitud no encontrada'}), 404
+    if adelanto.estado != 'Pendiente':
+        return jsonify(success=False, error='Esta solicitud ya fue resuelta o cancelada.'), 409
 
     data = request.get_json(silent=True) or {}
     accion = (data.get('accion') or '').strip().lower()
@@ -209,7 +211,7 @@ def gestionar_solicitud(id_adelanto):
         return jsonify({'success': False, 'error': 'Acción no válida'}), 400
 
     adelanto.respuesta_admin = respuesta if respuesta else None
-    adelanto.fecha_gestion = datetime.now()
+    adelanto.fecha_gestion = ahora()
     adelanto.notificacion_vista = False
     crear_notificacion(
         adelanto.id_usuario,

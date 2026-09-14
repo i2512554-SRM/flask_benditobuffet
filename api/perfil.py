@@ -1,5 +1,6 @@
-from api.fechas import ahora
-from api.validaciones import numero
+from api.fechas import ahora, LIMA
+from api.validaciones import numero, validar_personal
+from models import SueldoSemanal
 import os
 import re
 import uuid
@@ -44,6 +45,8 @@ def _serializar_usuario(usuario):
     foto_perfil = None
     if perfil and perfil.foto_perfil:
         foto_perfil = f"/uploads/perfiles/{perfil.foto_perfil}"
+    tarifa = SueldoSemanal.query.filter(SueldoSemanal.id_usuario == usuario.id_usuario,
+        SueldoSemanal.desde <= ahora().astimezone(LIMA).date()).order_by(SueldoSemanal.desde.desc()).first()
     return {
         'id_usuario': usuario.id_usuario,
         'nombres': usuario.nombres,
@@ -62,6 +65,7 @@ def _serializar_usuario(usuario):
             'fecha_ingreso': perfil.fecha_ingreso.strftime('%d/%m/%Y') if (perfil and perfil.fecha_ingreso) else None,
             'horario': perfil.horario if perfil else None,
             'salario': perfil.salario if perfil else None,
+            'sueldo_semanal': float(tarifa.monto) if tarifa else None,
         }
     }
 
@@ -228,6 +232,9 @@ def cambiar_contrasena():
 
     if nueva != verificar:
         return jsonify({'success': False, 'error': 'Las contraseñas nuevas no coinciden'}), 400
+    error = validar_personal({'clave': nueva})
+    if error:
+        return jsonify(success=False, error=error), 400
 
     if nueva == actual:
         return jsonify({'success': False, 'error': 'La nueva contraseña no puede ser igual a la actual'}), 400
@@ -297,7 +304,7 @@ def cancelar_adelanto(id_adelanto):
     usuario_id = int(get_jwt_identity())
     adelanto = Adelanto.query.filter_by(
         id_adelanto=id_adelanto, id_usuario=usuario_id
-    ).first()
+    ).with_for_update().first()
     if not adelanto:
         return jsonify({'success': False, 'error': 'Solicitud no encontrada'}), 404
 

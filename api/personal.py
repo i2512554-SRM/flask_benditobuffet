@@ -8,10 +8,21 @@ from dateutil.relativedelta import relativedelta
 from decimal import Decimal, InvalidOperation
 from models import SueldoSemanal, DescuentoSemanal
 import bcrypt
+import uuid
+from sqlalchemy.exc import IntegrityError
 from models import db, Usuario, Rol, PagoPersonal, PagoEmpleado, Adelanto, ActividadUsuario, DocumentoIdentidad, crear_notificacion
 from schemas.usuario import usuario_schema, usuarios_schema, pago_schema, pagos_schema
 
 personal_bp = Blueprint('personal', __name__)
+
+
+def _bloquear_personal():
+    if db.engine.dialect.name == 'postgresql':
+        db.session.execute(db.text('SELECT pg_advisory_xact_lock(72500000)'))
+
+
+def _proteger_admin(empleado, estado, rol):
+    return empleado.id_rol == 1 and empleado.estado and (not estado or rol != 1) and Usuario.query.filter_by(id_rol=1, estado=True).count() <= 1
 
 def admin_required(fn):
     from functools import wraps
@@ -105,11 +116,28 @@ def crear_empleado():
 @personal_bp.route('/<int:id>', methods=['PUT'])
 @admin_required
 def actualizar_empleado(id):
+    _bloquear_personal()
     empleado = Usuario.query.get_or_404(id)
     data = request.get_json(silent=True) or {}
     error = validar_personal(data, crear=False)
     if error:
         return jsonify(success=False, message=error), 400
+
+    try:
+        nuevo_rol = int(data.get('id_rol', empleado.id_rol))
+    except (TypeError, ValueError):
+        return jsonify(success=False, message='Rol no válido'), 400
+    nuevo_estado = data.get('estado', empleado.estado)
+    if not isinstance(nuevo_estado, bool):
+        return jsonify(success=False, message='Estado no válido'), 400
+    if _proteger_admin(empleado, nuevo_estado, nuevo_rol):
+        return jsonify(success=False, message='Debe permanecer al menos un administrador activo.'), 409
+    if 'dni' in data:
+        existente = DocumentoIdentidad.query.filter(DocumentoIdentidad.numero == data['dni'], DocumentoIdentidad.id_documento != empleado.id_documento).first()
+        if existente:
+            return jsonify(success=False, message='El DNI ya pertenece a otro empleado.'), 409
+    if data.get('correo') and Usuario.query.filter(Usuario.correo == data['correo'], Usuario.id_usuario != id).first():
+        return jsonify(success=False, message='El correo ya pertenece a otro empleado.'), 409
 
     empleado.nombres = data.get('nombres', empleado.nombres)
     empleado.apellido = data.get('apellido', empleado.apellido)
@@ -141,13 +169,20 @@ def actualizar_empleado(id):
     if 'dni' in data and empleado.documento:
         empleado.documento.numero = data['dni']
     
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, message='El DNI o correo ya está registrado.'), 409
     return jsonify({'success': True, 'data': usuario_schema.dump(empleado)})
 
 @personal_bp.route('/<int:id>', methods=['DELETE'])
 @admin_required
 def eliminar_empleado(id):
+    _bloquear_personal()
     empleado = Usuario.query.get_or_404(id)
+    if _proteger_admin(empleado, False, empleado.id_rol):
+        return jsonify(success=False, message='No puedes desactivar al último administrador activo.'), 409
     empleado.estado = False
     db.session.commit()
     return jsonify({'success': True, 'message': 'Empleado desactivado'})
@@ -168,7 +203,7 @@ def _totales_pagos(start_date, end_date, id_usuario=None):
     pagos_q = db.session.query(db.func.coalesce(db.func.sum(PagoEmpleado.monto), 0)).filter(
         PagoEmpleado.estado == 'Pagado', PagoEmpleado.fecha_pago >= inicio, PagoEmpleado.fecha_pago <= fin)
     adelantos_q = db.session.query(db.func.coalesce(db.func.sum(Adelanto.monto), 0)).filter(
-        Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado == 'Aprobado')
+        db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) >= inicio, db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) <= fin, Adelanto.estado == 'Aprobado')
     if id_usuario:
         pagos_q = pagos_q.filter(PagoEmpleado.id_usuario == id_usuario)
         adelantos_q = adelantos_q.filter(Adelanto.id_usuario == id_usuario)
@@ -185,7 +220,7 @@ def _totales_por_empleado(start_date, end_date):
         .group_by(PagoEmpleado.id_usuario).all())
     adelantos = dict(db.session.query(
         Adelanto.id_usuario, db.func.coalesce(db.func.sum(Adelanto.monto), 0)
-    ).filter(Adelanto.fecha >= inicio, Adelanto.fecha <= fin, Adelanto.estado == 'Aprobado')
+    ).filter(db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) >= inicio, db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) <= fin, Adelanto.estado == 'Aprobado')
         .group_by(Adelanto.id_usuario).all())
     return pagos, adelantos
 
@@ -258,6 +293,7 @@ def get_pagos():
                 'fecha': h.fecha_pago.strftime('%Y-%m-%d') if h.fecha_pago else None,
                 'estado': h.estado,
                 'descripcion': h.descripcion,
+                'tipo': h.tipo, 'semana': h.semana.isoformat() if h.semana else None,
             } for h in historial] + [{
                 'id_pago': f'adelanto-{a.id_adelanto}', 'id_usuario': a.id_usuario,
                 'empleado': f'{a.usuario_adelanto.nombres} {a.usuario_adelanto.apellido}' if a.usuario_adelanto else 'Empleado',
@@ -307,13 +343,15 @@ def get_pago_detalle(id_usuario):
 @personal_bp.route('/pagos', methods=['POST'])
 @admin_required
 def crear_pago():
-    data = request.get_json()
+    _bloquear_personal()
+    data = request.get_json() or {}
     admin_id = int(get_jwt_identity())
     try:
         id_usuario = int(data.get('id_usuario'))
     except (TypeError, ValueError):
         return jsonify({'success': False, 'message': 'Empleado no válido'}), 400
-    if not Usuario.query.get(id_usuario):
+    empleado = db.session.get(Usuario, id_usuario)
+    if not empleado or not empleado.estado or empleado.id_rol == 1:
         return jsonify({'success': False, 'message': 'Empleado no válido'}), 400
     try:
         monto = numero(data['monto'], .01)
@@ -335,12 +373,21 @@ def crear_pago():
     if estado not in ('Pagado', 'Pendiente'):
         estado = 'Pagado'
     descripcion = data.get('descripcion', '')
-    tipo = data.get('tipo', 'Pago')
+    tipo = data.get('tipo', 'Salario semanal')
+    if tipo not in ('Salario semanal', 'Bono', 'Horas extra', 'Otros'):
+        return jsonify(success=False, message='Selecciona un tipo de pago válido.'), 400
+    try:
+        dia_semana = date.fromisoformat(data.get('semana') or fecha.isoformat())
+        semana = dia_semana - timedelta(days=dia_semana.weekday())
+    except (TypeError, ValueError):
+        return jsonify(success=False, message='Semana de pago no válida.'), 400
     if tipo and tipo != 'Pago' and tipo != 'Adelanto':
         descripcion = f'{tipo}: {descripcion}'.strip()
 
     if _duplicado_pago(fecha, id_usuario, monto, estado):
         return jsonify({'success': False, 'message': 'Ya existe un pago similar para esa fecha'}), 400
+    if estado == 'Pagado' and PagoEmpleado.query.filter_by(id_usuario=id_usuario, monto=monto, estado='Pendiente', tipo=tipo, semana=semana).first():
+        return jsonify(success=False, message='Ya existe un pago pendiente igual. Usa Completar pago en el historial.'), 409
 
     pago_personal = PagoPersonal(
         id_usuario=id_usuario, monto=monto, fecha=fecha,
@@ -351,7 +398,7 @@ def crear_pago():
     pago_empleado = PagoEmpleado(
         id_usuario=id_usuario, monto=monto,
         fecha_pago=limites_dia(fecha)[0],
-        estado=estado, descripcion=descripcion
+        estado=estado, descripcion=descripcion, tipo=tipo, semana=semana, id_pago_personal=pago_personal.id_pago
     )
     db.session.add(pago_empleado)
     db.session.add(ActividadUsuario(id_usuario=admin_id, accion=f'Registró pago para empleado {id_usuario}', fecha=datetime.now()))
@@ -362,6 +409,54 @@ def crear_pago():
     )
     db.session.commit()
     return jsonify({'success': True, 'data': {'id_pago': pago_empleado.id_pago, 'monto': monto, 'fecha': fecha.isoformat(), 'estado': estado}})
+
+@personal_bp.route('/pagos/<int:id_pago>', methods=['PUT'])
+@admin_required
+def actualizar_pago(id_pago):
+    _bloquear_personal()
+    pago = PagoEmpleado.query.filter_by(id_pago=id_pago).with_for_update().first()
+    if not pago:
+        return jsonify(success=False, message='Pago no encontrado'), 404
+    data = request.get_json() or {}
+    estado = data.get('estado', pago.estado)
+    tipo = data.get('tipo', pago.tipo)
+    if tipo not in ('Salario semanal', 'Bono', 'Horas extra', 'Otros') or estado not in ('Pendiente', 'Pagado', 'Cancelado'):
+        return jsonify(success=False, message='Selecciona un concepto y estado válidos.'), 400
+    if pago.estado != 'Pendiente' and estado != pago.estado:
+        return jsonify(success=False, message='Solo se pueden completar o cancelar pagos pendientes.'), 409
+    if pago.tipo is not None and pago.estado != 'Pendiente' and tipo != pago.tipo:
+        return jsonify(success=False, message='No se puede cambiar el concepto de un pago resuelto.'), 409
+    try:
+        fecha_semana = date.fromisoformat(data['semana']) if data.get('semana') else pago.semana or pago.fecha_pago.date()
+        semana = fecha_semana - timedelta(days=fecha_semana.weekday())
+    except (TypeError, ValueError):
+        return jsonify(success=False, message='Semana no válida.'), 400
+    if pago.semana and semana != pago.semana and pago.estado != 'Pendiente':
+        return jsonify(success=False, message='No se puede cambiar la semana de un pago resuelto.'), 409
+    if (pago.estado, pago.tipo, pago.semana) == (estado, tipo, semana):
+        return jsonify(success=True, repetido=True)
+    espejo = db.session.get(PagoPersonal, pago.id_pago_personal) if pago.id_pago_personal else None
+    if not espejo and pago.id_pago_personal is None:
+        candidatos = PagoPersonal.query.filter_by(id_usuario=pago.id_usuario, monto=pago.monto,
+            estado=pago.estado, descripcion=pago.descripcion).filter(PagoPersonal.fecha == pago.fecha_pago.date()).all()
+        if len(candidatos) > 1:
+            return jsonify(success=False, message='El pago antiguo tiene registros ambiguos y requiere conciliación.'), 409
+        espejo = candidatos[0] if candidatos else None
+        if espejo:
+            pago.id_pago_personal = espejo.id_pago
+    if pago.estado == 'Pendiente' and estado == 'Pagado':
+        pago.fecha_pago = ahora()
+        if espejo:
+            espejo.fecha = ahora().astimezone(LIMA).date()
+    pago.estado, pago.tipo, pago.semana = estado, tipo, semana
+    if espejo:
+        espejo.estado, espejo.tipo = estado, tipo
+    db.session.add(ActividadUsuario(id_usuario=int(get_jwt_identity()),
+        accion=f'Actualizó pago {id_pago}: {estado}, {tipo}, semana {semana}', fecha=ahora()))
+    crear_notificacion(pago.id_usuario, 'Pago actualizado', f'Tu pago de S/ {pago.monto:.2f} figura como {estado}.')
+    db.session.commit()
+    return jsonify(success=True)
+
 
 @personal_bp.route('/pagos/adelanto', methods=['POST'])
 @admin_required
@@ -405,7 +500,8 @@ def crear_pago_adelanto():
     if existe:
         return jsonify({'success': False, 'message': 'Ya existe un adelanto similar para esa fecha'}), 400
 
-    nuevo = Adelanto(id_usuario=id_usuario, motivo=motivo, monto=monto, fecha=adelanto_fecha, estado=estado)
+    nuevo = Adelanto(id_usuario=id_usuario, motivo=motivo, monto=monto, fecha=adelanto_fecha, estado=estado,
+                     fecha_gestion=adelanto_fecha if estado == 'Aprobado' else None)
     db.session.add(nuevo)
     db.session.add(ActividadUsuario(id_usuario=admin_id, accion=f'Registró adelanto para empleado {id_usuario}', fecha=datetime.now()))
     db.session.commit()
@@ -432,11 +528,19 @@ def get_salarios():
     lunes = fecha - timedelta(days=fecha.weekday())
     inicio, _ = limites_dia(lunes)
     fin = inicio + timedelta(days=7)
-    pagos = dict(db.session.query(PagoEmpleado.id_usuario, db.func.sum(PagoEmpleado.monto)).filter(
-        PagoEmpleado.estado == 'Pagado', PagoEmpleado.fecha_pago >= inicio, PagoEmpleado.fecha_pago < fin
-    ).group_by(PagoEmpleado.id_usuario).all())
+    pagos = {}; pagos_sueldo = {}; sin_clasificar = set()
+    for pago in PagoEmpleado.query.filter(PagoEmpleado.estado == 'Pagado', db.or_(
+        PagoEmpleado.semana == lunes,
+        db.and_(PagoEmpleado.semana.is_(None), PagoEmpleado.fecha_pago >= inicio, PagoEmpleado.fecha_pago < fin))).all():
+        uid = pago.id_usuario
+        importe = Decimal(str(pago.monto))
+        pagos[uid] = pagos.get(uid, Decimal(0)) + importe
+        if pago.tipo == 'Salario semanal':
+            pagos_sueldo[uid] = pagos_sueldo.get(uid, Decimal(0)) + importe
+        elif pago.tipo is None:
+            sin_clasificar.add(uid)
     adelantos = dict(db.session.query(Adelanto.id_usuario, db.func.sum(Adelanto.monto)).filter(
-        Adelanto.estado == 'Aprobado', Adelanto.fecha >= inicio, Adelanto.fecha < fin
+        Adelanto.estado == 'Aprobado', db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) >= inicio, db.func.coalesce(Adelanto.fecha_gestion, Adelanto.fecha) < fin
     ).group_by(Adelanto.id_usuario).all())
     empleados = Usuario.query.filter(Usuario.id_rol != 1).order_by(Usuario.nombres).all()
     tarifas = SueldoSemanal.query.filter(SueldoSemanal.desde <= lunes).order_by(SueldoSemanal.desde).all()
@@ -449,13 +553,14 @@ def get_salarios():
         'total_pagos': round(float(pagos.get(e.id_usuario) or 0), 2),
         'total_adelantos': round(float(adelantos.get(e.id_usuario) or 0), 2),
         'neto': round(float(pagos.get(e.id_usuario) or 0) + float(adelantos.get(e.id_usuario) or 0), 2)
-    } for e in empleados if e.estado or e.id_usuario in pagos or e.id_usuario in adelantos]
+    } for e in empleados if e.estado or e.id_usuario in pagos or e.id_usuario in adelantos or e.id_usuario in detalle]
     for fila in datos:
         uid = fila['id_usuario']
         base = bases.get(uid)
         deducciones = sum((Decimal(str(d['monto'])) for d in detalle.get(uid, [])), Decimal('0'))
-        saldo = None if base is None else base - deducciones - Decimal(str(fila['neto']))
+        saldo = None if base is None or uid in sin_clasificar else base - deducciones - pagos_sueldo.get(uid, Decimal(0)) - Decimal(str(fila['total_adelantos']))
         fila.update(sueldo_base=None if base is None else float(base), descuentos=detalle.get(uid, []),
+                    pagos_sueldo=float(pagos_sueldo.get(uid, 0)), pagos_por_clasificar=uid in sin_clasificar,
                     total_descuentos=float(deducciones), saldo=None if saldo is None else float(round(saldo, 2)))
     return jsonify(success=True, data=datos, inicio=lunes.isoformat(), fin=(lunes + timedelta(days=6)).isoformat())
 
@@ -501,14 +606,21 @@ def registrar_descuento_semanal():
     try:
         empleado, lunes = _datos_nomina(data)
         monto = Decimal(str(numero(data.get('monto'), .01)))
+        clave = str(uuid.UUID(str(data.get('clave_operacion'))))
         motivo = str(data.get('motivo') or '').strip()
         if not motivo or len(motivo) > 255 or monto > Decimal('9999999999.99') or monto != monto.quantize(Decimal('.01')):
             raise ValueError()
     except (TypeError, ValueError, InvalidOperation):
         return jsonify(success=False, message='Indique empleado, fecha, motivo y monto positivo con hasta dos decimales'), 400
     uid = int(get_jwt_identity())
+    _bloquear_personal()
+    existente = DescuentoSemanal.query.filter_by(clave_operacion=clave).first()
+    if existente:
+        if (existente.id_usuario, existente.semana, existente.monto, existente.motivo, existente.registrado_por) != (empleado.id_usuario, lunes, monto, motivo, uid):
+            return jsonify(success=False, message='La operación ya fue usada con otros datos.'), 409
+        return jsonify(success=True, repetido=True)
     db.session.add(DescuentoSemanal(id_usuario=empleado.id_usuario, semana=lunes, monto=monto,
-        motivo=motivo, registrado_por=uid, fecha=ahora()))
+        motivo=motivo, registrado_por=uid, fecha=ahora(), clave_operacion=clave))
     db.session.add(ActividadUsuario(id_usuario=uid,
         accion=f'Descuento de {monto} al empleado {empleado.id_usuario} para {lunes}: {motivo}'[:255], fecha=ahora()))
     db.session.commit()

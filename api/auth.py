@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from api.sesiones import crear_sesion
+from models import SesionUsuario
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import or_
 from bd import db
@@ -125,14 +127,7 @@ def login():
     _limpiar_bloqueos(identificador, ip)
     _registrar_intento(identificador, ip, 'exito')
 
-    try:
-        db.session.add(ActividadUsuario(id_usuario=usuario.id_usuario, accion='Inició sesión', fecha=_ahora()))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-    access_token = create_access_token(identity=str(usuario.id_usuario))
-    refresh_token = create_refresh_token(identity=str(usuario.id_usuario))
+    access_token, refresh_token = crear_sesion(usuario)
 
     return jsonify({
         'success': True,
@@ -150,7 +145,10 @@ def login():
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    # JWT es stateless, simplemente retornamos exito
+    sesion = db.session.get(SesionUsuario, get_jwt().get('sid'))
+    if sesion:
+        sesion.revocada = True
+        db.session.commit()
     return jsonify({'success': True, 'message': 'Sesión cerrada correctamente'})
 
 @auth_bp.route('/refresh', methods=['POST'])
@@ -158,9 +156,9 @@ def logout():
 def refresh():
     current_user = get_jwt_identity()
     usuario = db.session.get(Usuario, int(current_user))
-    if not usuario or not usuario.estado:
+    if not usuario or not usuario.estado or not usuario.rol or not usuario.rol.estado:
         return jsonify(success=False, error='Cuenta inactiva'), 401
-    access_token = create_access_token(identity=current_user)
+    access_token = create_access_token(identity=current_user, additional_claims={'sid': get_jwt()['sid']})
     return jsonify({'success': True, 'data': {'token': access_token}})
 
 @auth_bp.route('/me', methods=['GET'])

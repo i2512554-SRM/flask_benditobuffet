@@ -11,13 +11,11 @@ from api.fechas import ahora
 fixture = FlujosTest()
 fixture.setUp()
 app = fixture.app
-app.register_blueprint(auth_bp)
-app.register_blueprint(cocina_bp)
 with app.app_context():
     for u in Usuario.query.all():
         u.clave = bcrypt.hashpw(b'demo-local-2026', bcrypt.gensalt()).decode()
     fixture.producto(25)
-    db.session.add(PagoEmpleado(id_usuario=2,monto=250,estado='Pagado',fecha_pago=ahora(),descripcion='Salario semanal'))
+    db.session.add(PagoEmpleado(id_usuario=2,monto=250,estado='Pagado',fecha_pago=ahora(),descripcion='Salario semanal',tipo='Salario semanal'))
     db.session.add(Adelanto(id_usuario=2,monto=30,estado='Pendiente',fecha=ahora(),motivo='Transporte'))
     for dia in range(8):
         db.session.add(TransaccionCaja(id_usuario=2,tipo='Venta',monto=150+dia*15,fecha=ahora()-timedelta(days=dia),metodo_pago='Yape',descripcion='Ventas de prueba'))
