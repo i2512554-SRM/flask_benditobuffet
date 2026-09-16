@@ -1,11 +1,9 @@
 """Vista local de revisión con datos ficticios; nunca utiliza la conexión real."""
 from pathlib import Path
-from datetime import timedelta
 import bcrypt
 from flask import send_from_directory
 from tests.test_flows import FlujosTest, db, Usuario, PagoEmpleado, Adelanto, TransaccionCaja
-from api.auth import auth_bp
-from api.cocina import cocina_bp
+from tests.datos_grafico import cargar_historico
 from api.fechas import ahora
 
 fixture = FlujosTest()
@@ -17,10 +15,8 @@ with app.app_context():
     fixture.producto(25)
     db.session.add(PagoEmpleado(id_usuario=2,monto=250,estado='Pagado',fecha_pago=ahora(),descripcion='Salario semanal',tipo='Salario semanal'))
     db.session.add(Adelanto(id_usuario=2,monto=30,estado='Pendiente',fecha=ahora(),motivo='Transporte'))
-    for dia in range(8):
-        db.session.add(TransaccionCaja(id_usuario=2,tipo='Venta',monto=150+dia*15,fecha=ahora()-timedelta(days=dia),metodo_pago='Yape',descripcion='Ventas de prueba'))
-        db.session.add(TransaccionCaja(id_usuario=2,tipo='Gasto',monto=30+dia*3,fecha=ahora()-timedelta(days=dia),metodo_pago='Efectivo',descripcion='Gasto de prueba'))
     db.session.commit()
+    cargar_historico()
 
 dist = Path(__file__).resolve().parents[1] / 'frontend' / 'dist'
 @app.route('/', defaults={'path':''})

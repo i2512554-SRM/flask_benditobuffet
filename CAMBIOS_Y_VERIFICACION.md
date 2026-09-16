@@ -48,6 +48,8 @@ Pruebas aisladas: `python -m unittest discover -s tests -v`. Utilizan SQLite en 
 
 Interfaz: `npm run build` desde `frontend`. Para revisión manual con datos ficticios: `python -m tests.preview`, abrir `http://127.0.0.1:5056`. Usuarios locales `user1` (administrador), `user2` (cajero), `user3` (cocina), `user4` (trabajador); contraseña exclusivamente de prueba: `demo-local-2026`. El servidor solo escucha en localhost y usa memoria; no debe desplegarse.
 
+La vista local incluye movimientos y cierres ficticios desde el 1 de abril de 2025 hasta ayer: ventas por efectivo, Yape y tarjeta, gastos variables, mayor venta los fines de semana y temporadas altas. Los lunes no tienen movimientos. Permite comparar días, semanas, meses y años en Reportes de caja. Los datos se recrean al reiniciar; el cargador rechaza bases persistentes y no inserta nada en Supabase.
+
 No se han ejecutado migraciones ni operaciones sobre los datos reales. Los bloqueos de concurrencia de PostgreSQL requieren validación en un entorno de pruebas PostgreSQL antes de producción; SQLite verifica la lógica de los flujos, no el comportamiento de esos bloqueos.
 
 Resultado local al 14 de septiembre: 32 pruebas aprobadas, una prueba PostgreSQL omitida, compilación de la interfaz correcta y generador SQL ejecutado sin conexión. Las nuevas regresiones cubren los trece hallazgos de la revisión, además de DNI, contraseñas, retención y ausencia de tablas. La revisión visual previa cubrió reportes, pagos/adelantos, empleados, perfil y sueldo semanal; los nuevos cambios se verificaron mediante pruebas de API y compilación. La prueba opcional de PostgreSQL requiere `TEST_POSTGRES_URL`; no se ejecutó por falta de un entorno PostgreSQL de pruebas configurado.
