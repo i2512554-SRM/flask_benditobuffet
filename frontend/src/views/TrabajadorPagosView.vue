@@ -3,13 +3,17 @@
     <VolverBtn to="/trabajador" />
     <div class="page-header">
       <div>
-        <h1>Mis pagos</h1>
+        <h1>{{ soloAdelantos ? 'Mis adelantos' : 'Mis pagos' }}</h1>
         <p>Historial de pagos y solicitudes de adelanto</p>
       </div>
       <SolicitarAdelanto @enviado="load" />
     </div>
 
-    <div class="table-card">
+    <nav aria-label="Historial personal" class="page-header">
+      <router-link to="/trabajador/pagos">Pagos y adelantos</router-link>
+      <router-link to="/trabajador/pagos?vista=adelantos">Solo adelantos</router-link>
+    </nav>
+    <div class="table-card" v-if="!soloAdelantos">
       <h2 class="section-title"><i class="fa-solid fa-money-check-dollar"></i> Pagos registrados</h2>
       <DataTable :value="data.pagos || []" :paginator="true" :rows="10" dataKey="id_pago" responsiveLayout="scroll">
         <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
@@ -70,7 +74,10 @@
 
 <script setup>
 import { formatFecha as fechaLegible } from '../utils/format'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
+const soloAdelantos = computed(() => route.query.vista === 'adelantos')
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'

@@ -79,9 +79,6 @@
       <button class="accion-chip chip-btn" type="button" @click="abrirDialogTransaccion('Gasto')" :disabled="$saving || (!caja.abierta)">
         <i class="fa-solid fa-circle-minus"></i> Registrar Egreso
       </button>
-      <router-link to="/caja" class="accion-chip">
-        <i class="fa-solid fa-vault"></i> Ir al Control de Caja
-      </router-link>
       <router-link to="/caja/movimientos" class="accion-chip">
         <i class="fa-solid fa-arrows-rotate"></i> Movimientos
       </router-link>
@@ -238,7 +235,7 @@ const dialogTransaccion = ref(false)
 const guardando = ref(false)
 const montoInicial = ref(null)
 const metodosPago = ['Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Otros']
-const nuevaTransaccion = ref({ tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' })
+const nuevaTransaccion = ref({ tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '', clave_operacion: null })
 const tiposTransaccion = [
   { label: 'Venta (Ingreso)', value: 'Venta' },
   { label: 'Gasto (Egreso)', value: 'Gasto' }
@@ -344,7 +341,7 @@ const abrirCaja = async () => {
 }
 
 const abrirDialogTransaccion = (tipo) => {
-  nuevaTransaccion.value = { tipo, metodo_pago: 'Efectivo', monto: null, descripcion: '' }
+  nuevaTransaccion.value = { tipo, metodo_pago: 'Efectivo', monto: null, descripcion: '', clave_operacion: crypto.randomUUID() }
   dialogTransaccion.value = true
 }
 
@@ -365,12 +362,13 @@ const registrarTransaccion = async () => {
       tipo: nuevaTransaccion.value.tipo,
       monto,
       metodo_pago: nuevaTransaccion.value.metodo_pago,
-      descripcion: nuevaTransaccion.value.descripcion.trim()
+      descripcion: nuevaTransaccion.value.descripcion.trim(),
+      clave_operacion: nuevaTransaccion.value.clave_operacion
     })
     if (res.data.success) {
       toast.add({ severity: 'success', summary: 'Movimiento registrado', life: 2500 })
       dialogTransaccion.value = false
-      nuevaTransaccion.value = { tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '' }
+      nuevaTransaccion.value = { tipo: 'Venta', metodo_pago: 'Efectivo', monto: null, descripcion: '', clave_operacion: null }
       await cargar()
       await cargarRendimiento()
     }

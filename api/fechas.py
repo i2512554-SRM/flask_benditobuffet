@@ -1,6 +1,9 @@
 from datetime import datetime, time, timedelta, timezone
 
 LIMA = timezone(timedelta(hours=-5))
+DIAS_ES = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+MESES_ES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre')
 
 
 def ahora():
@@ -9,6 +12,20 @@ def ahora():
 
 def utc(valor):
     return valor.replace(tzinfo=timezone.utc) if valor.tzinfo is None else valor.astimezone(timezone.utc)
+
+
+def iso_utc(valor):
+    return utc(valor).isoformat() if valor else None
+
+
+def fecha_larga_local(valor):
+    local = utc(valor).astimezone(LIMA)
+    return f'{DIAS_ES[local.weekday()]}, {local.day} de {MESES_ES[local.month - 1]} de {local.year}'
+
+
+def fecha_local(valor, hora=False):
+    formato = '%d/%m/%Y %H:%M' if hora else '%d/%m/%Y'
+    return utc(valor).astimezone(LIMA).strftime(formato) if valor else None
 
 
 def limites_dia(fecha=None):

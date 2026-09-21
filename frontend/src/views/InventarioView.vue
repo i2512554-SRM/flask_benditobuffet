@@ -73,8 +73,8 @@
         <Column header="Acciones" :exportable="false">
           <template #body="slotProps">
             <div class="row-actions">
-              <Button :disabled="$saving" icon="pi pi-eye" severity="info" text rounded @click="verProducto(slotProps.data)" />
-              <Button :disabled="$saving" icon="pi pi-pencil" severity="secondary" text rounded @click="editar(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-eye" aria-label="Ver producto" severity="info" text rounded @click="verProducto(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-pencil" aria-label="Editar producto" severity="secondary" text rounded @click="editar(slotProps.data)" />
               <Button :disabled="$saving" icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirAgregarStock(slotProps.data)" />
               <Button :disabled="$saving" icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirRegistrarSalida(slotProps.data)" />
               <Button v-if="esAdmin" :disabled="$saving" :icon="slotProps.data.estado ? 'pi pi-ban' : 'pi pi-check'" :severity="slotProps.data.estado ? 'danger' : 'success'" text rounded :title="slotProps.data.estado ? 'Desactivar' : 'Activar'" @click="toggleEstado(slotProps.data)" />
@@ -253,7 +253,7 @@
       </div>
       <template #footer>
         <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="stockDialog = false" />
-        <Button :disabled="$saving" label="Confirmar" @click="confirmarStock" />
+        <Button :disabled="$saving || procesandoStock" :loading="procesandoStock" label="Confirmar" @click="confirmarStock" />
       </template>
     </Dialog>
 
@@ -295,7 +295,7 @@
       </div>
       <template #footer>
         <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="compraDialog = false" />
-        <Button label="Guardar inversión" :disabled="$saving || (!compraForm.detalle.length)" @click="guardarCompra" />
+        <Button label="Guardar inversión" :disabled="$saving || procesandoCompra || (!compraForm.detalle.length)" :loading="procesandoCompra" @click="guardarCompra" />
       </template>
     </Dialog>
 
@@ -440,6 +440,8 @@ const provForm = ref({ nombre: '' })
 const compraSeleccionada = ref({})
 const productoVisto = ref({})
 const stockWarning = ref('')
+const procesandoStock = ref(false)
+const procesandoCompra = ref(false)
 
 const productosActivos = computed(() => productos.value.filter(p => p.estado))
 const stockProducto = computed(() => productosActivos.value.find(p => p.id_producto === stockForm.value.id_producto) || null)
@@ -573,7 +575,7 @@ const cargarActivos = async () => {
 const abrirAgregarStock = (prod = null) => {
   stockModo.value = 'entrada'
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '' }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
   cargarActivos()
   stockDialog.value = true
 }
@@ -581,12 +583,13 @@ const abrirAgregarStock = (prod = null) => {
 const abrirRegistrarSalida = (prod = null) => {
   stockModo.value = 'salida'
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '' }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
   cargarActivos()
   stockDialog.value = true
 }
 
 const confirmarStock = async () => {
+  if (procesandoStock.value) return
   stockWarning.value = ''
   const prod = stockProducto.value
   if (!stockForm.value.id_producto || !prod) {
@@ -608,9 +611,10 @@ const confirmarStock = async () => {
       return
     }
   }
+  procesandoStock.value = true
   try {
     const url = `/inventario/productos/${stockForm.value.id_producto}/stock/${stockModo.value}`
-    const body = { cantidad }
+    const body = { cantidad, clave_operacion: stockForm.value.clave_operacion }
     if (stockForm.value.motivo) body.motivo = stockForm.value.motivo
     const res = await api.post(url, body)
     toast.add({ severity: 'success', summary: res.data.message || 'Operación registrada', life: 2500 })
@@ -618,12 +622,14 @@ const confirmarStock = async () => {
     await recargarTodo()
   } catch (e) {
     toast.add({ severity: 'error', summary: e.response?.data?.error || 'Error en la operación', life: 3500 })
+  } finally {
+    procesandoStock.value = false
   }
 }
 
 const openCompra = () => {
   cargarActivos()
-  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '' }
+  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '', clave_operacion: crypto.randomUUID() }
   compraDialog.value = true
 }
 
@@ -636,6 +642,8 @@ const quitarLinea = (idx) => {
 }
 
 const guardarCompra = async () => {
+  if (procesandoCompra.value) return
+  procesandoCompra.value = true
   try {
     const lineas = compraForm.value.detalle.filter(l => l.id_producto && l.cantidad > 0)
     if (!lineas.length) {
@@ -645,13 +653,16 @@ const guardarCompra = async () => {
     await api.post('/inventario/compras', {
       id_proveedor: compraForm.value.id_proveedor,
       notas: compraForm.value.notas,
-      detalle: lineas
+      detalle: lineas,
+      clave_operacion: compraForm.value.clave_operacion
     })
     toast.add({ severity: 'success', summary: 'Compra registrada y stock actualizado', life: 2500 })
     compraDialog.value = false
     await Promise.all([cargarCompras(), cargarProductos(), cargarMovimientos(), cargarResumen()])
   } catch (e) {
     toast.add({ severity: 'error', summary: e.response?.data?.error || 'Error al registrar', life: 3500 })
+  } finally {
+    procesandoCompra.value = false
   }
 }
 

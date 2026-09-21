@@ -172,9 +172,9 @@
 
 <script setup>
 import { formatFecha as fechaLegible, fechaLocal } from '../utils/format'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -188,6 +188,7 @@ import Tag from 'primevue/tag'
 import api from '../config/axios'
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 
 const pagos = ref({
@@ -276,7 +277,8 @@ const openRegistrar = (tipo) => {
     tipo: 'Salario semanal',
     estado: 'Pagado',
     descripcion: '',
-    motivo: ''
+    motivo: '',
+    clave_operacion: crypto.randomUUID()
   }
   dialogVisible.value = true
 }
@@ -317,8 +319,10 @@ const guardar = async () => {
 }
 
 onMounted(async () => {
+  if (route.query.accion === 'nuevo') openRegistrar('pago')
   await Promise.all([cargarDatos(), cargarEmpleados()])
 })
+watch(() => route.query.accion, accion => { if (accion === 'nuevo') openRegistrar('pago') })
 </script>
 
 <style scoped>

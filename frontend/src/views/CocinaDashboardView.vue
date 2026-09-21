@@ -72,9 +72,6 @@
         <router-link to="/cocinero/alertas" class="accion-chip">
           <i class="fa-solid fa-chart-line"></i> Consultar Stock
         </router-link>
-        <router-link to="/inventario/operaciones?vista=productos" class="accion-chip">
-          <i class="fa-solid fa-burger"></i> Productos y stock
-        </router-link>
         <router-link to="/cocinero/solicitudes" class="accion-chip">
           <i class="fa-solid fa-plus"></i> Realizar Solicitud
         </router-link>
@@ -108,11 +105,6 @@
         <div class="module-icon tone-green"><i class="fa-solid fa-carrot"></i></div>
         <h3>Insumos</h3>
         <p>Consultar ingredientes disponibles</p>
-      </router-link>
-      <router-link to="/inventario/operaciones?vista=productos" class="module-card">
-        <div class="module-icon tone-blue"><i class="fa-solid fa-burger"></i></div>
-        <h3>Productos</h3>
-        <p>Consultar productos registrados</p>
       </router-link>
       <router-link to="/cocinero/alertas" class="module-card">
         <div class="module-icon tone-red"><i class="fa-solid fa-chart-line"></i></div>

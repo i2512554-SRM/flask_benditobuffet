@@ -115,14 +115,14 @@
         <h3>Mis pagos</h3>
         <p>Fecha, monto y estado de pagos</p>
       </router-link>
-      <router-link to="/trabajador/pagos" class="module-card">
+      <router-link to="/trabajador/pagos?vista=adelantos" class="module-card">
         <div class="module-icon tone-amber"><i class="fa-solid fa-file-invoice-dollar"></i></div>
         <h3>Mis adelantos</h3>
         <p>Solicita y consulta el estado de tus adelantos</p>
       </router-link>
       <router-link to="/trabajador/notificaciones" class="module-card">
         <div class="module-icon tone-purple"><i class="fa-solid fa-bell"></i></div>
-        <h3>Mis solicitudes</h3>
+        <h3>Notificaciones</h3>
         <p>Avisos y respuestas del sistema</p>
       </router-link>
     </div>

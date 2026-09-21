@@ -64,7 +64,7 @@ def _serializar_usuario(usuario):
             'foto_perfil': foto_perfil,
             'fecha_ingreso': perfil.fecha_ingreso.strftime('%d/%m/%Y') if (perfil and perfil.fecha_ingreso) else None,
             'horario': perfil.horario if perfil else None,
-            'salario': perfil.salario if perfil else None,
+            'salario': float(perfil.salario) if (perfil and perfil.salario is not None) else None,
             'sueldo_semanal': float(tarifa.monto) if tarifa else None,
         }
     }
@@ -91,7 +91,7 @@ def get_perfil():
         for n in notificaciones_frescas:
             notif_data.append({
                 'id_adelanto': n.id_adelanto,
-                'monto': n.monto,
+                'monto': float(n.monto),
                 'estado': n.estado,
                 'respuesta_admin': n.respuesta_admin,
             })
@@ -104,7 +104,7 @@ def get_perfil():
             'usuario': _serializar_usuario(usuario),
             'pagos': [{
                 'id_pago': p.id_pago,
-                'monto': p.monto,
+                'monto': float(p.monto),
                 'fecha_pago': p.fecha_pago.strftime('%d/%m/%Y') if p.fecha_pago else None,
                 'descripcion': p.descripcion or 'Pago registrado',
                 'estado': p.estado,
@@ -112,7 +112,7 @@ def get_perfil():
             'adelantos': [{
                 'id_adelanto': a.id_adelanto,
                 'motivo': a.motivo,
-                'monto': a.monto,
+                'monto': float(a.monto),
                 'fecha': a.fecha.strftime('%d/%m/%Y') if a.fecha else None,
                 'estado': a.estado,
                 'respuesta_admin': a.respuesta_admin,
@@ -292,7 +292,7 @@ def solicitar_adelanto():
     return jsonify({'success': True, 'message': 'Solicitud de adelanto enviada', 'data': {
         'id_adelanto': adelanto.id_adelanto,
         'motivo': adelanto.motivo,
-        'monto': adelanto.monto,
+        'monto': float(adelanto.monto),
         'fecha': adelanto.fecha.strftime('%d/%m/%Y') if adelanto.fecha else None,
         'estado': adelanto.estado,
     }})

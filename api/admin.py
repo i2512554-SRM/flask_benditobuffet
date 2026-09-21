@@ -181,7 +181,7 @@ def listar_solicitudes():
             'id_usuario': s.id_usuario,
             'empleado': f"{emp.nombres} {emp.apellido}" if emp else 'Desconocido',
             'motivo': s.motivo,
-            'monto': s.monto,
+            'monto': float(s.monto),
             'fecha': s.fecha.strftime('%d/%m/%Y') if s.fecha else None,
             'fecha_gestion': s.fecha_gestion.strftime('%d/%m/%Y %H:%M') if s.fecha_gestion else None,
             'estado': s.estado,

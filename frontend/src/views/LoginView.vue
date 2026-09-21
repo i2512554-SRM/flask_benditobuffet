@@ -61,7 +61,7 @@
           </div>
         </Transition>
 
-        <p class="olvide stagger-5">¿Olvidaste tu contraseña?</p>
+        <p class="olvide stagger-5">Si olvidaste tu contraseña, contacta al administrador.</p>
 
         <hr class="stagger-6" />
 

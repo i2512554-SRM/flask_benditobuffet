@@ -34,6 +34,7 @@ def configurar_sesiones(jwt):
         s = db.session.get(SesionUsuario, sid)
         u = db.session.get(Usuario, s.id_usuario) if s else None
         return (not s or s.revocada or utc(s.expira) <= ahora() or not u
+                or not u.estado or not u.rol or not u.rol.estado
                 or str(u.id_usuario) != payload.get('sub')
                 or s.huella_clave != huella(u))
 

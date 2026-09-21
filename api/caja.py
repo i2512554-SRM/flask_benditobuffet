@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from bisect import bisect_left
 from decimal import Decimal
 from functools import wraps
 from flask import Blueprint, request, jsonify
@@ -8,6 +9,7 @@ from models import db, TransaccionCaja, CierreCaja, Usuario
 from schemas.caja import transacciones_schema, cierre_schema, transaccion_schema
 from api.fechas import ahora, limites_dia, periodo_financiero, utc, LIMA
 from api.validaciones import numero
+from api.idempotencia import normalizar_clave
 
 caja_bp = Blueprint('caja', __name__)
 METODOS = ('Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Otros')
@@ -40,6 +42,26 @@ def _totales(movimientos):
     return {'ventas': float(ventas.quantize(Decimal('.01'))), 'gastos': float(gastos.quantize(Decimal('.01'))),
             'neto': float((ventas - gastos).quantize(Decimal('.01')))}
 
+def _prefijos_movimientos(movimientos):
+    fechas, ventas, gastos = [], [Decimal(0)], [Decimal(0)]
+    for movimiento in movimientos:
+        fechas.append(utc(movimiento.fecha))
+        monto = Decimal(str(movimiento.monto))
+        ventas.append(ventas[-1] + (monto if movimiento.tipo == 'Venta' else Decimal(0)))
+        gastos.append(gastos[-1] + (monto if movimiento.tipo == 'Gasto' else Decimal(0)))
+    return fechas, ventas, gastos
+
+def _totales_intervalo(prefijos, inicio, fin):
+    fechas, ventas, gastos = prefijos
+    izquierda, derecha = bisect_left(fechas, utc(inicio)), bisect_left(fechas, utc(fin))
+    total_ventas = ventas[derecha] - ventas[izquierda]
+    total_gastos = gastos[derecha] - gastos[izquierda]
+    return {
+        'ventas': float(total_ventas.quantize(Decimal('.01'))),
+        'gastos': float(total_gastos.quantize(Decimal('.01'))),
+        'neto': float((total_ventas - total_gastos).quantize(Decimal('.01'))),
+    }
+
 def _historial(inicio=None, fin_periodo=None):
     query = CierreCaja.query
     if inicio is not None:
@@ -48,25 +70,34 @@ def _historial(inicio=None, fin_periodo=None):
     cierres = query.all() if inicio is not None else query.limit(200).all()
     if not cierres:
         return []
-    movimientos = _movimientos(min(c.fecha for c in cierres), ahora()).all()
-    resultado = []
+    corte = ahora()
+    resultado, intervalos = [], []
     siguiente = CierreCaja.query.filter(CierreCaja.fecha > cierres[0].fecha).order_by(CierreCaja.fecha).first()
     siguiente_apertura = utc(siguiente.fecha) if siguiente else None
     for c in cierres:
         item = cierre_schema.dump(c)
-        fin = utc(c.fecha_cierre) if c.fecha_cierre else ahora()
+        fin = utc(c.fecha_cierre) if c.fecha_cierre else corte
+        if fin_periodo is not None and fin > utc(fin_periodo):
+            fin = utc(fin_periodo)
         if siguiente_apertura and fin > siguiente_apertura:
             fin = siguiente_apertura
             item['requiere_revision'] = True
             if c.estado == 'abierta':
                 item['estado'] = 'pendiente de revisión'
-        totales = _totales([t for t in movimientos if utc(c.fecha) <= utc(t.fecha) < fin])
+        intervalos.append((c, item, utc(c.fecha), fin))
+        siguiente_apertura = utc(c.fecha)
+
+    limite_inferior = min(intervalo[2] for intervalo in intervalos)
+    limite_superior = max(intervalo[3] for intervalo in intervalos)
+    movimientos = _movimientos(limite_inferior, limite_superior).order_by(TransaccionCaja.fecha).all()
+    prefijos = _prefijos_movimientos(movimientos)
+    for c, item, apertura, fin in intervalos:
+        totales = _totales_intervalo(prefijos, apertura, fin)
         # Conservar importes históricos guardados: mostrar el cálculo por apertura sin reescribirlos.
-        item['total_ventas_registrado'] = c.total_ventas
+        item['total_ventas_registrado'] = float(c.total_ventas or 0)
         item.update(total_ventas=totales['ventas'], total_gastos=totales['gastos'], neto=totales['neto'])
         item['saldo_final'] = round(float(c.monto_inicial or 0) + totales['neto'], 2)
         resultado.append(item)
-        siguiente_apertura = utc(c.fecha)
     return resultado
 
 @caja_bp.route('/actual')
@@ -131,8 +162,6 @@ def get_transacciones():
 @_caja
 def crear_transaccion():
     _bloquear_caja()
-    if not _abierta():
-        return jsonify(success=False, error='Abre la caja antes de registrar movimientos.'), 409
     data = request.get_json(silent=True) or {}
     if data.get('tipo') not in ('Venta', 'Gasto') or data.get('metodo_pago') not in METODOS:
         return jsonify(success=False, error='Selecciona el tipo y el método de pago.'), 400
@@ -142,9 +171,28 @@ def crear_transaccion():
             raise ValueError()
     except (ValueError, TypeError):
         return jsonify(success=False, error='Ingresa un monto positivo con hasta dos decimales.'), 400
+    try:
+        clave = normalizar_clave(data)
+    except ValueError as error:
+        return jsonify(success=False, error=str(error)), 400
+    uid = int(get_jwt_identity())
+    if clave:
+        existente = TransaccionCaja.query.filter_by(clave_operacion=clave).first()
+        if existente:
+            coincide = (
+                existente.id_usuario == uid and existente.tipo == data['tipo']
+                and Decimal(str(existente.monto)).quantize(Decimal('.01')) == Decimal(str(monto)).quantize(Decimal('.01'))
+                and existente.metodo_pago == data['metodo_pago']
+                and (existente.descripcion or '') == (data.get('descripcion') or '').strip()
+            )
+            if not coincide:
+                return jsonify(success=False, error='El identificador ya pertenece a otra operación.'), 409
+            return jsonify(success=True, repetida=True, data=transaccion_schema.dump(existente))
+    if not _abierta():
+        return jsonify(success=False, error='Abre la caja antes de registrar movimientos.'), 409
     t = TransaccionCaja(id_usuario=int(get_jwt_identity()), tipo=data['tipo'], monto=monto,
         metodo_pago=data['metodo_pago'], categoria=data.get('categoria', ''),
-        descripcion=data.get('descripcion', ''), fecha=ahora())
+        descripcion=(data.get('descripcion') or '').strip(), clave_operacion=clave, fecha=ahora())
     db.session.add(t)
     db.session.commit()
     return jsonify(success=True, data=transaccion_schema.dump(t))
@@ -158,18 +206,30 @@ def get_historial():
 @_caja
 def reportes():
     try:
-        fecha = date.fromisoformat(request.args.get('fecha') or ahora().astimezone(LIMA).date().isoformat())
-        inicio, fin, buckets = periodo_financiero(request.args.get('periodo', 'mes'), fecha)
+        datos = _datos_reporte(request.args.get('periodo', 'mes'), request.args.get('fecha'))
     except ValueError:
         return jsonify(success=False, error='Fecha o periodo no válido'), 400
-    movimientos = _movimientos(inicio, fin).order_by(TransaccionCaja.fecha.desc()).all()
-    puntos = []
-    for etiqueta, a, b in buckets:
-        total = _totales([t for t in movimientos if a <= utc(t.fecha) < b])
-        puntos.append({'etiqueta': etiqueta, 'ingresos': total['ventas'], 'egresos': total['gastos'], 'ganancia': total['neto']})
-    totales = _totales(movimientos)
-    return jsonify(success=True, data={
+    return jsonify(success=True, data=datos)
+
+def _datos_reporte(periodo='mes', fecha_texto=None):
+    inicio, fin, movimientos, puntos, totales = _calcular_reporte(periodo, fecha_texto)
+    return {
         'ventas_mes': totales['ventas'], 'egresos_mes': totales['gastos'], 'neto_mes': totales['neto'],
         'inicio': inicio.isoformat(), 'fin': fin.isoformat(), 'puntos': puntos,
-        'transacciones': transacciones_schema.dump(movimientos),
-        'cierres': _historial(inicio, fin)})
+        'transacciones': transacciones_schema.dump(reversed(movimientos)),
+        'cierres': _historial(inicio, fin),
+    }
+
+def _puntos_reporte(periodo='mes', fecha_texto=None):
+    return _calcular_reporte(periodo, fecha_texto)[3]
+
+def _calcular_reporte(periodo, fecha_texto):
+    fecha = date.fromisoformat(fecha_texto or ahora().astimezone(LIMA).date().isoformat())
+    inicio, fin, buckets = periodo_financiero(periodo, fecha)
+    movimientos = _movimientos(inicio, fin).order_by(TransaccionCaja.fecha, TransaccionCaja.id_transaccion).all()
+    prefijos = _prefijos_movimientos(movimientos)
+    puntos = []
+    for etiqueta, a, b in buckets:
+        total = _totales_intervalo(prefijos, a, b)
+        puntos.append({'etiqueta': etiqueta, 'ingresos': total['ventas'], 'egresos': total['gastos'], 'ganancia': total['neto']})
+    return inicio, fin, movimientos, puntos, _totales_intervalo(prefijos, inicio, fin)

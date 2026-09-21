@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from bd import db
 from api.validaciones import cantidad_decimal
+from api.fechas import fecha_larga_local, fecha_local
 from models import (
     Usuario, Producto, Categoria, SolicitudInsumo, ActividadUsuario, crear_notificacion
 )
@@ -65,11 +66,11 @@ def _serializar_solicitud(s):
         'id_solicitud': s.id_solicitud,
         'id_producto': s.id_producto,
         'producto': s.producto,
-        'cantidad': s.cantidad,
+        'cantidad': float(s.cantidad),
         'observacion': s.observacion,
         'estado': s.estado,
         'respuesta': s.respuesta,
-        'fecha': s.fecha.strftime('%d/%m/%Y %H:%M') if s.fecha else None,
+        'fecha': fecha_local(s.fecha, hora=True),
     }
 
 
@@ -94,7 +95,7 @@ def dashboard(cocinero):
                 'apellido': cocinero.apellido,
                 'rol': cocinero.rol.nombre if cocinero.rol else 'Cocinero',
             },
-            'fecha': _ahora().strftime('%A, %d de %B del %Y'),
+            'fecha': fecha_larga_local(_ahora()),
             'resumen': {
                 'total_insumos': total_insumos,
                 'disponibles': len(disponibles),

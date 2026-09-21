@@ -76,7 +76,7 @@ class UsuarioPerfil(db.Model):
     foto_perfil = db.Column(db.String(255))
     fecha_ingreso = db.Column(db.Date)
     horario = db.Column(db.String(100))
-    salario = db.Column(db.Float)
+    salario = db.Column(db.Numeric(12, 2))
     fecha_creacion = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
 
     usuario = db.relationship('Usuario', back_populates='perfil')
@@ -106,17 +106,19 @@ class PagoEmpleado(db.Model):
     __table_args__ = (
         db.Index('ix_pagos_empleados_usuario', 'id_usuario'),
         db.Index('ix_pagos_empleados_fecha', 'fecha_pago'),
+        db.Index('ux_pagos_empleados_operacion', 'clave_operacion', unique=True),
     )
 
     id_pago = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha_pago = db.Column(db.DateTime(timezone=True), nullable=False)
     estado = db.Column(db.String(80), nullable=False)
     descripcion = db.Column(db.String(255))
     tipo = db.Column(db.String(100))
     semana = db.Column(db.Date)
     id_pago_personal = db.Column(db.BigInteger, db.ForeignKey('pagos_personal.id_pago'), unique=True)
+    clave_operacion = db.Column(db.String(36), nullable=True)
 
     usuario_empleado = db.relationship('Usuario', foreign_keys=[id_usuario])
 
@@ -175,7 +177,7 @@ class PagoPersonal(db.Model):
 
     id_pago = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.Date, nullable=False)
     tipo = db.Column(db.String(100), nullable=False)
     estado = db.Column(db.String(80), nullable=False, server_default='Completado')
@@ -198,7 +200,7 @@ class Adelanto(db.Model):
     id_adelanto = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
     motivo = db.Column(db.String(255), nullable=False)
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
     estado = db.Column(db.String(80), nullable=False, default='Pendiente')
     respuesta_admin = db.Column(db.Text, nullable=True)
@@ -254,15 +256,17 @@ class TransaccionCaja(db.Model):
     __table_args__ = (
         db.Index('ix_transacciones_caja_usuario', 'id_usuario'),
         db.Index('ix_transacciones_caja_fecha', 'fecha'),
+        db.Index('ux_transacciones_caja_operacion', 'clave_operacion', unique=True),
     )
 
     id_transaccion = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
     tipo = db.Column(db.String(50))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     metodo_pago = db.Column(db.String(50))
     categoria = db.Column(db.String(150))
     descripcion = db.Column(db.Text)
+    clave_operacion = db.Column(db.String(36), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     def __repr__(self):
@@ -277,10 +281,10 @@ class CierreCaja(db.Model):
 
     id_cierre = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    monto_inicial = db.Column(db.Float, nullable=False, server_default='0', default=0)
-    total_ventas = db.Column(db.Float, nullable=False)
-    total_gastos = db.Column(db.Float, nullable=False)
-    neto = db.Column(db.Float, db.Computed('(total_ventas - total_gastos)'))
+    monto_inicial = db.Column(db.Numeric(12, 2), nullable=False, server_default='0', default=0)
+    total_ventas = db.Column(db.Numeric(12, 2), nullable=False)
+    total_gastos = db.Column(db.Numeric(12, 2), nullable=False)
+    neto = db.Column(db.Numeric(12, 2), db.Computed('(total_ventas - total_gastos)'))
     observaciones = db.Column(db.Text)
     estado = db.Column(db.String(20), nullable=False, default='cerrada')
     fecha_cierre = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -298,8 +302,8 @@ class Producto(db.Model):
 
     id_producto = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(200), nullable=False)
-    precio = db.Column(db.Float, nullable=False)
-    stock = db.Column(db.Float, nullable=False)
+    precio = db.Column(db.Numeric(12, 2), nullable=False)
+    stock = db.Column(db.Numeric(12, 3), nullable=False)
     unidad_medida = db.Column(db.String(10), nullable=False, default='Un', server_default='Un')
     descripcion = db.Column(db.String(255), nullable=True)
     estado = db.Column(db.Boolean, nullable=False, default=True, server_default='true')
@@ -327,7 +331,7 @@ class Inversion(db.Model):
     descripcion = db.Column(db.String(255), nullable=False)
     id_proveedor = db.Column(db.BigInteger, db.ForeignKey('proveedores.id_proveedor'), nullable=True)
     notas = db.Column(db.Text, nullable=True)
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     proveedor_rel = db.relationship('Proveedor', foreign_keys=[id_proveedor])
@@ -365,15 +369,17 @@ class CompraInventario(db.Model):
     __tablename__ = 'compras_inventario'
     __table_args__ = (
         db.Index('ix_compras_inventario_fecha', 'fecha'),
+        db.Index('ux_compras_inventario_operacion', 'clave_operacion', unique=True),
     )
 
     id_compra = db.Column(db.BigInteger, primary_key=True)
     codigo = db.Column(db.String(50), nullable=False, unique=True)
     id_proveedor = db.Column(db.BigInteger, db.ForeignKey('proveedores.id_proveedor'), nullable=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
-    total_compra = db.Column(db.Float, nullable=False, default=0)
+    total_compra = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     notas = db.Column(db.Text)
     estado = db.Column(db.String(30), nullable=False, default='Completada')
+    clave_operacion = db.Column(db.String(36), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     detalle = db.relationship('DetalleCompraInventario', back_populates='compra', cascade='all, delete-orphan')
@@ -400,9 +406,9 @@ class DetalleCompraInventario(db.Model):
     id_detalle = db.Column(db.BigInteger, primary_key=True)
     id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=False)
     id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
-    cantidad = db.Column(db.Float, nullable=False, default=0)
-    precio_unitario = db.Column(db.Float, nullable=False, default=0)
-    subtotal = db.Column(db.Float, db.Computed('(cantidad * precio_unitario)'))
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False, default=0)
+    precio_unitario = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    subtotal = db.Column(db.Numeric(12, 2), db.Computed('(cantidad * precio_unitario)'))
 
     compra = db.relationship('CompraInventario', back_populates='detalle')
     producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
@@ -420,18 +426,20 @@ class InventarioMovimiento(db.Model):
     __table_args__ = (
         db.Index('ix_inventario_movimientos_producto', 'id_producto'),
         db.Index('ix_inventario_movimientos_fecha', 'fecha'),
+        db.Index('ux_inventario_movimientos_operacion', 'clave_operacion', unique=True),
     )
 
     id_movimiento = db.Column(db.BigInteger, primary_key=True)
     id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
     tipo = db.Column(db.String(30), nullable=False)
-    cantidad = db.Column(db.Float, nullable=False, default=0)
-    stock_anterior = db.Column(db.Float, nullable=True)
-    stock_posterior = db.Column(db.Float, nullable=True)
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False, default=0)
+    stock_anterior = db.Column(db.Numeric(12, 3), nullable=True)
+    stock_posterior = db.Column(db.Numeric(12, 3), nullable=True)
     motivo = db.Column(db.String(255), nullable=True)
     id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=True)
     observacion = db.Column(db.String(255))
+    clave_operacion = db.Column(db.String(36), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
@@ -464,7 +472,7 @@ class SolicitudInsumo(db.Model):
     id_solicitud = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
     id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
-    cantidad = db.Column(db.Float, nullable=False)
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False)
     observacion = db.Column(db.String(255))
     estado = db.Column(db.String(30), nullable=False, default='Pendiente')
     respuesta = db.Column(db.String(255))

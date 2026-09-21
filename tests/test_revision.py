@@ -1,12 +1,181 @@
 from datetime import timedelta
 from unittest.mock import patch, Mock
 from tests.test_flows import BaseFlujos, instante
-from models import db, Usuario, PagoEmpleado, PagoPersonal, Adelanto, DescuentoSemanal, CierreCaja, SolicitudInsumo, SueldoSemanal, SesionUsuario
+from models import db, Usuario, PagoEmpleado, PagoPersonal, Adelanto, DescuentoSemanal, CierreCaja, SolicitudInsumo, SueldoSemanal, SesionUsuario, TransaccionCaja, InventarioMovimiento, CompraInventario
 from api.sesiones import crear_sesion
 import bcrypt
 
 
 class RevisionFlujosTest(BaseFlujos):
+    def test_filtro_de_pagos_rechaza_meses_invalidos_y_respeta_lima(self):
+        for ruta in ('/personal/pagos', '/personal/pagos/empleado/2'):
+            for parametros in ('mes=13', 'mes=0', 'anio=abc', 'anio=9999'):
+                respuesta = self.call('get', f'{ruta}?{parametros}')
+                self.assertEqual(respuesta.status_code, 400)
+                self.assertEqual(respuesta.json['message'], 'Mes o año no válido.')
+
+        db.session.add(PagoEmpleado(id_usuario=2, monto=25,
+            fecha_pago=instante('2026-09-21T02:00:00'), estado='Pendiente'))
+        db.session.commit()
+        with patch('api.personal.ahora', return_value=instante('2026-09-21T01:00:00')):
+            self.assertEqual(self.call('get', '/personal/pagos').json['data']['proximo_pago'], 0)
+
+        PagoEmpleado.query.delete()
+        db.session.add(PagoEmpleado(id_usuario=2, monto=25,
+            fecha_pago=instante('2026-09-21T06:00:00'), estado='Pendiente'))
+        db.session.commit()
+        with patch('api.personal.ahora', return_value=instante('2026-09-21T01:00:00')):
+            self.assertEqual(self.call('get', '/personal/pagos').json['data']['proximo_pago'], 1)
+
+    def test_fechas_se_muestran_en_espanol_y_con_zona_horaria(self):
+        with patch('api.cocina._ahora', return_value=instante('2026-09-21T02:00:00')):
+            cocina = self.call('get', '/cocina/dashboard', role=3).json['data']
+        with patch('api.trabajador._ahora', return_value=instante('2026-09-21T02:00:00')):
+            trabajador = self.call('get', '/trabajador/dashboard', role=4).json['data']
+        self.assertEqual(cocina['fecha'], 'domingo, 20 de septiembre de 2026')
+        self.assertEqual(trabajador['fecha'], cocina['fecha'])
+        db.session.add(TransaccionCaja(id_usuario=2, tipo='Venta', monto=10,
+            metodo_pago='Efectivo', fecha=instante('2025-06-01T00:00:00')))
+        db.session.commit()
+        reporte = self.call('get', '/caja/reportes?periodo=mes&fecha=2025-05-15', role=2).json['data']
+        self.assertEqual(reporte['transacciones'][0]['fecha'], '2025-06-01T00:00:00+00:00')
+
+    def test_turnos_respetan_el_lunes_en_lima(self):
+        with patch('api.trabajador._ahora', return_value=instante('2026-09-21T02:00:00')):
+            semana = self.call('get', '/trabajador/turnos', role=4).json['data']['semana']
+        self.assertEqual(semana[0]['fecha'], '14/09/2026')
+        self.assertEqual(semana[-1]['fecha'], '20/09/2026')
+
+    def test_panel_y_reporte_comparten_el_mismo_calculo(self):
+        db.session.add_all([
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=25, fecha=instante('2026-09-10T16:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Gasto', monto=7, fecha=instante('2026-09-10T17:00:00')),
+        ])
+        db.session.commit()
+        reporte = self.call('get', '/caja/reportes?periodo=mes&fecha=2026-09-10', role=2).json['data']
+        with patch('api.caja._historial', side_effect=AssertionError('El panel no debe cargar cierres')):
+            panel = self.call('get', '/rendimiento?periodo=mes&fecha=2026-09-10', role=2).json['data']
+        self.assertEqual(panel, reporte['puntos'])
+
+    def test_historial_limita_la_consulta_al_ultimo_cierre(self):
+        cierre = instante('2025-04-01T16:00:00')
+        db.session.add(CierreCaja(id_usuario=1, estado='cerrada',
+            fecha=instante('2025-04-01T15:00:00'), fecha_cierre=cierre,
+            total_ventas=0, total_gastos=0))
+        db.session.commit()
+        from api import caja as caja_api
+        real = caja_api._movimientos
+        limites = []
+
+        def registrar(inicio, fin):
+            limites.append((inicio, fin))
+            return real(inicio, fin)
+
+        with patch('api.caja._movimientos', side_effect=registrar):
+            self.assertEqual(self.call('get', '/caja/historial').status_code, 200)
+        self.assertEqual(limites, [(instante('2025-04-01T15:00:00'), cierre)])
+
+    def test_reintento_de_caja_no_duplica_movimiento(self):
+        self.call('post', '/caja/abrir', role=2, json={'monto_inicial': 0})
+        datos = {'tipo': 'Venta', 'monto': 20, 'metodo_pago': 'Yape',
+                 'descripcion': 'Almuerzo', 'clave_operacion': '73a294b3-7a75-4d04-8349-fdb5eb2608fc'}
+        primera = self.call('post', '/caja/transacciones', role=2, json=datos)
+        segunda = self.call('post', '/caja/transacciones', role=2, json=datos)
+        self.assertEqual((primera.status_code, segunda.status_code), (200, 200))
+        self.assertTrue(segunda.json['repetida'])
+        self.assertEqual(TransaccionCaja.query.count(), 1)
+        self.assertEqual(self.call('post', '/caja/transacciones', role=2,
+            json={**datos, 'monto': 21}).status_code, 409)
+
+    def test_importes_decimales_no_acumulan_error_binario(self):
+        self.call('post', '/caja/abrir', role=2, json={'monto_inicial': 0})
+        for monto, clave in ((0.1, 'b6c70902-134d-4f4a-bccd-68669687e75f'),
+                             (0.2, '23e8d6f0-f8d9-4548-ad22-cdc680c182c3')):
+            self.assertEqual(self.call('post', '/caja/transacciones', role=2, json={
+                'tipo': 'Venta', 'monto': monto, 'metodo_pago': 'Efectivo',
+                'descripcion': 'Prueba decimal', 'clave_operacion': clave}).status_code, 200)
+        cierre = self.call('post', '/caja/cerrar', role=2).json['data']
+        self.assertEqual(cierre['total_ventas'], 0.3)
+
+    def test_reintento_de_stock_no_modifica_dos_veces(self):
+        self.producto(10)
+        datos = {'cantidad': 4, 'motivo': 'Reposición',
+                 'clave_operacion': '9812f479-ab44-42d1-9f0e-2c84652b5e79'}
+        for _ in range(2):
+            self.assertEqual(self.call('post', '/inventario/productos/1/stock/entrada', role=3,
+                json=datos).status_code, 200)
+        self.assertEqual(float(self.producto_actual().stock), 14)
+        self.assertEqual(InventarioMovimiento.query.count(), 1)
+        self.assertEqual(self.call('post', '/inventario/productos/1/stock/entrada', role=3,
+            json={**datos, 'cantidad': 5}).status_code, 409)
+
+    def test_reintento_de_compra_no_duplica_compra_ni_stock(self):
+        self.producto(0)
+        datos = {'detalle': [{'id_producto': 1, 'cantidad': 2, 'precio_unitario': 4}],
+                 'notas': 'Mercado', 'clave_operacion': '0a9615ab-d611-4648-bb5b-52591b63bf75'}
+        primera = self.call('post', '/inventario/compras', json=datos)
+        segunda = self.call('post', '/inventario/compras', json=datos)
+        self.assertEqual((primera.status_code, segunda.status_code), (201, 200))
+        self.assertTrue(segunda.json['repetida'])
+        self.assertEqual(CompraInventario.query.count(), 1)
+        self.assertEqual(float(self.producto_actual().stock), 2)
+
+    def test_compra_suma_subtotales_redondeados_por_linea(self):
+        self.producto(0)
+        datos = {'detalle': [
+            {'id_producto': 1, 'cantidad': 0.126, 'precio_unitario': 1},
+            {'id_producto': 1, 'cantidad': 0.126, 'precio_unitario': 1},
+        ]}
+        respuesta = self.call('post', '/inventario/compras', json=datos)
+        self.assertEqual(respuesta.status_code, 201)
+        self.assertEqual(respuesta.json['data']['total_compra'], 0.26)
+        self.assertEqual([d['subtotal'] for d in respuesta.json['data']['detalle']], [0.13, 0.13])
+
+    def test_reintento_de_pago_y_dos_pagos_legitimos_iguales(self):
+        datos = {'id_usuario': 2, 'fecha': '2026-09-10', 'monto': 25,
+                 'tipo': 'Bono', 'estado': 'Pagado', 'descripcion': 'Rendimiento',
+                 'clave_operacion': 'e24c270b-ff3f-44d7-a891-e2494bcd0059'}
+        primera = self.call('post', '/personal/pagos', json=datos)
+        segunda = self.call('post', '/personal/pagos', json=datos)
+        self.assertEqual((primera.status_code, segunda.status_code), (200, 200))
+        self.assertTrue(segunda.json['repetida'])
+        self.assertEqual(PagoEmpleado.query.count(), 1)
+        self.assertEqual(PagoPersonal.query.count(), 1)
+        self.assertEqual(self.call('post', '/personal/pagos', json={**datos, 'monto': 30}).status_code, 409)
+        tercero = self.call('post', '/personal/pagos', json={**datos,
+            'clave_operacion': 'd3907898-0872-450a-9b90-533694b6f374'})
+        self.assertEqual(tercero.status_code, 200)
+        self.assertEqual(PagoEmpleado.query.count(), 2)
+
+    def producto_actual(self):
+        from models import Producto
+        return db.session.get(Producto, 1)
+
+    def test_desactivar_usuario_o_rol_bloquea_sesion_anterior(self):
+        usuario = db.session.get(Usuario, 2)
+        token, refresh = crear_sesion(usuario)
+        self.tokens[2] = (token, refresh)
+        db.session.add(Adelanto(id_usuario=2, monto=15, motivo='Prueba', estado='Pendiente', fecha=instante('2026-09-20T12:00:00')))
+        db.session.commit()
+        adelanto = Adelanto.query.one()
+        for objeto in (usuario, usuario.rol):
+            objeto.estado = False
+            db.session.commit()
+            self.assertEqual(self.call('delete', f'/perfil/adelantos/{adelanto.id_adelanto}', role=2).status_code, 401)
+            self.assertEqual(self.client.post('/api/auth/refresh', headers={'Authorization':'Bearer '+refresh}).status_code, 401)
+            self.assertEqual(db.session.get(Adelanto, adelanto.id_adelanto).estado, 'Pendiente')
+            objeto.estado = True
+            db.session.commit()
+
+    def test_pagos_iguales_distinguen_concepto_y_semana(self):
+        datos = {'id_usuario':2, 'monto':25, 'fecha':'2026-09-20', 'tipo':'Salario semanal'}
+        self.assertEqual(self.call('post','/personal/pagos',json=datos).status_code, 200)
+        datos['tipo'] = 'Bono'
+        self.assertEqual(self.call('post','/personal/pagos',json=datos).status_code, 200)
+        self.assertEqual(self.call('post','/personal/pagos',json=datos).status_code, 400)
+        datos.update(tipo='Salario semanal', semana='2026-09-07')
+        self.assertEqual(self.call('post','/personal/pagos',json=datos).status_code, 200)
+
     def test_retencion_limpia_accesos_duplicados_sin_borrar_pagos(self):
         from models import ActividadUsuario
         from automatizacion_caja.limpiar_logs import limpiar_accesos

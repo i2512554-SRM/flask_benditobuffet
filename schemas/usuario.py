@@ -23,6 +23,8 @@ class PagoPersonalSchema(SQLAlchemyAutoSchema):
         model = PagoPersonal
         load_instance = False
         sqla_session = None
+
+    monto = fields.Float()
         
 pago_schema = PagoPersonalSchema()
 pagos_schema = PagoPersonalSchema(many=True)

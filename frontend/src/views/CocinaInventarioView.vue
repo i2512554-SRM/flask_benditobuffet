@@ -160,7 +160,7 @@
       </div>
       <template #footer>
         <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="stockDialog = false" />
-        <Button :disabled="$saving" label="Confirmar" @click="confirmarStock" />
+        <Button :disabled="$saving || procesandoStock" :loading="procesandoStock" label="Confirmar" @click="confirmarStock" />
       </template>
     </Dialog>
   </div>
@@ -193,6 +193,7 @@ const stockDialog = ref(false)
 const stockModo = ref('entrada')
 const stockForm = ref({})
 const stockWarning = ref('')
+const procesandoStock = ref(false)
 
 const filtered = computed(() => {
   const q = busqueda.value.trim().toLowerCase()
@@ -223,11 +224,12 @@ const solicitar = (prod) => router.push({ path: '/cocinero/solicitudes', query: 
 const abrirStock = (modo, prod = null) => {
   stockModo.value = modo
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '' }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
   stockDialog.value = true
 }
 
 const confirmarStock = async () => {
+  if (procesandoStock.value) return
   stockWarning.value = ''
   const prod = stockProducto.value
   if (!stockForm.value.id_producto || !prod) {
@@ -249,8 +251,9 @@ const confirmarStock = async () => {
       return
     }
   }
+  procesandoStock.value = true
   try {
-    const body = { cantidad }
+    const body = { cantidad, clave_operacion: stockForm.value.clave_operacion }
     if (stockForm.value.motivo) body.motivo = stockForm.value.motivo
     await api.post(`/inventario/productos/${stockForm.value.id_producto}/stock/${stockModo.value}`, body)
     toast.add({ severity: 'success', summary: stockModo.value === 'entrada' ? 'Stock agregado' : 'Salida registrada', life: 2500 })
@@ -258,6 +261,8 @@ const confirmarStock = async () => {
     await load()
   } catch (e) {
     toast.add({ severity: 'error', summary: e.response?.data?.error || 'Error en la operación', life: 3500 })
+  } finally {
+    procesandoStock.value = false
   }
 }
 

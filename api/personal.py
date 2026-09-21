@@ -1,5 +1,6 @@
 from api.validaciones import validar_personal, numero
-from api.fechas import limites_dia, LIMA, ahora
+from api.idempotencia import normalizar_clave
+from api.fechas import limites_dia, LIMA, ahora, utc
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, time, timedelta
@@ -189,8 +190,13 @@ def eliminar_empleado(id):
 
 def _filtro_mes():
     now = ahora().astimezone(LIMA)
-    anio = request.args.get('anio', type=int) or now.year
-    mes = request.args.get('mes', type=int) or now.month
+    try:
+        anio = int(request.args['anio']) if 'anio' in request.args else now.year
+        mes = int(request.args['mes']) if 'mes' in request.args else now.month
+    except (TypeError, ValueError):
+        raise ValueError('Mes o año no válido.') from None
+    if not 1 <= mes <= 12 or not 1 <= anio <= 9998:
+        raise ValueError('Mes o año no válido.')
     ultimo_dia = monthrange(anio, mes)[1]
     inicio, _ = limites_dia(date(anio, mes, 1))
     _, fin = limites_dia(date(anio, mes, ultimo_dia))
@@ -225,16 +231,16 @@ def _totales_por_empleado(start_date, end_date):
     return pagos, adelantos
 
 def _proximo_pago():
-    hoy = date.today()
+    hoy = ahora().astimezone(LIMA).date()
     pendiente = PagoEmpleado.query.filter(
-        PagoEmpleado.estado == 'Pendiente', db.func.date(PagoEmpleado.fecha_pago) >= hoy
+        PagoEmpleado.estado == 'Pendiente', PagoEmpleado.fecha_pago >= limites_dia(hoy)[0]
     ).order_by(PagoEmpleado.fecha_pago.asc()).first()
     if pendiente:
-        delta = (pendiente.fecha_pago.date() - hoy).days
+        delta = (utc(pendiente.fecha_pago).astimezone(LIMA).date() - hoy).days
         return delta if delta >= 0 else 0
     return None
 
-def _duplicado_pago(fecha, id_usuario, monto, estado):
+def _duplicado_pago(fecha, id_usuario, monto, estado, tipo, semana):
     ini, fin = limites_dia(fecha)
     fin -= timedelta(microseconds=1)
     return PagoEmpleado.query.filter(
@@ -242,13 +248,18 @@ def _duplicado_pago(fecha, id_usuario, monto, estado):
         PagoEmpleado.fecha_pago >= ini,
         PagoEmpleado.fecha_pago <= fin,
         PagoEmpleado.monto == monto,
-        PagoEmpleado.estado == estado
+        PagoEmpleado.estado == estado,
+        PagoEmpleado.tipo == tipo,
+        PagoEmpleado.semana == semana
     ).first()
 
 @personal_bp.route('/pagos', methods=['GET'])
 @admin_required
 def get_pagos():
-    inicio, fin, mes, anio = _filtro_mes()
+    try:
+        inicio, fin, mes, anio = _filtro_mes()
+    except ValueError as error:
+        return jsonify(success=False, message=str(error)), 400
     total_pagado, total_adelantos, neto = _totales_pagos(inicio, fin)
     empleados_activos = Usuario.query.filter_by(estado=True).count()
     proximo_pago = _proximo_pago()
@@ -289,7 +300,7 @@ def get_pagos():
                 'id_pago': h.id_pago,
                 'id_usuario': h.id_usuario,
                 'empleado': f"{h.usuario_empleado.nombres} {h.usuario_empleado.apellido}" if h.usuario_empleado else 'Empleado',
-                'monto': h.monto,
+                'monto': float(h.monto),
                 'fecha': h.fecha_pago.strftime('%Y-%m-%d') if h.fecha_pago else None,
                 'estado': h.estado,
                 'descripcion': h.descripcion,
@@ -297,7 +308,7 @@ def get_pagos():
             } for h in historial] + [{
                 'id_pago': f'adelanto-{a.id_adelanto}', 'id_usuario': a.id_usuario,
                 'empleado': f'{a.usuario_adelanto.nombres} {a.usuario_adelanto.apellido}' if a.usuario_adelanto else 'Empleado',
-                'monto': a.monto, 'fecha': a.fecha.strftime('%Y-%m-%d'), 'estado': a.estado,
+                'monto': float(a.monto), 'fecha': a.fecha.strftime('%Y-%m-%d'), 'estado': a.estado,
                 'descripcion': f'Adelanto: {a.motivo}'
             } for a in Adelanto.query.options(db.joinedload(Adelanto.usuario_adelanto)).filter(
                 Adelanto.fecha >= inicio, Adelanto.fecha <= fin).all()], key=lambda x: x['fecha'] or '', reverse=True)
@@ -308,7 +319,10 @@ def get_pagos():
 @admin_required
 def get_pago_detalle(id_usuario):
     empleado = Usuario.query.get_or_404(id_usuario)
-    inicio, fin, mes, anio = _filtro_mes()
+    try:
+        inicio, fin, mes, anio = _filtro_mes()
+    except ValueError as error:
+        return jsonify(success=False, message=str(error)), 400
     total_pagado, total_adelantos, neto = _totales_pagos(inicio, fin, id_usuario)
 
     pagos = PagoEmpleado.query.filter(PagoEmpleado.id_usuario == id_usuario).order_by(PagoEmpleado.fecha_pago.desc()).all()
@@ -323,17 +337,17 @@ def get_pago_detalle(id_usuario):
             'anio': anio,
             'totales': {'pagado': total_pagado, 'adelantos': total_adelantos, 'neto': neto},
             'pagos': [{
-                'id_pago': p.id_pago, 'monto': p.monto,
+                'id_pago': p.id_pago, 'monto': float(p.monto),
                 'fecha': p.fecha_pago.strftime('%Y-%m-%d') if p.fecha_pago else None,
                 'estado': p.estado, 'descripcion': p.descripcion
             } for p in pagos],
             'pagos_personal': [{
-                'id_pago': p.id_pago, 'monto': p.monto,
+                'id_pago': p.id_pago, 'monto': float(p.monto),
                 'fecha': p.fecha.strftime('%Y-%m-%d') if p.fecha else None,
                 'tipo': p.tipo, 'descripcion': p.descripcion
             } for p in pagos_personal],
             'adelantos': [{
-                'id_adelanto': a.id_adelanto, 'monto': a.monto, 'motivo': a.motivo,
+                'id_adelanto': a.id_adelanto, 'monto': float(a.monto), 'motivo': a.motivo,
                 'fecha': a.fecha.strftime('%Y-%m-%d') if a.fecha else None,
                 'estado': a.estado, 'respuesta': a.respuesta_admin
             } for a in adelantos],
@@ -355,7 +369,7 @@ def crear_pago():
         return jsonify({'success': False, 'message': 'Empleado no válido'}), 400
     try:
         monto = numero(data['monto'], .01)
-        if monto <= 0:
+        if monto <= 0 or monto >= 10000000000 or round(monto, 2) != monto:
             raise ValueError
     except (ValueError, KeyError, TypeError):
         return jsonify({'success': False, 'message': 'El monto debe ser un número mayor que cero'}), 400
@@ -367,7 +381,7 @@ def crear_pago():
         except ValueError:
             return jsonify({'success': False, 'message': 'Fecha de pago inválida'}), 400
     else:
-        fecha = date.today()
+        fecha = ahora().astimezone(LIMA).date()
 
     estado = data.get('estado', 'Pagado')
     if estado not in ('Pagado', 'Pendiente'):
@@ -384,7 +398,25 @@ def crear_pago():
     if tipo and tipo != 'Pago' and tipo != 'Adelanto':
         descripcion = f'{tipo}: {descripcion}'.strip()
 
-    if _duplicado_pago(fecha, id_usuario, monto, estado):
+    try:
+        clave = normalizar_clave(data)
+    except ValueError as error:
+        return jsonify(success=False, message=str(error)), 400
+    if clave:
+        existente = PagoEmpleado.query.filter_by(clave_operacion=clave).first()
+        if existente:
+            coincide = (
+                existente.id_usuario == id_usuario and existente.monto == Decimal(str(monto))
+                and existente.fecha_pago.date() == limites_dia(fecha)[0].date()
+                and existente.estado == estado and existente.tipo == tipo
+                and existente.semana == semana and (existente.descripcion or '') == descripcion
+            )
+            if not coincide:
+                return jsonify(success=False, message='El identificador ya pertenece a otra operación.'), 409
+            return jsonify(success=True, repetida=True, data={
+                'id_pago': existente.id_pago, 'monto': float(existente.monto),
+                'fecha': fecha.isoformat(), 'estado': existente.estado})
+    if not clave and _duplicado_pago(fecha, id_usuario, monto, estado, tipo, semana):
         return jsonify({'success': False, 'message': 'Ya existe un pago similar para esa fecha'}), 400
     if estado == 'Pagado' and PagoEmpleado.query.filter_by(id_usuario=id_usuario, monto=monto, estado='Pendiente', tipo=tipo, semana=semana).first():
         return jsonify(success=False, message='Ya existe un pago pendiente igual. Usa Completar pago en el historial.'), 409
@@ -398,7 +430,8 @@ def crear_pago():
     pago_empleado = PagoEmpleado(
         id_usuario=id_usuario, monto=monto,
         fecha_pago=limites_dia(fecha)[0],
-        estado=estado, descripcion=descripcion, tipo=tipo, semana=semana, id_pago_personal=pago_personal.id_pago
+        estado=estado, descripcion=descripcion, tipo=tipo, semana=semana,
+        id_pago_personal=pago_personal.id_pago, clave_operacion=clave
     )
     db.session.add(pago_empleado)
     db.session.add(ActividadUsuario(id_usuario=admin_id, accion=f'Registró pago para empleado {id_usuario}', fecha=datetime.now()))
@@ -511,7 +544,7 @@ def crear_pago_adelanto():
 @admin_required
 def get_adelantos():
     adelantos = Adelanto.query.order_by(Adelanto.fecha.desc()).all()
-    return jsonify({'success': True, 'data': [{'id_adelanto': a.id_adelanto, 'id_usuario': a.id_usuario, 'monto': a.monto, 'fecha': a.fecha, 'estado': a.estado, 'motivo': a.motivo} for a in adelantos]})
+    return jsonify({'success': True, 'data': [{'id_adelanto': a.id_adelanto, 'id_usuario': a.id_usuario, 'monto': float(a.monto), 'fecha': a.fecha, 'estado': a.estado, 'motivo': a.motivo} for a in adelantos]})
 
 @personal_bp.route('/adelantos', methods=['POST'])
 @admin_required

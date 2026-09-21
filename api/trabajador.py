@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone, timedelta
 
 from bd import db
+from api.fechas import fecha_larga_local, fecha_local, LIMA
 from models import (
     Usuario, PagoEmpleado, Adelanto, Notificacion, UsuarioPerfil
 )
@@ -64,7 +65,7 @@ def _horas_de(turno, horario):
 def mis_turnos(trabajador):
     turnos = _turnos(trabajador)
     horario = _horario(trabajador)
-    hoy = datetime.now(timezone.utc)
+    hoy = _ahora().astimezone(LIMA)
 
     DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     semana = []
@@ -121,7 +122,7 @@ def dashboard(trabajador):
                 'apellido': trabajador.apellido,
                 'rol': trabajador.rol.nombre if trabajador.rol else None,
             },
-            'fecha': _ahora().strftime('%A, %d de %B del %Y'),
+            'fecha': fecha_larga_local(_ahora()),
             'turnos': _turnos(trabajador),
             'resumen': {
                 'total_pagado': float(total_pagado),
@@ -134,7 +135,7 @@ def dashboard(trabajador):
                 'titulo': n.titulo,
                 'mensaje': n.mensaje,
                 'leida': n.leida,
-                'fecha': n.fecha.strftime('%d/%m/%Y %H:%M') if n.fecha else None,
+                'fecha': fecha_local(n.fecha, hora=True),
             } for n in ultimas_notif],
         }
     })
@@ -176,16 +177,16 @@ def mis_pagos(trabajador):
         'data': {
             'pagos': [{
                 'id_pago': p.id_pago,
-                'monto': p.monto,
-                'fecha': p.fecha_pago.strftime('%d/%m/%Y') if p.fecha_pago else None,
+                'monto': float(p.monto),
+                'fecha': fecha_local(p.fecha_pago),
                 'estado': p.estado,
                 'descripcion': p.descripcion or 'Pago registrado',
             } for p in pagos],
             'adelantos': [{
                 'id_adelanto': a.id_adelanto,
-                'monto': a.monto,
+                'monto': float(a.monto),
                 'motivo': a.motivo,
-                'fecha': a.fecha.strftime('%d/%m/%Y') if a.fecha else None,
+                'fecha': fecha_local(a.fecha),
                 'estado': a.estado,
                 'respuesta': a.respuesta_admin,
             } for a in adelantos],
@@ -206,7 +207,7 @@ def notificaciones(trabajador):
             'titulo': n.titulo,
             'mensaje': n.mensaje,
             'leida': n.leida,
-            'fecha': n.fecha.strftime('%d/%m/%Y %H:%M') if n.fecha else None,
+            'fecha': fecha_local(n.fecha, hora=True),
         } for n in notifs]
     })
 

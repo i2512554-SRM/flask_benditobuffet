@@ -12,6 +12,8 @@ class ProductoSchema(SQLAlchemyAutoSchema):
         sqla_session = None
 
     categoria = fields.String(attribute='categoria')
+    precio = fields.Float()
+    stock = fields.Float()
         
 producto_schema = ProductoSchema()
 productos_schema = ProductoSchema(many=True)
@@ -23,6 +25,7 @@ class InversionSchema(SQLAlchemyAutoSchema):
         sqla_session = None
 
     proveedor = fields.String(attribute='proveedor')
+    monto = fields.Float()
         
 inversion_schema = InversionSchema()
 inversiones_schema = InversionSchema(many=True)
@@ -34,6 +37,9 @@ class DetalleCompraInventarioSchema(SQLAlchemyAutoSchema):
         sqla_session = None
 
     producto = fields.String(attribute='producto')
+    cantidad = fields.Float()
+    precio_unitario = fields.Float()
+    subtotal = fields.Float(allow_none=True)
 
 detalle_compra_inventario_schema = DetalleCompraInventarioSchema()
 detalles_compra_inventario_schema = DetalleCompraInventarioSchema(many=True)
@@ -46,6 +52,7 @@ class CompraInventarioSchema(SQLAlchemyAutoSchema):
 
     proveedor = fields.String(attribute='proveedor')
     detalle = fields.List(fields.Nested(DetalleCompraInventarioSchema), attribute='detalle')
+    total_compra = fields.Float()
 
 compra_inventario_schema = CompraInventarioSchema()
 compras_inventario_schema = CompraInventarioSchema(many=True)
@@ -60,6 +67,9 @@ class InventarioMovimientoSchema(SQLAlchemyAutoSchema):
     producto = fields.String(attribute='producto')
     usuario = fields.String(attribute='usuario')
     unidad = fields.String(attribute='unidad')
+    cantidad = fields.Float()
+    stock_anterior = fields.Float(allow_none=True)
+    stock_posterior = fields.Float(allow_none=True)
 
 inventario_movimiento_schema = InventarioMovimientoSchema()
 inventario_movimientos_schema = InventarioMovimientoSchema(many=True)

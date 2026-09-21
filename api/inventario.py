@@ -1,7 +1,9 @@
 from api.validaciones import numero, cantidad_decimal
+from api.idempotencia import normalizar_clave
 from models import AtencionInsumo
 from sqlalchemy import text
 import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date, timedelta
@@ -85,7 +87,8 @@ def _categoria_por_defecto():
 
 
 def _registrar_movimiento(id_producto, id_usuario, tipo, cantidad, stock_anterior,
-                          stock_posterior, motivo, observacion=None, id_compra=None):
+                          stock_posterior, motivo, observacion=None, id_compra=None,
+                          clave_operacion=None):
     db.session.add(InventarioMovimiento(
         id_producto=id_producto,
         id_usuario=id_usuario,
@@ -96,8 +99,34 @@ def _registrar_movimiento(id_producto, id_usuario, tipo, cantidad, stock_anterio
         motivo=motivo or observacion,
         id_compra=id_compra,
         observacion=observacion or motivo,
+        clave_operacion=clave_operacion,
         fecha=_ahora()
     ))
+
+
+def _clave_o_error(data):
+    try:
+        return normalizar_clave(data), None
+    except ValueError as error:
+        return None, (jsonify({'success': False, 'error': str(error)}), 400)
+
+
+def _movimiento_repetido(clave, producto, uid, tipo, cantidad, motivo):
+    if not clave:
+        return None
+    existente = InventarioMovimiento.query.filter_by(clave_operacion=clave).first()
+    if not existente:
+        return None
+    esperada = cantidad if tipo == 'Entrada' else -cantidad
+    coincide = (
+        existente.id_producto == producto.id_producto and existente.id_usuario == uid
+        and existente.tipo == tipo and cantidad_decimal(existente.cantidad, existente=True) == esperada
+        and (existente.motivo or '') == motivo
+    )
+    if not coincide:
+        return jsonify({'success': False, 'error': 'El identificador ya pertenece a otra operación.'}), 409
+    return jsonify({'success': True, 'repetida': True,
+        'message': 'La operación ya estaba registrada', 'data': producto_schema.dump(producto)})
 
 
 @inventario_bp.route('/resumen', methods=['GET'])
@@ -306,15 +335,23 @@ def entrada_stock(id):
     if cantidad <= 0:
         return jsonify({'success': False, 'error': 'La cantidad a agregar debe ser mayor a cero'}), 400
 
+    clave, error = _clave_o_error(data)
+    if error:
+        return error
+    uid = int(get_jwt_identity())
+    motivo = (data.get('motivo') or '').strip() or 'Ingreso de stock'
+    repetida = _movimiento_repetido(clave, producto, uid, 'Entrada', cantidad, motivo)
+    if repetida:
+        return repetida
     anterior = cantidad_decimal(producto.stock or 0, existente=True)
     posterior = anterior + cantidad
-    motivo = (data.get('motivo') or '').strip() or 'Ingreso de stock'
     producto.stock = posterior
     producto.fecha_edicion = _ahora()
     _registrar_movimiento(
-        producto.id_producto, int(get_jwt_identity()), 'Entrada', cantidad,
+        producto.id_producto, uid, 'Entrada', cantidad,
         anterior, posterior, motivo,
-        observacion=(data.get('observacion') or '').strip() or None
+        observacion=(data.get('observacion') or '').strip() or None,
+        clave_operacion=clave
     )
     db.session.commit()
     return jsonify({'success': True, 'message': 'Stock agregado correctamente', 'data': producto_schema.dump(producto)})
@@ -334,21 +371,28 @@ def salida_stock(id):
     if cantidad <= 0:
         return jsonify({'success': False, 'error': 'La cantidad a retirar debe ser mayor a cero'}), 400
 
-    anterior = cantidad_decimal(producto.stock or 0, existente=True)
-    if cantidad > anterior:
-        return jsonify({'success': False, 'error': 'No hay suficiente stock disponible.'}), 400
-
     motivo = (data.get('motivo') or '').strip()
     if not motivo:
         return jsonify({'success': False, 'error': 'El motivo de la salida es obligatorio'}), 400
 
+    clave, error = _clave_o_error(data)
+    if error:
+        return error
+    uid = int(get_jwt_identity())
+    repetida = _movimiento_repetido(clave, producto, uid, 'Salida', cantidad, motivo)
+    if repetida:
+        return repetida
+    anterior = cantidad_decimal(producto.stock or 0, existente=True)
+    if cantidad > anterior:
+        return jsonify({'success': False, 'error': 'No hay suficiente stock disponible.'}), 400
     posterior = anterior - cantidad
     producto.stock = posterior
     producto.fecha_edicion = _ahora()
     _registrar_movimiento(
-        producto.id_producto, int(get_jwt_identity()), 'Salida', -cantidad,
+        producto.id_producto, uid, 'Salida', -cantidad,
         anterior, posterior, motivo,
-        observacion=(data.get('observacion') or '').strip() or None
+        observacion=(data.get('observacion') or '').strip() or None,
+        clave_operacion=clave
     )
     db.session.commit()
     return jsonify({'success': True, 'message': 'Salida registrada correctamente', 'data': producto_schema.dump(producto)})
@@ -405,18 +449,43 @@ def get_compra(id):
 @inventario_bp.route('/compras', methods=['POST'])
 @_solo_admin
 def crear_compra():
-    data = request.get_json()
+    data = request.get_json() or {}
+    clave, error = _clave_o_error(data)
+    if error:
+        return error
     detalle = data.get('detalle') or []
     if not detalle:
         return jsonify({'success': False, 'error': 'Agrega al menos un producto a la compra'}), 400
-    id_proveedor = data.get('id_proveedor')
+    try:
+        id_proveedor = int(data['id_proveedor']) if data.get('id_proveedor') else None
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Selecciona un proveedor válido para la compra'}), 400
     if id_proveedor and not db.session.get(Proveedor, id_proveedor):
         return jsonify({'success': False, 'error': 'Selecciona un proveedor válido para la compra'}), 400
 
     usuario_id = int(get_jwt_identity())
-    n_hoy = CompraInventario.query.filter(
-        db.func.date(CompraInventario.fecha) == date.today()
-    ).count() + 1
+    lineas_normalizadas = []
+    try:
+        for linea in detalle:
+            cantidad = cantidad_decimal(linea.get('cantidad'))
+            precio = numero(linea.get('precio_unitario'), 0)
+            if cantidad <= 0 or precio >= 10000000000 or round(precio, 2) != precio:
+                raise ValueError()
+            lineas_normalizadas.append((int(linea.get('id_producto')), cantidad, Decimal(str(precio))))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({'success': False, 'error': 'Cada producto requiere cantidad positiva y precio con hasta dos decimales.'}), 400
+    if clave:
+        existente = CompraInventario.query.filter_by(clave_operacion=clave).first()
+        if existente:
+            guardadas = sorted((d.id_producto, cantidad_decimal(d.cantidad, existente=True), Decimal(str(d.precio_unitario)))
+                               for d in existente.detalle)
+            coincide = (existente.id_usuario == usuario_id and existente.id_proveedor == id_proveedor
+                        and (existente.notas or '') == (data.get('notas') or '')
+                        and guardadas == sorted(lineas_normalizadas) and existente.estado == 'Completada')
+            if not coincide:
+                return jsonify({'success': False, 'error': 'El identificador ya pertenece a otra operación.'}), 409
+            return jsonify({'success': True, 'repetida': True,
+                'data': compra_inventario_schema.dump(existente)})
     codigo = f"COMPRA-{date.today().strftime('%Y%m%d')}-{uuid.uuid4().hex[:10]}"
 
     compra = CompraInventario(
@@ -426,21 +495,19 @@ def crear_compra():
         total_compra=0,
         notas=data.get('notas', ''),
         estado='Completada',
+        clave_operacion=clave,
         fecha=_ahora()
     )
     db.session.add(compra)
     db.session.flush()
 
-    total = 0
-    for linea in detalle:
-        id_producto = linea.get('id_producto')
+    total = Decimal('0.00')
+    for id_producto, cantidad, precio in lineas_normalizadas:
         producto = Producto.query.get(id_producto)
         if not producto:
             db.session.rollback()
             return jsonify({'success': False, 'error': 'Producto no encontrado para la compra'}), 400
-        cantidad = cantidad_decimal(linea.get('cantidad') or 0)
-        precio = float(linea.get('precio_unitario') or 0)
-        subtotal = float(cantidad) * precio
+        subtotal = (cantidad * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         total += subtotal
         det = DetalleCompraInventario(
             id_compra=compra.id_compra,

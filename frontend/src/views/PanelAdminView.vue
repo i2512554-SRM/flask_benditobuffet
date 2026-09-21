@@ -130,7 +130,7 @@
           <router-link to="/inventario/operaciones" class="accion-chip">
             <i class="fa-solid fa-boxes-stacked"></i> Ver Inventario
           </router-link>
-          <router-link to="/personal/pagos" class="accion-chip">
+          <router-link to="/personal/pagos?accion=nuevo" class="accion-chip">
             <i class="fa-solid fa-money-bill-wave"></i> Registrar Pago
           </router-link>
           <router-link to="/personal/solicitudes" class="accion-chip">
