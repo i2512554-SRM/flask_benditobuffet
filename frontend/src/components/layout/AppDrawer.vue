@@ -80,7 +80,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useLogout } from '../../composables/useLogout'
 import api from '../../config/axios'
@@ -94,6 +94,7 @@ const emit = defineEmits(['close'])
 const { confirmarCierre } = useLogout()
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 const rol = computed(() => authStore.user?.rol)
 const subtitle = computed(() => {
@@ -120,7 +121,7 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-cash-register',
       iconCls: 'ic-green',
       children: [
-        { to: '/caja/dashboard', icon: 'fa-solid fa-chart-pie', label: 'Dashboard de Caja' },
+        { to: '/caja/resumen', icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
         { to: '/caja', icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
         { to: '/caja/movimientos', icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
         { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
@@ -150,7 +151,7 @@ const MENU_POR_ROL = {
       children: [
         { to: '/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Módulo' },
         { to: '/inventario/operaciones?vista=productos', icon: 'fa-solid fa-box-open', label: 'Productos y Stock' },
-        { to: '/inventario/operaciones?vista=movimientos', icon: 'fa-solid fa-clock-rotate-left', label: 'Entradas, Salidas y Movimientos' },
+        { to: '/inventario/operaciones?vista=movimientos', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de movimientos' },
         { to: '/inventario/reportes', icon: 'fa-solid fa-chart-column', label: 'Reportes' }
       ]
     },
@@ -175,7 +176,7 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-cash-register',
       iconCls: 'ic-green',
       children: [
-        { to: '/caja/dashboard', icon: 'fa-solid fa-chart-pie', label: 'Dashboard de Caja' },
+        { to: '/caja/resumen', icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
         { to: '/caja', icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
         { to: '/caja/movimientos', icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
         { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
@@ -213,16 +214,22 @@ const menu = computed(() => {
 })
 
 // Apertura por categoría: el estado es local al drawer y se reinicia en cada apertura
-const abiertas = ref({ caja: true })
+const abiertas = ref({})
 
 const toggleCat = (key) => {
   abiertas.value[key] = !abiertas.value[key]
 }
 
 // Indicador de la sección activa
-const isExact = (path) => route.path === path
+const isExact = (path) => {
+  const destino = router.resolve(path)
+  return route.path === destino.path && Object.entries(destino.query).every(([clave, valor]) => route.query[clave] === valor)
+}
 const isSectionActive = (entry) =>
-  (entry.children || []).some((c) => route.path === c.to || route.path.startsWith(c.to + '/'))
+  (entry.children || []).some((c) => {
+    const destino = router.resolve(c.to)
+    return isExact(c.to) || route.path.startsWith(destino.path + '/')
+  })
 
 // Métricas en vivo del menú (lema: la información está en el menú)
 const chips = ref(null)
@@ -230,8 +237,8 @@ const chips = ref(null)
 watch(
   () => props.open,
   (val) => {
+    abiertas.value = {}
     if (!val) return
-    abiertas.value = { caja: true }
     if (rol.value === 1 || rol.value === 2) cargarChips()
   }
 )

@@ -91,8 +91,8 @@ const routes = [
     meta: { requiresAuth: true, roles: [1, 2] }
   },
   {
-    path: '/caja/dashboard',
-    name: 'caja-dashboard',
+    path: '/caja/resumen',
+    name: 'caja-resumen',
     component: () => import('../views/CajaDashboardView.vue'),
     meta: { requiresAuth: true, roles: [1, 2] }
   },
@@ -222,8 +222,8 @@ const router = createRouter({
 })
 
 function homeForRole(rol) {
-  if (rol === 1) return '/caja/dashboard'
-  if (rol === 2) return '/caja/dashboard'
+  if (rol === 1) return '/panel'
+  if (rol === 2) return '/panel-cajera'
   if (rol === 3) return '/cocinero'
   if (rol === 4) return '/trabajador'
   return '/'

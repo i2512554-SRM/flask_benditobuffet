@@ -1,17 +1,20 @@
 <template><button class="volver-btn" type="button" @click="goBack"><i class="fa-solid fa-arrow-left"></i> Volver</button></template>
 <script setup>
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 const props = defineProps({ to: { type: [String, Object], default: '/' }, etiqueta: String })
 const router = useRouter()
+const auth = useAuthStore()
 function goBack() {
-  const back = window.history.state?.back
-  if (typeof back === 'string' && back.startsWith('/') && !back.startsWith('//') && back !== '/login') router.back()
-  else router.push(props.to || '/')
+  const panel = { 1: '/panel', 2: '/panel-cajera', 3: '/cocinero', 4: '/trabajador' }[auth.userRole]
+  router.push(panel || props.to || '/')
 }
 </script>
 <style scoped>
 .volver-btn {
   display: inline-flex;
+  align-self: flex-start;
+  width: max-content;
   align-items: center;
   gap: 0.55rem;
   padding: 0.5rem 1rem;

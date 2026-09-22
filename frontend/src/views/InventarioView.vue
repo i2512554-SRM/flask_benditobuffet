@@ -33,16 +33,20 @@
     </div>
 
     <div class="view-toggle">
-      <Button :disabled="$saving" label="Productos" :class="{ active: vista === 'productos' }" severity="secondary" plain @click="vista = 'productos'" />
-      <Button :disabled="$saving" v-if="esAdmin" label="Inversiones (compras)" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="vista = 'compras'" />
-      <Button :disabled="$saving" v-if="esAdmin && inversiones.length" label="Registros anteriores" :class="{ active: vista === 'inversiones' }" severity="secondary" plain @click="vista = 'inversiones'" />
-      <Button :disabled="$saving" label="Movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain @click="vista = 'movimientos'" />
+      <Button :disabled="$saving" label="Productos" :class="{ active: vista === 'productos' }" severity="secondary" plain @click="seleccionarVista('productos')" />
+      <Button :disabled="$saving" v-if="esAdmin" label="Inversiones (compras)" :class="{ active: vista === 'compras' }" severity="secondary" plain @click="seleccionarVista('compras')" />
+      <Button :disabled="$saving" v-if="esAdmin && inversiones.length" label="Registros anteriores" :class="{ active: vista === 'inversiones' }" severity="secondary" plain @click="seleccionarVista('inversiones')" />
+      <Button :disabled="$saving" label="Movimientos" :class="{ active: vista === 'movimientos' }" severity="secondary" plain @click="seleccionarVista('movimientos')" />
     </div>
 
     <div class="table-card" v-if="vista === 'productos'">
       <div class="table-header">
         <h2>Productos</h2>
         <div class="search-box">
+          <span v-if="stockFiltro" class="filtro-pill">
+            Filtrando: {{ stockFiltroEtiqueta }}
+            <button class="pill-clear" title="Quitar filtro" @click="stockFiltro = null"><i class="pi pi-times"></i></button>
+          </span>
           <InputText v-model="busqueda" placeholder="Buscar producto o categoría..." class="w-full" @input="cargarProductos" />
           <Select v-model="categoriaFiltro" :options="categorias" optionLabel="nombre" optionValue="id_categoria" placeholder="Todas las categorías" showClear class="w-full" @update:model-value="cargarProductos" />
           <div class="check-activos">
@@ -51,7 +55,7 @@
           </div>
         </div>
       </div>
-      <DataTable :value="productos" data-key="id_producto" :paginator="true" :rows="10" class="mt-4">
+      <DataTable :value="productosVisibles" data-key="id_producto" :paginator="true" :rows="10" class="mt-4">
         <Column field="nombre" header="Producto" sortable></Column>
         <Column field="categoria" header="Categoría" sortable></Column>
         <Column field="precio" header="Precio" sortable>
@@ -388,7 +392,7 @@
 <script setup>
 import { formatFecha as fechaLegible } from '../utils/format'
 import { ref, computed, onMounted, watch }  from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -403,6 +407,7 @@ import { useAuthStore } from '../stores/auth'
 import api from '../config/axios'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const esAdmin = computed(() => auth.userRole === 1)
 const toast = useToast()
@@ -415,9 +420,15 @@ const proveedores = ref([])
 const resumen = ref({ valor_total: 0, inversiones_mes: 0, articulos_registrados: 0, productos_mes: 0 })
 const vistaValida = ['productos', 'compras', 'inversiones', 'movimientos']
 const vista = ref(vistaValida.includes(route.query.vista) ? route.query.vista : 'productos')
+const seleccionarVista = (nuevaVista) => {
+  vista.value = nuevaVista
+  router.push({ path: route.path, query: { vista: nuevaVista } })
+}
 const busqueda = ref('')
 const categoriaFiltro = ref(null)
 const mostrarInactivos = ref(false)
+const stockFiltro = ref(['bajo', 'agotados'].includes(route.query.stock) ? route.query.stock : null)
+const UMBRAL_STOCK_BAJO = 10
 const movBusqueda = ref('')
 const movTipo = ref(null)
 const unidades = [{ label: 'Kg', valor: 'Kg' }, { label: 'Un', valor: 'Un' }, { label: 'Lt', valor: 'Lt' }]
@@ -445,6 +456,15 @@ const procesandoCompra = ref(false)
 
 const productosActivos = computed(() => productos.value.filter(p => p.estado))
 const stockProducto = computed(() => productosActivos.value.find(p => p.id_producto === stockForm.value.id_producto) || null)
+const productosVisibles = computed(() => {
+  if (!stockFiltro.value) return productos.value
+  return productos.value.filter((p) => {
+    const s = Number(p.stock || 0)
+    if (stockFiltro.value === 'agotados') return s <= 0
+    return s > 0 && s < UMBRAL_STOCK_BAJO
+  })
+})
+const stockFiltroEtiqueta = computed(() => (stockFiltro.value === 'agotados' ? 'Agotados' : 'Stock bajo'))
 
 const fmt = (v) => Number(v || 0).toFixed(2)
 const fmt2 = (v) => Number(v || 0).toFixed(2)
@@ -743,8 +763,19 @@ onMounted(async () => {
   ])
   if(route.query.accion === 'entrada') abrirAgregarStock()
   if(route.query.accion === 'nuevo') agregarDialog()
+  if(route.query.accion === 'nueva-compra') {
+    vista.value = 'compras'
+    openCompra()
+  }
 })
 watch(() => route.query.vista, v => { if(vistaValida.includes(v)) vista.value=v })
+watch(() => route.query.stock, v => { stockFiltro.value = (v === 'bajo' || v === 'agotados') ? v : null })
+watch(() => route.query.accion, a => {
+  if (a === 'nueva-compra' && esAdmin.value) { vista.value = 'compras'; openCompra() }
+  if (a === 'entrada') abrirAgregarStock()
+  if (a === 'salida') abrirRegistrarSalida()
+  if (a === 'nuevo') agregarDialog()
+})
 </script>
 
 <style scoped>
@@ -759,6 +790,28 @@ watch(() => route.query.vista, v => { if(vistaValida.includes(v)) vista.value=v 
 .search-box { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 .check-activos { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
 .check-activos label { margin: 0; font-size: 0.85rem; }
+.filtro-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--btn-primary);
+  background: rgba(255, 122, 0, 0.08);
+  border: 1px solid rgba(255, 122, 0, 0.25);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
+}
+.pill-clear {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.15rem;
+}
 .view-toggle { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .view-toggle .active { background: var(--btn-primary); color: white; border-color: var(--btn-primary); }
 .table-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; }

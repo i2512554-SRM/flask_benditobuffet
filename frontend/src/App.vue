@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppDrawer from './components/layout/AppDrawer.vue'
@@ -10,6 +10,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 const route = useRoute()
 const showLayout = computed(() => !['login', 'home'].includes(route.name))
 const menuOpen = ref(false)
+watch(() => route.fullPath, () => { menuOpen.value = false })
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
