@@ -14,7 +14,7 @@
         <form class="form-grid" @submit.prevent="enviar">
           <div class="form-group col-12">
             <label>Producto / insumo</label>
-            <Dropdown
+            <Select
               v-model="form.id_producto"
               :options="insumos"
               optionLabel="nombre"
@@ -23,17 +23,18 @@
               filter
               class="w-full"
             />
+            <small v-if="!insumos.length" class="text-muted">No hay insumos disponibles para solicitar.</small>
           </div>
           <div class="form-group">
-            <label>Cantidad</label>
-            <InputNumber :maxFractionDigits="2" v-model="form.cantidad" :min="1" :step="1" mode="decimal" class="w-full" placeholder="0" />
+            <label>Cantidad{{ insumoSeleccionado ? ` (${insumoSeleccionado.unidad_medida || 'Un'})` : '' }}</label>
+            <InputNumber :maxFractionDigits="3" v-model="form.cantidad" :min="0.001" :step="1" mode="decimal" class="w-full" placeholder="Ej. 2" />
           </div>
           <div class="form-group">
             <label>Observación (opcional)</label>
             <InputText v-model="form.observacion" placeholder="Ej. para el buffet de mañana" class="w-full" />
           </div>
           <div class="form-actions col-12">
-            <Button :disabled="$saving" type="submit" label="Enviar solicitud" icon="pi pi-check" severity="success" />
+            <Button :disabled="$saving || enviando || !insumoSeleccionado || !form.cantidad || form.cantidad <= 0" :loading="enviando" type="submit" label="Enviar solicitud" icon="pi pi-check" severity="success" />
           </div>
         </form>
       </div>
@@ -78,7 +79,8 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import Select from 'primevue/select'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import VolverBtn from '../components/ui/VolverBtn.vue'
@@ -90,6 +92,8 @@ const toast = useToast()
 const insumos = ref([])
 const solicitudes = ref([])
 const form = ref({ id_producto: null, cantidad: null, observacion: '' })
+const enviando = ref(false)
+const insumoSeleccionado = computed(() => insumos.value.find(p => p.id_producto === form.value.id_producto))
 
 const severidad = (e) => (e === 'Atendida' ? 'success' : e === 'Rechazada' ? 'danger' : 'warning')
 
@@ -116,6 +120,8 @@ const loadSolicitudes = async () => {
 }
 
 const enviar = async () => {
+  if (enviando.value || !insumoSeleccionado.value || !form.value.cantidad || form.value.cantidad <= 0) return
+  enviando.value = true
   const payload = {
     id_producto: form.value.id_producto,
     cantidad: form.value.cantidad,
@@ -130,6 +136,8 @@ const enviar = async () => {
     }
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.error || 'No se pudo enviar la solicitud', life: 4000 })
+  } finally {
+    enviando.value = false
   }
 }
 
