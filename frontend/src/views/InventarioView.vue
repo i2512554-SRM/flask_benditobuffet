@@ -55,7 +55,7 @@
           </div>
         </div>
       </div>
-      <DataTable :value="productosVisibles" data-key="id_producto" :paginator="true" :rows="10" class="mt-4">
+      <DataTable :value="productosVisibles" data-key="id_producto" :paginator="true" :rows="10" responsiveLayout="scroll" class="mt-4">
         <Column field="nombre" header="Producto" sortable></Column>
         <Column field="categoria" header="Categoría" sortable></Column>
         <Column field="precio" header="Precio" sortable>
@@ -74,13 +74,13 @@
             </span>
           </template>
         </Column>
-        <Column header="Acciones" :exportable="false">
+        <Column header="Acciones" :exportable="false" style="min-width: 22rem">
           <template #body="slotProps">
             <div class="row-actions">
-              <Button :disabled="$saving" icon="pi pi-eye" aria-label="Ver producto" severity="info" text rounded @click="verProducto(slotProps.data)" />
-              <Button :disabled="$saving" icon="pi pi-pencil" aria-label="Editar producto" severity="secondary" text rounded @click="editar(slotProps.data)" />
-              <Button :disabled="$saving" icon="pi pi-arrow-down" text rounded title="Agregar stock" @click="abrirAgregarStock(slotProps.data)" />
-              <Button :disabled="$saving" icon="pi pi-arrow-up" text rounded title="Registrar salida" @click="abrirRegistrarSalida(slotProps.data)" />
+              <Button :disabled="$saving" label="Detalle" icon="pi pi-eye" aria-label="Ver producto" severity="info" text size="small" @click="verProducto(slotProps.data)" />
+              <Button :disabled="$saving" label="Editar" icon="pi pi-pencil" aria-label="Editar producto" severity="secondary" text size="small" @click="editar(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-arrow-down" aria-label="Agregar stock" text rounded title="Agregar stock" @click="abrirAgregarStock(slotProps.data)" />
+              <Button :disabled="$saving" icon="pi pi-arrow-up" aria-label="Registrar salida" text rounded title="Registrar salida" @click="abrirRegistrarSalida(slotProps.data)" />
               <Button v-if="esAdmin" :disabled="$saving" :icon="slotProps.data.estado ? 'pi pi-ban' : 'pi pi-check'" :severity="slotProps.data.estado ? 'danger' : 'success'" text rounded :title="slotProps.data.estado ? 'Desactivar' : 'Activar'" @click="toggleEstado(slotProps.data)" />
             </div>
           </template>
@@ -197,9 +197,9 @@
           <label for="precio">Precio</label>
           <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="precio" v-model="form.precio" mode="currency" currency="PEN" locale="es-PE" class="w-full" />
         </div>
-        <div class="field col-6" v-if="!editing.id_producto">
-          <label for="stock">Stock inicial</label>
-          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="stock" v-model="form.stock" :min="0" class="w-full" />
+        <div class="field col-6" v-if="!editing.id_producto && form.unidad_medida">
+          <label for="stock">Cantidad inicial ({{ unidadLabel(form.unidad_medida) }})</label>
+          <InputNumber :maxFractionDigits="form.unidad_medida === 'Un' ? 0 : 3" placeholder="Ej. 10" id="stock" v-model="form.stock" :min="0" class="w-full" />
         </div>
         <div class="field col-12">
           <label for="descripcion">Descripción</label>
@@ -239,8 +239,8 @@
           <div class="stock-actual">{{ stockProducto ? unidadLabel(stockProducto.unidad_medida) : '-' }}</div>
         </div>
         <div class="field col-6">
-          <label for="stock-cantidad">Cantidad *</label>
-          <InputNumber :maxFractionDigits="2" placeholder="Ej. 100.00" id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
+          <label for="stock-cantidad">Cantidad{{ stockProducto ? ` (${unidadLabel(stockProducto.unidad_medida)})` : '' }} *</label>
+          <InputNumber :maxFractionDigits="stockProducto?.unidad_medida === 'Un' ? 0 : 3" placeholder="Ej. 10" id="stock-cantidad" v-model="stockForm.cantidad" :min="0" class="w-full" />
         </div>
         <div class="field col-12" v-if="stockModo === 'entrada'">
           <label for="stock-motivo">Motivo (opcional)</label>
@@ -286,7 +286,7 @@
           <label>Detalle de productos</label>
           <div v-for="(linea, idx) in compraForm.detalle" :key="idx" class="detalle-row">
             <Select v-model="linea.id_producto" :options="productosActivos" filter optionLabel="nombre" optionValue="id_producto" placeholder="Producto" class="w-full" />
-            <InputNumber :maxFractionDigits="2" v-model="linea.cantidad" placeholder="Cant." :min="0" class="w-full" />
+            <InputNumber :maxFractionDigits="unidadProducto(linea.id_producto) === 'Un' ? 0 : 3" v-model="linea.cantidad" :placeholder="`Cantidad (${unidadProducto(linea.id_producto)})`" :min="0" class="w-full" />
             <InputNumber :maxFractionDigits="2" v-model="linea.precio_unitario" placeholder="P. unit." mode="currency" currency="PEN" locale="es-PE" :min="0" class="w-full" />
             <Button :disabled="$saving" icon="pi pi-trash" severity="danger" text rounded @click="quitarLinea(idx)" />
           </div>
@@ -471,6 +471,7 @@ const fmt2 = (v) => Number(v || 0).toFixed(2)
 const fmtFecha = fechaLegible
 const fmtFechaHora = fechaLegible
 const unidadLabel = (u) => u === 'Kg' ? 'Kg' : u === 'Lt' ? 'Lt' : 'Un'
+const unidadProducto = (id) => unidadLabel(productosActivos.value.find(p => p.id_producto === id)?.unidad_medida)
 const fmtStock = (v) => Number(v || 0) % 1 === 0 ? String(Number(v || 0)) : Number(v || 0).toFixed(2)
 const firmarCantidad = (v) => {
   const n = Number(v || 0)
@@ -817,7 +818,7 @@ watch(() => route.query.accion, a => {
 .table-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; }
 .mt-4 { margin-top: 1rem; }
 .mt-3 { margin-top: 0.75rem; }
-.row-actions { display: flex; gap: 0.15rem; }
+.row-actions { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
 .stock-num { font-weight: 600; }
 .stock-cero { color: var(--color-danger, #dc2626); }
 .estado-badge { padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
