@@ -224,8 +224,10 @@ class CierreCaja(db.Model):
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
     total_ventas = db.Column(db.Float, nullable=False)
     total_gastos = db.Column(db.Float, nullable=False)
-    neto = db.Column(db.Float, nullable=False)
+    neto = db.Column(db.Float, db.Computed('(total_ventas - total_gastos)'))
     observaciones = db.Column(db.Text)
+    estado = db.Column(db.String(20), nullable=False, default='cerrada')
+    fecha_cierre = db.Column(db.DateTime(timezone=True), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     def __repr__(self):
