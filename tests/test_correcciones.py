@@ -196,3 +196,12 @@ class CorreccionesTest(BaseFlujos):
             respuesta = self.call('get', '/dni/12345678')
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(set(respuesta.json), {'success', 'dni', 'nombres', 'apellidoPaterno', 'apellidoMaterno'})
+
+    def test_listado_de_compras_incluye_cantidad_de_productos(self):
+        self.producto(stock=0)
+        compra = self.call('post', '/inventario/compras', json={'detalle': [
+            {'id_producto': 1, 'cantidad': 2, 'precio_unitario': 3},
+            {'id_producto': 1, 'cantidad': 1, 'precio_unitario': 3}]})
+        self.assertEqual(compra.status_code, 201)
+        self.assertEqual(compra.json['data']['n_detalle'], 2)
+        self.assertEqual(self.call('get', '/inventario/compras').json['data'][0]['n_detalle'], 2)

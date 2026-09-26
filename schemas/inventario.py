@@ -54,6 +54,7 @@ class CompraInventarioSchema(SQLAlchemyAutoSchema):
     proveedor = fields.String(attribute='proveedor')
     detalle = fields.List(fields.Nested(DetalleCompraInventarioSchema), attribute='detalle')
     total_compra = fields.Float()
+    n_detalle = fields.Integer(dump_only=True)
 
 compra_inventario_schema = CompraInventarioSchema()
 compras_inventario_schema = CompraInventarioSchema(many=True)
