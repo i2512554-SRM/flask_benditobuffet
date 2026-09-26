@@ -64,7 +64,7 @@
               <Button :disabled="$saving"
                 v-if="slotProps.data.estado !== 'Disponible'"
                 label="Solicitar"
-                icon="pi pi-basket"
+                icon="pi pi-shopping-cart"
                 size="small"
                 @click="solicitar(slotProps.data)"
               />

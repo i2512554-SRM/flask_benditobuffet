@@ -10,6 +10,7 @@ import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 
 import '@fortawesome/fontawesome-free/css/all.min.css'
+import 'primeicons/primeicons.css'
 import './assets/variables.css'
 import './style.css'
 
