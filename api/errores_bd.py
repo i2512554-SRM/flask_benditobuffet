@@ -1,9 +1,21 @@
 from flask import jsonify
-from sqlalchemy.exc import ProgrammingError, OperationalError
+from sqlalchemy.exc import ProgrammingError, OperationalError, DataError, IntegrityError
 from models import db
 
 
 def configurar_errores_bd(app):
+    @app.errorhandler(DataError)
+    def error_datos(error):
+        db.session.rollback()
+        app.logger.warning('Dato rechazado por la base de datos: %s', getattr(error.orig, 'sqlstate', None))
+        return jsonify(success=False, error='Algún dato excede el tamaño o formato permitido.'), 400
+
+    @app.errorhandler(IntegrityError)
+    def error_integridad(error):
+        db.session.rollback()
+        app.logger.warning('Operación rechazada por integridad: %s', getattr(error.orig, 'sqlstate', None))
+        return jsonify(success=False, error='La operación entra en conflicto con registros existentes.'), 409
+
     @app.errorhandler(ProgrammingError)
     @app.errorhandler(OperationalError)
     def error_base(error):

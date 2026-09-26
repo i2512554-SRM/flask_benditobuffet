@@ -1,28 +1,42 @@
-from datetime import date, datetime
+from datetime import date
 from bisect import bisect_left
-from decimal import Decimal
-from functools import wraps
+from decimal import Decimal, InvalidOperation
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import text
-from models import db, TransaccionCaja, CierreCaja, Usuario
+from models import db, TransaccionCaja, CierreCaja
 from schemas.caja import transacciones_schema, cierre_schema, transaccion_schema
 from api.fechas import ahora, limites_dia, periodo_financiero, utc, LIMA
-from api.validaciones import numero
 from api.idempotencia import normalizar_clave
+from api.roles import ROLES_CAJA, requiere_roles
 
 caja_bp = Blueprint('caja', __name__)
 METODOS = ('Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Otros')
 
-def _caja(fn):
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        u = db.session.get(Usuario, int(get_jwt_identity()))
-        if not u or u.id_rol not in (1, 2) or not u.estado:
-            return jsonify(success=False, error='Acceso restringido a caja'), 403
-        return fn(*args, **kwargs)
-    return wrapper
+
+def _json_objeto(permitir_vacio=False):
+    data = request.get_json(silent=True)
+    if data is None and permitir_vacio:
+        return {}
+    return data if isinstance(data, dict) else None
+
+
+def _monto(valor, positivo=False):
+    try:
+        monto = Decimal(str(valor))
+        minimo = Decimal('.01') if positivo else Decimal('0')
+        if (
+            not monto.is_finite()
+            or monto < minimo
+            or monto > Decimal('9999999999.99')
+            or monto.quantize(Decimal('.01')) != monto
+        ):
+            raise ValueError()
+        return monto
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError()
+
+_caja = requiere_roles(*ROLES_CAJA, mensaje='Acceso restringido a caja')
 
 def _bloquear_caja():
     # Bloqueo compartido entre procesos; se libera al terminar la transacción.
@@ -121,10 +135,13 @@ def abrir_caja():
     _bloquear_caja()
     if _abierta():
         return jsonify(success=False, error='Ya existe una caja abierta. Ciérrala antes de abrir otra.'), 409
+    data = _json_objeto(permitir_vacio=True)
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
     try:
-        monto = numero((request.get_json(silent=True) or {}).get('monto_inicial') or 0)
+        monto = _monto(data.get('monto_inicial') or 0)
     except (ValueError, TypeError):
-        return jsonify(success=False, error='Monto inicial no válido'), 400
+        return jsonify(success=False, error='El monto inicial admite hasta dos decimales.'), 400
     cierre = CierreCaja(id_usuario=int(get_jwt_identity()), monto_inicial=monto, total_ventas=0,
                         total_gastos=0, estado='abierta', fecha=ahora())
     db.session.add(cierre)
@@ -138,9 +155,19 @@ def cerrar_caja():
     cierre = _abierta()
     if not cierre:
         return jsonify(success=False, error='No hay caja abierta'), 409
+    data = _json_objeto(permitir_vacio=True)
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
+    contado = None
+    if data.get('efectivo_contado') is not None:
+        try:
+            contado = _monto(data['efectivo_contado'])
+        except (ValueError, TypeError):
+            return jsonify(success=False, error='El efectivo contado admite hasta dos decimales.'), 400
     fin = ahora()
     totales = _totales(_movimientos(cierre.fecha, fin).all())
     cierre.total_ventas, cierre.total_gastos = totales['ventas'], totales['gastos']
+    cierre.efectivo_contado = contado
     cierre.estado, cierre.fecha_cierre = 'cerrada', fin
     db.session.commit()
     return jsonify(success=True, data=cierre_schema.dump(cierre))
@@ -162,15 +189,25 @@ def get_transacciones():
 @_caja
 def crear_transaccion():
     _bloquear_caja()
-    data = request.get_json(silent=True) or {}
+    data = _json_objeto()
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
     if data.get('tipo') not in ('Venta', 'Gasto') or data.get('metodo_pago') not in METODOS:
         return jsonify(success=False, error='Selecciona el tipo y el método de pago.'), 400
     try:
-        monto = numero(data.get('monto'), .01)
-        if round(monto, 2) != monto:
-            raise ValueError()
+        monto = _monto(data.get('monto'), positivo=True)
     except (ValueError, TypeError):
         return jsonify(success=False, error='Ingresa un monto positivo con hasta dos decimales.'), 400
+    categoria = data.get('categoria') or ''
+    descripcion = data.get('descripcion') or ''
+    if (
+        not isinstance(categoria, str)
+        or len(categoria.strip()) > 150
+        or not isinstance(descripcion, str)
+    ):
+        return jsonify(success=False, error='La categoría o la descripción no es válida.'), 400
+    categoria = categoria.strip()
+    descripcion = descripcion.strip()
     try:
         clave = normalizar_clave(data)
     except ValueError as error:
@@ -181,9 +218,9 @@ def crear_transaccion():
         if existente:
             coincide = (
                 existente.id_usuario == uid and existente.tipo == data['tipo']
-                and Decimal(str(existente.monto)).quantize(Decimal('.01')) == Decimal(str(monto)).quantize(Decimal('.01'))
+                and Decimal(str(existente.monto)).quantize(Decimal('.01')) == monto
                 and existente.metodo_pago == data['metodo_pago']
-                and (existente.descripcion or '') == (data.get('descripcion') or '').strip()
+                and (existente.descripcion or '') == descripcion
             )
             if not coincide:
                 return jsonify(success=False, error='El identificador ya pertenece a otra operación.'), 409
@@ -191,8 +228,8 @@ def crear_transaccion():
     if not _abierta():
         return jsonify(success=False, error='Abre la caja antes de registrar movimientos.'), 409
     t = TransaccionCaja(id_usuario=int(get_jwt_identity()), tipo=data['tipo'], monto=monto,
-        metodo_pago=data['metodo_pago'], categoria=data.get('categoria', ''),
-        descripcion=(data.get('descripcion') or '').strip(), clave_operacion=clave, fecha=ahora())
+        metodo_pago=data['metodo_pago'], categoria=categoria,
+        descripcion=descripcion, clave_operacion=clave, fecha=ahora())
     db.session.add(t)
     db.session.commit()
     return jsonify(success=True, data=transaccion_schema.dump(t))
@@ -220,7 +257,7 @@ def _datos_reporte(periodo='mes', fecha_texto=None):
         'cierres': _historial(inicio, fin),
     }
 
-def _puntos_reporte(periodo='mes', fecha_texto=None):
+def puntos_reporte(periodo='mes', fecha_texto=None):
     return _calcular_reporte(periodo, fecha_texto)[3]
 
 def _calcular_reporte(periodo, fecha_texto):

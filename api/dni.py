@@ -1,13 +1,13 @@
-from functools import wraps
 from datetime import timedelta
 import os
 import re
 import requests
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity
-from api.admin import admin_required
+from api.roles import admin_required
 from api.fechas import ahora
 from models import db, ActividadUsuario
+from schemas.dni import consulta_dni_schema
 
 
 @admin_required
@@ -31,6 +31,6 @@ def consultar_dni(dni):
         cuerpo = respuesta.json()
         if respuesta.status_code != 200 or cuerpo.get('success') is False:
             return jsonify(error='No se pudo obtener el DNI del proveedor.'), 502
-        return jsonify(cuerpo)
+        return jsonify(consulta_dni_schema.dump(cuerpo) if isinstance(cuerpo, dict) else {})
     except (requests.RequestException, ValueError):
         return jsonify(error='El servicio de consulta no respondió correctamente.'), 502

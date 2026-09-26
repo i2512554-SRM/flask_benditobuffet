@@ -13,6 +13,7 @@ class ProductoSchema(SQLAlchemyAutoSchema):
 
     categoria = fields.String(attribute='categoria')
     precio = fields.Float()
+    costo = fields.Float(allow_none=True)
     stock = fields.Float()
         
 producto_schema = ProductoSchema()

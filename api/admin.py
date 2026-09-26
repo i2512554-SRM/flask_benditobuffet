@@ -1,24 +1,36 @@
-from api.fechas import utc, LIMA, ahora
+from api.fechas import utc, limites_dia, LIMA, ahora
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, date, timedelta, timezone
-from calendar import monthrange
+from flask_jwt_extended import get_jwt_identity
+from datetime import date, timedelta
 from bd import db
+from api.roles import ADMIN, admin_required
+from schemas.admin import (roles_schema, actividades_schema, adelantos_admin_schema, intentos_login_schema,
+                           bloqueos_login_schema, actividad_reciente_schema)
 from models import Rol, Usuario, TransaccionCaja, CierreCaja, Adelanto, ActividadUsuario, IntentoLogin, BloqueoLogin, Producto, SolicitudInsumo, PagoEmpleado, Inversion, crear_notificacion
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
-def admin_required(fn):
-    from functools import wraps
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        uid = int(get_jwt_identity())
-        u = Usuario.query.get(uid)
-        if not u or u.id_rol != 1 or not u.estado:
-            return jsonify({'success': False, 'message': 'Acceso restringido a administradores'}), 403
-        return fn(*args, **kwargs)
-    return wrapper
+
+def _json_objeto():
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else None
+
+
+def _limite_consulta(predeterminado, maximo):
+    valor = request.args.get('limit')
+    if valor is None:
+        return predeterminado
+    try:
+        limite = int(valor)
+    except (TypeError, ValueError):
+        return None
+    return limite if 1 <= limite <= maximo else None
+
+def _usuarios_por_id(ids):
+    ids = {i for i in ids if i is not None}
+    if not ids:
+        return {}
+    return {u.id_usuario: u for u in Usuario.query.filter(Usuario.id_usuario.in_(ids)).all()}
 
 @admin_bp.route('/panel-stats', methods=['GET'])
 @admin_required
@@ -34,34 +46,24 @@ def get_panel_stats():
 @admin_required
 def listar_roles():
     roles = Rol.query.order_by(Rol.id_rol).all()
-    data = []
-    for r in roles:
-        data.append({
-            'id_rol': r.id_rol,
-            'nombre': r.nombre,
-            'estado': r.estado,
-            'total_usuarios': Usuario.query.filter(Usuario.id_rol == r.id_rol).count(),
-            'fecha_creacion': r.fecha_creacion.strftime('%d/%m/%Y') if r.fecha_creacion else None,
-        })
+    totales = dict(db.session.query(Usuario.id_rol, db.func.count(Usuario.id_usuario)).group_by(Usuario.id_rol).all())
+    data = [{**fila, 'total_usuarios': totales.get(r.id_rol, 0)} for fila, r in zip(roles_schema.dump(roles), roles)]
     return jsonify({'success': True, 'data': data})
 
 
 @admin_bp.route('/actividad', methods=['GET'])
 @admin_required
 def listar_actividad():
-    limite = request.args.get('limit', 100, type=int)
-    registros = ActividadUsuario.query.order_by(ActividadUsuario.fecha.desc()).limit(min(limite, 500)).all()
+    limite = _limite_consulta(100, 500)
+    if limite is None:
+        return jsonify({'success': False, 'error': 'El límite debe ser un entero entre 1 y 500'}), 400
+    registros = ActividadUsuario.query.order_by(ActividadUsuario.fecha.desc()).limit(limite).all()
+    usuarios = _usuarios_por_id(a.id_usuario for a in registros)
     data = []
-    for a in registros:
-        emp = Usuario.query.get(a.id_usuario)
-        data.append({
-            'id_actividad': a.id_actividad,
-            'id_usuario': a.id_usuario,
-            'usuario': f"{emp.nombres} {emp.apellido}" if emp else 'Desconocido',
-            'correo': emp.correo if emp else '-',
-            'accion': a.accion,
-            'fecha': a.fecha.strftime('%d/%m/%Y %H:%M') if a.fecha else None,
-        })
+    for fila, a in zip(actividades_schema.dump(registros), registros):
+        emp = usuarios.get(a.id_usuario)
+        fila.update(usuario=f"{emp.nombres} {emp.apellido}" if emp else 'Desconocido', correo=emp.correo if emp else '-')
+        data.append(fila)
     return jsonify({'success': True, 'data': data})
 
 
@@ -69,20 +71,33 @@ def listar_actividad():
 @admin_required
 def alertas_resumen():
     umbral = 10
-    productos = Producto.query.all()
-    stock_bajo = sum(1 for p in productos if 0 < float(p.stock or 0) < umbral)
-    agotados = sum(1 for p in productos if float(p.stock or 0) <= 0)
+    activos = Producto.query.filter(Producto.estado.is_(True))
+    stock_bajo = activos.filter(Producto.stock > 0, Producto.stock < umbral).count()
+    agotados = activos.filter(db.or_(Producto.stock <= 0, Producto.stock.is_(None))).count()
     adelantos_pendientes = Adelanto.query.filter(Adelanto.estado == 'Pendiente').count()
     solicitudes_pendientes = SolicitudInsumo.query.filter(SolicitudInsumo.estado == 'Pendiente').count()
-    pagos_pendientes = PagoEmpleado.query.filter(PagoEmpleado.estado != 'Pagado').count()
-    ahora = datetime.now(timezone.utc)
+    pagos_pendientes = PagoEmpleado.query.filter(PagoEmpleado.estado == 'Pendiente').count()
+    instante = ahora()
     bloqueos_activos = BloqueoLogin.query.filter(
         BloqueoLogin.bloqueado_hasta.isnot(None),
-        BloqueoLogin.bloqueado_hasta > ahora
+        BloqueoLogin.bloqueado_hasta > instante
     ).count()
-    hoy = datetime.utcnow().date()
-    inicio = datetime.combine(hoy, datetime.min.time())
-    movimientos_hoy = TransaccionCaja.query.filter(TransaccionCaja.fecha >= inicio).count()
+    hoy = instante.astimezone(LIMA).date()
+    inicio, fin = limites_dia(hoy)
+    movimientos_hoy = TransaccionCaja.query.filter(
+        TransaccionCaja.fecha >= inicio, TransaccionCaja.fecha < fin
+    ).count()
+    inicio_mes = limites_dia(date(hoy.year, hoy.month, 1))[0]
+    siguiente_mes = date(hoy.year + 1, 1, 1) if hoy.month == 12 else date(hoy.year, hoy.month + 1, 1)
+    fin_mes = limites_dia(siguiente_mes)[0]
+    pagos_mes = PagoEmpleado.query.filter(
+        PagoEmpleado.estado == 'Pagado',
+        PagoEmpleado.fecha_pago >= inicio_mes,
+        PagoEmpleado.fecha_pago < fin_mes
+    ).count()
+    empleados_activos = Usuario.query.filter(Usuario.estado == True, Usuario.id_rol != ADMIN).count()
+    from api.caja import _abierta
+    caja_pendiente_cierre = _abierta() is not None
     return jsonify({'success': True, 'data': {
         'stock_bajo': stock_bajo,
         'agotados': agotados,
@@ -91,14 +106,18 @@ def alertas_resumen():
         'pagos_pendientes': pagos_pendientes,
         'bloqueos_activos': bloqueos_activos,
         'movimientos_hoy': movimientos_hoy,
+        'empleados_activos': empleados_activos,
+        'pagos_mes': pagos_mes,
+        'caja_pendiente_cierre': caja_pendiente_cierre,
     }})
 
 
 @admin_bp.route('/actividad-reciente', methods=['GET'])
 @admin_required
 def actividad_reciente():
-    limite = request.args.get('limit', 10, type=int)
-    limite = max(1, min(limite, 50))
+    limite = _limite_consulta(10, 50)
+    if limite is None:
+        return jsonify({'success': False, 'error': 'El límite debe ser un entero entre 1 y 50'}), 400
     items = []
 
     pagos = PagoEmpleado.query.options(db.joinedload(PagoEmpleado.usuario_empleado)).order_by(PagoEmpleado.fecha_pago.desc()).limit(limite).all()
@@ -114,8 +133,9 @@ def actividad_reciente():
         })
 
     cierres = CierreCaja.query.filter(CierreCaja.estado == 'cerrada').order_by(CierreCaja.fecha_cierre.desc()).limit(limite).all()
+    cajeras = _usuarios_por_id(c.id_usuario for c in cierres)
     for c in cierres:
-        emp = Usuario.query.get(c.id_usuario)
+        emp = cajeras.get(c.id_usuario)
         nombre = f"{emp.nombres} {emp.apellido}".strip() if emp else 'Cajera'
         items.append({
             'tipo': 'cierre_caja',
@@ -151,43 +171,22 @@ def actividad_reciente():
     for i in inversiones:
         items.append({
             'tipo': 'inversion',
-            'titulo': 'Inversión registrada',
+            'titulo': 'Inversión anulada' if i.estado == 'Anulada' else 'Inversión registrada',
             'descripcion': f'S/ {i.monto:.2f} — {i.descripcion}' + (f' ({i.proveedor})' if i.proveedor else ''),
             'fecha': i.fecha,
             'icono': 'chart-line',
         })
 
     items.sort(key=lambda x: utc(x['fecha']).timestamp() if x['fecha'] else 0, reverse=True)
-    data = [{
-        'tipo': it['tipo'],
-        'titulo': it['titulo'],
-        'descripcion': it['descripcion'],
-        'icono': it['icono'],
-        'fecha': utc(it['fecha']).astimezone(LIMA).strftime('%d/%m/%Y %H:%M') if it['fecha'] else None,
-        'destino': {'pago': '/personal/pagos', 'cierre_caja': '/caja/historial', 'adelanto': '/personal/solicitudes', 'solicitud_insumo': '/inventario/operaciones?vista=productos', 'inversion': '/inventario/operaciones?vista=inversiones'}.get(it['tipo'], '/panel'),
-    } for it in items[:limite]]
+    data = actividad_reciente_schema.dump(items[:limite])
     return jsonify({'success': True, 'data': data})
 
 
 @admin_bp.route('/adelantos', methods=['GET'])
 @admin_required
 def listar_solicitudes():
-    solicitudes = Adelanto.query.order_by(Adelanto.fecha.desc()).all()
-    data = []
-    for s in solicitudes:
-        emp = s.usuario_adelanto
-        data.append({
-            'id_adelanto': s.id_adelanto,
-            'id_usuario': s.id_usuario,
-            'empleado': f"{emp.nombres} {emp.apellido}" if emp else 'Desconocido',
-            'motivo': s.motivo,
-            'monto': float(s.monto),
-            'fecha': s.fecha.strftime('%d/%m/%Y') if s.fecha else None,
-            'fecha_gestion': s.fecha_gestion.strftime('%d/%m/%Y %H:%M') if s.fecha_gestion else None,
-            'estado': s.estado,
-            'respuesta_admin': s.respuesta_admin,
-        })
-    return jsonify({'success': True, 'data': data})
+    solicitudes = Adelanto.query.options(db.joinedload(Adelanto.usuario_adelanto)).order_by(Adelanto.fecha.desc()).all()
+    return jsonify({'success': True, 'data': adelantos_admin_schema.dump(solicitudes)})
 
 
 @admin_bp.route('/adelantos/<int:id_adelanto>', methods=['PUT'])
@@ -199,9 +198,17 @@ def gestionar_solicitud(id_adelanto):
     if adelanto.estado != 'Pendiente':
         return jsonify(success=False, error='Esta solicitud ya fue resuelta o cancelada.'), 409
 
-    data = request.get_json(silent=True) or {}
-    accion = (data.get('accion') or '').strip().lower()
-    respuesta = (data.get('respuesta') or '').strip()
+    data = _json_objeto()
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
+    accion_recibida = data.get('accion') or ''
+    respuesta_recibida = data.get('respuesta') or ''
+    if not isinstance(accion_recibida, str) or not isinstance(respuesta_recibida, str):
+        return jsonify(success=False, error='La acción o la respuesta no es válida.'), 400
+    accion = accion_recibida.strip().lower()
+    respuesta = respuesta_recibida.strip()
+    if len(respuesta) > 300:
+        return jsonify(success=False, error='La respuesta admite hasta 300 caracteres.'), 400
 
     if accion == 'aprobar':
         adelanto.estado = 'Aprobado'
@@ -212,7 +219,6 @@ def gestionar_solicitud(id_adelanto):
 
     adelanto.respuesta_admin = respuesta if respuesta else None
     adelanto.fecha_gestion = ahora()
-    adelanto.notificacion_vista = False
     crear_notificacion(
         adelanto.id_usuario,
         f'Solicitud de adelanto {adelanto.estado}',
@@ -223,7 +229,7 @@ def gestionar_solicitud(id_adelanto):
 
     try:
         admin_id = int(get_jwt_identity())
-        accion_act = ActividadUsuario(id_usuario=admin_id, accion=f"{accion.capitalize()} adelanto #{id_adelanto}", fecha=datetime.now())
+        accion_act = ActividadUsuario(id_usuario=admin_id, accion=f"{accion.capitalize()} adelanto #{id_adelanto}", fecha=ahora())
         db.session.add(accion_act)
         db.session.commit()
     except Exception:
@@ -234,46 +240,28 @@ def gestionar_solicitud(id_adelanto):
 @admin_bp.route('/seguridad', methods=['GET'])
 @admin_required
 def get_seguridad():
-    ahora = datetime.now(timezone.utc)
+    instante = ahora()
     dias = request.args.get('dias', 7, type=int)
-    limite = ahora - timedelta(days=max(1, min(dias, 90)))
+    limite = instante - timedelta(days=max(1, min(dias, 90)))
 
     intentos = IntentoLogin.query.options(db.joinedload(IntentoLogin.usuario_rel)).filter(IntentoLogin.fecha >= limite).order_by(IntentoLogin.fecha.desc()).limit(200).all()
-    intentos_data = []
-    for i in intentos:
-        intentos_data.append({
-            'id': i.id,
-            'identificador': i.identificador,
-            'usuario_nombre': i.usuario_nombre,
-            'ip': i.ip or '-',
-            'resultado': i.resultado,
-            'fecha': i.fecha.strftime('%d/%m/%Y %H:%M') if i.fecha else None,
-        })
+    intentos_data = intentos_login_schema.dump(intentos)
 
     bloqueos = BloqueoLogin.query.options(db.joinedload(BloqueoLogin.usuario_rel).joinedload(Usuario.rol)).filter(
         BloqueoLogin.bloqueado_hasta.isnot(None),
-        BloqueoLogin.bloqueado_hasta > ahora
+        BloqueoLogin.bloqueado_hasta > instante
     ).order_by(BloqueoLogin.intentos.desc()).all()
-    bloqueos_data = []
-    for b in bloqueos:
-        activo = b.bloqueado_hasta is not None and b.bloqueado_hasta > ahora
-        bloqueos_data.append({
-            'id': b.id,
-            'usuario': b.usuario,
-            'usuario_nombre': b.usuario_nombre,
-            'usuario_rol': b.usuario_rol,
-            'ip': b.ip or '-',
-            'intentos': b.intentos,
-            'bloqueado_hasta': b.bloqueado_hasta.strftime('%d/%m/%Y %H:%M') if b.bloqueado_hasta else None,
-            'activo': activo,
-            'fecha': b.fecha.strftime('%d/%m/%Y %H:%M') if b.fecha else None,
-        })
+    bloqueos_data = [{**fila, 'activo': b.bloqueado_hasta is not None and utc(b.bloqueado_hasta) > instante}
+                     for fila, b in zip(bloqueos_login_schema.dump(bloqueos), bloqueos)]
 
     resumen = {
         'exitos': IntentoLogin.query.filter(IntentoLogin.resultado == 'exito', IntentoLogin.fecha >= limite).count(),
         'fallos': IntentoLogin.query.filter(IntentoLogin.resultado == 'fallo', IntentoLogin.fecha >= limite).count(),
         'bloqueados': IntentoLogin.query.filter(IntentoLogin.resultado == 'bloqueado', IntentoLogin.fecha >= limite).count(),
-        'bloqueos_activos': sum(1 for b in bloqueos if b.bloqueado_hasta is not None and b.bloqueado_hasta > ahora),
+        'bloqueos_activos': sum(
+            1 for b in bloqueos
+            if b.bloqueado_hasta is not None and utc(b.bloqueado_hasta) > instante
+        ),
     }
 
     return jsonify({'success': True, 'data': {
@@ -285,8 +273,13 @@ def get_seguridad():
 @admin_bp.route('/seguridad/desbloquear', methods=['POST'])
 @admin_required
 def desbloquear():
-    data = request.get_json(silent=True) or {}
-    usuario = (data.get('usuario') or '').strip()
+    data = _json_objeto()
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
+    usuario_recibido = data.get('usuario') or ''
+    if not isinstance(usuario_recibido, str):
+        return jsonify(success=False, error='Usuario no válido'), 400
+    usuario = usuario_recibido.strip()
     if not usuario:
         return jsonify({'success': False, 'error': 'Usuario requerido'}), 400
     for b in BloqueoLogin.query.filter(BloqueoLogin.usuario == usuario).all():

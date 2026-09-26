@@ -1,37 +1,30 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
 from bd import db
 from api.validaciones import cantidad_decimal
-from api.fechas import fecha_larga_local, fecha_local
+from api.fechas import iso_utc
+from api.roles import COCINA, requiere_roles
+from schemas.cocina import producto_cocina_schema, solicitud_schema, solicitudes_schema
 from models import (
-    Usuario, Producto, Categoria, SolicitudInsumo, ActividadUsuario, crear_notificacion
+    Producto, Categoria, SolicitudInsumo, ActividadUsuario
 )
 
 cocina_bp = Blueprint('cocina', __name__, url_prefix='/api/cocina')
 
-ROL_REQUERIDO = 3
 STOCK_BAJO_DEFECTO = 10
+
+
+def _json_objeto():
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else None
 
 
 def _ahora():
     return datetime.now(timezone.utc)
 
 
-def _cocinero(fn):
-    from functools import wraps
-
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        uid = int(get_jwt_identity())
-        u = Usuario.query.get(uid)
-        if not u or u.id_rol != ROL_REQUERIDO or not u.estado:
-            return jsonify({'success': False, 'error': 'Acceso restringido al personal de cocina'}), 403
-        return fn(u, *args, **kwargs)
-
-    return wrapper
+_cocinero = requiere_roles(COCINA, mensaje='Acceso restringido al personal de cocina', pasar_usuario=True)
 
 
 def _umbral_stock():
@@ -47,38 +40,15 @@ def _estado_stock(stock, umbral):
     return 'Disponible'
 
 
-def _serializar_producto(p, umbral=None):
-    umbral = umbral or _umbral_stock()
-    return {
-        'id_producto': p.id_producto,
-        'nombre': p.nombre,
-        'categoria': p.categoria or None,
-        'stock': float(p.stock or 0),
-        'unidad': p.unidad_medida or 'Un',
-        'unidad_medida': p.unidad_medida or 'Un',
-        'estado': _estado_stock(p.stock, umbral),
-        'activo': p.estado,
-    }
-
-
-def _serializar_solicitud(s):
-    return {
-        'id_solicitud': s.id_solicitud,
-        'id_producto': s.id_producto,
-        'producto': s.producto,
-        'cantidad': float(s.cantidad),
-        'observacion': s.observacion,
-        'estado': s.estado,
-        'respuesta': s.respuesta,
-        'fecha': fecha_local(s.fecha, hora=True),
-    }
+def _serializar_producto(p, umbral):
+    return {**producto_cocina_schema.dump(p), 'estado': _estado_stock(p.stock, umbral)}
 
 
 @cocina_bp.route('/dashboard', methods=['GET'])
 @_cocinero
 def dashboard(cocinero):
     umbral = _umbral_stock()
-    productos = Producto.query.all()
+    productos = Producto.query.filter(Producto.estado.is_(True)).all()
     total_insumos = len(productos)
     stock_bajo = [p for p in productos if 0 < float(p.stock or 0) < umbral]
     agotados = [p for p in productos if float(p.stock or 0) <= 0]
@@ -95,7 +65,7 @@ def dashboard(cocinero):
                 'apellido': cocinero.apellido,
                 'rol': cocinero.rol.nombre if cocinero.rol else 'Cocinero',
             },
-            'fecha': fecha_larga_local(_ahora()),
+            'fecha': iso_utc(_ahora()),
             'resumen': {
                 'total_insumos': total_insumos,
                 'disponibles': len(disponibles),
@@ -103,7 +73,7 @@ def dashboard(cocinero):
                 'agotados': len(agotados),
                 'solicitudes_pendientes': len(pendientes),
             },
-            'pendientes': [_serializar_solicitud(s) for s in pendientes],
+            'pendientes': solicitudes_schema.dump(pendientes),
         }
     })
 
@@ -142,15 +112,22 @@ def listar_solicitudes(cocinero):
     if estado:
         q = q.filter(SolicitudInsumo.estado == estado)
     solicitudes = q.order_by(SolicitudInsumo.fecha.desc()).all()
-    return jsonify({'success': True, 'data': [_serializar_solicitud(s) for s in solicitudes]})
+    return jsonify({'success': True, 'data': solicitudes_schema.dump(solicitudes)})
 
 
 @cocina_bp.route('/solicitudes', methods=['POST'])
 @_cocinero
 def crear_solicitud(cocinero):
-    data = request.get_json(silent=True) or {}
-    id_producto = data.get('id_producto')
-    producto = Producto.query.get(id_producto) if id_producto else None
+    data = _json_objeto()
+    if data is None:
+        return jsonify(success=False, error='El cuerpo debe ser un objeto JSON.'), 400
+    try:
+        if isinstance(data.get('id_producto'), bool):
+            raise ValueError()
+        id_producto = int(data.get('id_producto'))
+    except (TypeError, ValueError):
+        id_producto = None
+    producto = db.session.get(Producto, id_producto) if id_producto else None
     if not producto or not producto.estado:
         return jsonify({'success': False, 'error': 'Selecciona un producto o insumo válido'}), 400
 
@@ -161,7 +138,10 @@ def crear_solicitud(cocinero):
     except (ValueError, TypeError):
         return jsonify({'success': False, 'error': 'La cantidad debe ser mayor que cero'}), 400
 
-    observacion = (data.get('observacion') or '').strip()
+    observacion_recibida = data.get('observacion') or ''
+    if not isinstance(observacion_recibida, str) or len(observacion_recibida.strip()) > 255:
+        return jsonify(success=False, error='La observación admite hasta 255 caracteres.'), 400
+    observacion = observacion_recibida.strip()
     solicitud = SolicitudInsumo(
         id_usuario=cocinero.id_usuario,
         id_producto=producto.id_producto,
@@ -178,4 +158,4 @@ def crear_solicitud(cocinero):
     ))
     db.session.commit()
 
-    return jsonify({'success': True, 'data': _serializar_solicitud(solicitud)}), 201
+    return jsonify({'success': True, 'data': solicitud_schema.dump(solicitud)}), 201

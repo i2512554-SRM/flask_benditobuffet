@@ -12,6 +12,7 @@ ENV/
 # Archivos generados por la automatización
 cierres/
 logs/
+static/uploads/
 
 # Python
 __pycache__/

@@ -4,13 +4,28 @@ from decimal import Decimal, InvalidOperation
 
 
 def validar_personal(data, crear=False):
+    if not isinstance(data, dict):
+        return 'Los datos del empleado no son válidos.'
     if (crear or 'dni' in data) and not re.fullmatch(r'[0-9]{8}', str(data.get('dni') or '')):
         return 'El DNI debe contener exactamente 8 números.'
     for campo in ('nombres', 'apellido'):
         if crear or campo in data:
-            valor = str(data.get(campo) or '').strip()
-            if not valor or not all(c.isalpha() or c in " '-" for c in valor) or not any(c.isalpha() for c in valor):
+            recibido = data.get(campo) or ''
+            if not isinstance(recibido, str):
                 return 'Nombres y apellidos deben contener letras, sin números.'
+            valor = recibido.strip()
+            if not valor or len(valor) > 100 or not all(c.isalpha() or c in " '-" for c in valor) or not any(c.isalpha() for c in valor):
+                return 'Nombres y apellidos deben contener letras, sin números.'
+    correo = data.get('correo')
+    if 'correo' in data:
+        if correo in (None, ''):
+            if not crear:
+                return 'El correo no es válido.'
+        elif not isinstance(correo, str) or len(correo.strip()) > 150 or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', correo.strip()):
+            return 'El correo no es válido.'
+    usuario = data.get('usuario')
+    if usuario and (not isinstance(usuario, str) or not usuario.strip() or len(usuario.strip()) > 50):
+        return 'El usuario admite hasta 50 caracteres.'
     if data.get('telefono') and not re.fullmatch(r'[0-9]{9}', str(data['telefono'])):
         return 'El teléfono debe contener 9 números.'
     if 'turno' in data:

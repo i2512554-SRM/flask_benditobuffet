@@ -285,6 +285,7 @@ class CierreCaja(db.Model):
     total_ventas = db.Column(db.Numeric(12, 2), nullable=False)
     total_gastos = db.Column(db.Numeric(12, 2), nullable=False)
     neto = db.Column(db.Numeric(12, 2), db.Computed('(total_ventas - total_gastos)'))
+    efectivo_contado = db.Column(db.Numeric(12, 2), nullable=True)
     observaciones = db.Column(db.Text)
     estado = db.Column(db.String(20), nullable=False, default='cerrada')
     fecha_cierre = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -303,6 +304,7 @@ class Producto(db.Model):
     id_producto = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(200), nullable=False)
     precio = db.Column(db.Numeric(12, 2), nullable=False)
+    costo = db.Column(db.Numeric(12, 3), nullable=True)
     stock = db.Column(db.Numeric(12, 3), nullable=False)
     unidad_medida = db.Column(db.String(10), nullable=False, default='Un', server_default='Un')
     descripcion = db.Column(db.String(255), nullable=True)
@@ -333,6 +335,8 @@ class Inversion(db.Model):
     notas = db.Column(db.Text, nullable=True)
     monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+    estado = db.Column(db.String(20), nullable=False, default='Registrada', server_default='Registrada')
+    fecha_anulacion = db.Column(db.DateTime(timezone=True), nullable=True)
 
     proveedor_rel = db.relationship('Proveedor', foreign_keys=[id_proveedor])
 
@@ -515,7 +519,8 @@ class Notificacion(db.Model):
 
 
 def crear_notificacion(id_usuario, titulo, mensaje):
-    n = Notificacion(id_usuario=id_usuario, titulo=titulo, mensaje=mensaje, fecha=datetime.now(timezone.utc))
+    n = Notificacion(id_usuario=id_usuario, titulo=(titulo or '')[:120], mensaje=(mensaje or '')[:500] or None,
+                     fecha=datetime.now(timezone.utc))
     db.session.add(n)
     return n
 

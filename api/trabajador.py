@@ -1,35 +1,24 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify
 from datetime import datetime, timezone, timedelta
 
 from bd import db
-from api.fechas import fecha_larga_local, fecha_local, LIMA
+from api.fechas import iso_utc, LIMA
+from api.roles import ROLES_TRABAJADOR, requiere_roles
+from schemas.trabajador import (notificaciones_schema, pagos_trabajador_schema,
+                                adelantos_trabajador_schema, info_trabajador_schema)
 from models import (
-    Usuario, PagoEmpleado, Adelanto, Notificacion, UsuarioPerfil
+    PagoEmpleado, Adelanto, Notificacion
 )
 
 trabajador_bp = Blueprint('trabajador', __name__, url_prefix='/api/trabajador')
 
-ROLES_PERMITIDOS = (2, 3, 4)
 
 
 def _ahora():
     return datetime.now(timezone.utc)
 
 
-def _trabajador(fn):
-    from functools import wraps
-
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        uid = int(get_jwt_identity())
-        u = Usuario.query.get(uid)
-        if not u or u.id_rol not in ROLES_PERMITIDOS or not u.estado:
-            return jsonify({'success': False, 'error': 'Acceso restringido a trabajadores'}), 403
-        return fn(u, *args, **kwargs)
-
-    return wrapper
+_trabajador = requiere_roles(*ROLES_TRABAJADOR, mensaje='Acceso restringido a trabajadores', pasar_usuario=True)
 
 
 def _turnos(usuario):
@@ -75,7 +64,7 @@ def mis_turnos(trabajador):
         activo = i < 6 and len(turnos) > 0
         semana.append({
             'dia': DIAS_SEMANA[i],
-            'fecha': fecha.strftime('%d/%m/%Y'),
+            'fecha': fecha.isoformat(),
             'laboral': activo,
             'estado': 'Activo' if activo else 'Descanso',
             'turnos': [
@@ -122,7 +111,7 @@ def dashboard(trabajador):
                 'apellido': trabajador.apellido,
                 'rol': trabajador.rol.nombre if trabajador.rol else None,
             },
-            'fecha': fecha_larga_local(_ahora()),
+            'fecha': iso_utc(_ahora()),
             'turnos': _turnos(trabajador),
             'resumen': {
                 'total_pagado': float(total_pagado),
@@ -130,13 +119,7 @@ def dashboard(trabajador):
                 'adelantos_pendientes': pendientes_admin,
                 'notificaciones_no_leidas': no_leidas,
             },
-            'notificaciones': [{
-                'id_notificacion': n.id_notificacion,
-                'titulo': n.titulo,
-                'mensaje': n.mensaje,
-                'leida': n.leida,
-                'fecha': fecha_local(n.fecha, hora=True),
-            } for n in ultimas_notif],
+            'notificaciones': notificaciones_schema.dump(ultimas_notif),
         }
     })
 
@@ -144,22 +127,7 @@ def dashboard(trabajador):
 @trabajador_bp.route('/mi-info', methods=['GET'])
 @_trabajador
 def mi_info(trabajador):
-    perfil = trabajador.perfil
-    return jsonify({
-        'success': True,
-        'data': {
-            'nombres': trabajador.nombres,
-            'apellido': trabajador.apellido,
-            'dni': trabajador.dni,
-            'correo': trabajador.correo,
-            'telefono': trabajador.telefono,
-            'cargo': trabajador.rol.nombre if trabajador.rol else None,
-            'turnos': _turnos(trabajador),
-            'estado_laboral': 'Activo' if trabajador.estado else 'Inactivo',
-            'fecha_ingreso': perfil.fecha_ingreso.strftime('%d/%m/%Y') if (perfil and perfil.fecha_ingreso) else None,
-            'horario': perfil.horario if perfil else None,
-        }
-    })
+    return jsonify({'success': True, 'data': info_trabajador_schema.dump(trabajador)})
 
 
 @trabajador_bp.route('/pagos', methods=['GET'])
@@ -175,21 +143,8 @@ def mis_pagos(trabajador):
     return jsonify({
         'success': True,
         'data': {
-            'pagos': [{
-                'id_pago': p.id_pago,
-                'monto': float(p.monto),
-                'fecha': fecha_local(p.fecha_pago),
-                'estado': p.estado,
-                'descripcion': p.descripcion or 'Pago registrado',
-            } for p in pagos],
-            'adelantos': [{
-                'id_adelanto': a.id_adelanto,
-                'monto': float(a.monto),
-                'motivo': a.motivo,
-                'fecha': fecha_local(a.fecha),
-                'estado': a.estado,
-                'respuesta': a.respuesta_admin,
-            } for a in adelantos],
+            'pagos': pagos_trabajador_schema.dump(pagos),
+            'adelantos': adelantos_trabajador_schema.dump(adelantos),
         }
     })
 
@@ -202,13 +157,7 @@ def notificaciones(trabajador):
     ).all()
     return jsonify({
         'success': True,
-        'data': [{
-            'id_notificacion': n.id_notificacion,
-            'titulo': n.titulo,
-            'mensaje': n.mensaje,
-            'leida': n.leida,
-            'fecha': fecha_local(n.fecha, hora=True),
-        } for n in notifs]
+        'data': notificaciones_schema.dump(notifs)
     })
 
 
