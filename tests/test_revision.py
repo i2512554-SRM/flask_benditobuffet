@@ -12,7 +12,7 @@ class RevisionFlujosTest(BaseFlujos):
             for parametros in ('mes=13', 'mes=0', 'anio=abc', 'anio=9999'):
                 respuesta = self.call('get', f'{ruta}?{parametros}')
                 self.assertEqual(respuesta.status_code, 400)
-                self.assertEqual(respuesta.json['message'], 'Mes o año no válido.')
+                self.assertEqual(respuesta.json['error'], 'Mes o año no válido.')
 
         db.session.add(PagoEmpleado(id_usuario=2, monto=25,
             fecha_pago=instante('2026-09-21T02:00:00'), estado='Pendiente'))
@@ -27,12 +27,12 @@ class RevisionFlujosTest(BaseFlujos):
         with patch('api.personal.ahora', return_value=instante('2026-09-21T01:00:00')):
             self.assertEqual(self.call('get', '/personal/pagos').json['data']['proximo_pago'], 1)
 
-    def test_fechas_se_muestran_en_espanol_y_con_zona_horaria(self):
+    def test_datetime_se_emite_en_iso_utc(self):
         with patch('api.cocina._ahora', return_value=instante('2026-09-21T02:00:00')):
             cocina = self.call('get', '/cocina/dashboard', role=3).json['data']
         with patch('api.trabajador._ahora', return_value=instante('2026-09-21T02:00:00')):
             trabajador = self.call('get', '/trabajador/dashboard', role=4).json['data']
-        self.assertEqual(cocina['fecha'], 'domingo, 20 de septiembre de 2026')
+        self.assertEqual(cocina['fecha'], '2026-09-21T02:00:00+00:00')
         self.assertEqual(trabajador['fecha'], cocina['fecha'])
         db.session.add(TransaccionCaja(id_usuario=2, tipo='Venta', monto=10,
             metodo_pago='Efectivo', fecha=instante('2025-06-01T00:00:00')))
@@ -43,8 +43,8 @@ class RevisionFlujosTest(BaseFlujos):
     def test_turnos_respetan_el_lunes_en_lima(self):
         with patch('api.trabajador._ahora', return_value=instante('2026-09-21T02:00:00')):
             semana = self.call('get', '/trabajador/turnos', role=4).json['data']['semana']
-        self.assertEqual(semana[0]['fecha'], '14/09/2026')
-        self.assertEqual(semana[-1]['fecha'], '20/09/2026')
+        self.assertEqual(semana[0]['fecha'], '2026-09-14')
+        self.assertEqual(semana[-1]['fecha'], '2026-09-20')
 
     def test_panel_y_reporte_comparten_el_mismo_calculo(self):
         db.session.add_all([

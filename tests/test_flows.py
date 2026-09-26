@@ -1,17 +1,20 @@
-"""Pruebas aisladas: SQLite en memoria, sin conexiones ni cambios en Supabase."""
+"""Pruebas aisladas: SQLite en memoria o un PostgreSQL desechable (TEST_POSTGRES_URL), nunca Supabase."""
 import io
+import os
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from unittest.mock import patch
 
 from flask import Flask
 from flask_jwt_extended import JWTManager, create_access_token
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.compiler import compiles
 from bd import db
 from models import (Rol, Usuario, DocumentoIdentidad, Producto, Categoria, CierreCaja,
-                    TransaccionCaja, PagoEmpleado, Adelanto)
+                    TransaccionCaja, PagoEmpleado, PagoPersonal, Adelanto,
+                    SueldoSemanal, DescuentoSemanal, InventarioMovimiento)
 from api.caja import caja_bp
 from api.personal import personal_bp
 from api.perfil import perfil_bp
@@ -21,6 +24,7 @@ from api.admin import admin_bp
 from api.rendimiento import rendimiento_bp
 from api.auth import auth_bp
 from api.cocina import cocina_bp
+from api.indicadores import indicadores_bp
 from api.sesiones import crear_sesion, configurar_sesiones
 from api.dni import consultar_dni
 from api.errores_bd import configurar_errores_bd
@@ -35,11 +39,36 @@ def instante(d):
     return datetime.fromisoformat(d).replace(tzinfo=timezone.utc)
 
 
+def url_pruebas():
+    valor = os.getenv('TEST_POSTGRES_URL', '').strip()
+    if not valor:
+        return 'sqlite://'
+    url = make_url(valor)
+    if not url.drivername.startswith('postgresql'):
+        raise RuntimeError('TEST_POSTGRES_URL debe apuntar a PostgreSQL.')
+    if 'supabase' in (url.host or '').lower() or not any(p in (url.database or '').lower() for p in ('prueba', 'test')):
+        raise RuntimeError('TEST_POSTGRES_URL debe ser una base desechable cuyo nombre contenga "prueba" o "test"; '
+                           'las pruebas borran todas las tablas.')
+    return valor
+
+
+def _sincronizar_secuencias(session, contexto_flush):
+    tablas = {obj.__table__ for obj in session.new if hasattr(obj, '__table__')}
+    conexion = session.connection()
+    for tabla in tablas:
+        for columna in tabla.primary_key.columns:
+            conexion.execute(text(
+                f'SELECT setval(pg_get_serial_sequence(:tabla, :columna), '
+                f'GREATEST((SELECT MAX("{columna.name}") FROM "{tabla.name}"), 1)) '
+                f'WHERE pg_get_serial_sequence(:tabla, :columna) IS NOT NULL'
+            ), {'tabla': tabla.name, 'columna': columna.name})
+
+
 class BaseFlujos(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.app = Flask(__name__)
-        self.app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI='sqlite://',
+        self.app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI=url_pruebas(),
                                JWT_SECRET_KEY='test-only-key-at-least-thirty-two-characters', UPLOAD_FOLDER=self.folder.name)
         db.init_app(self.app)
         configurar_sesiones(JWTManager(self.app))
@@ -47,11 +76,16 @@ class BaseFlujos(unittest.TestCase):
         self.tokens = {}
         for bp, prefix in [(caja_bp, '/api/caja'), (personal_bp, '/api/personal'),
                            (inventario_bp, '/api/inventario'), (perfil_bp, None),
-                           (trabajador_bp, None), (admin_bp, None), (rendimiento_bp, '/api'), (auth_bp, None), (cocina_bp, None)]:
+                           (trabajador_bp, None), (admin_bp, None), (rendimiento_bp, '/api'), (auth_bp, None), (cocina_bp, None),
+                           (indicadores_bp, '/api')]:
             self.app.register_blueprint(bp, **({'url_prefix': prefix} if prefix else {}))
         self.app.add_url_rule('/api/dni/<dni>', view_func=consultar_dni)
         self.ctx = self.app.app_context()
         self.ctx.push()
+        self.postgres = db.engine.dialect.name == 'postgresql'
+        if self.postgres:
+            db.drop_all()
+            event.listen(db.session, 'after_flush', _sincronizar_secuencias)
         db.create_all()
         for i in range(1, 5):
             db.session.add(Rol(id_rol=i, nombre=f'Rol {i}', estado=True, fecha_creacion=datetime.now(timezone.utc)))
@@ -64,6 +98,8 @@ class BaseFlujos(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        if self.postgres:
+            event.remove(db.session, 'after_flush', _sincronizar_secuencias)
         db.session.remove()
         db.drop_all()
         db.engine.dispose()
@@ -160,6 +196,200 @@ class FlujosTest(BaseFlujos):
             self.assertEqual(self.call('post','/inventario/compras',json={'detalle':[{'id_producto':1,'cantidad':cantidad,'precio_unitario':4}]}).status_code,400)
         self.assertEqual(self.call('post','/inventario/compras',json={'detalle':[{'id_producto':1,'cantidad':2,'precio_unitario':4}]}).status_code,201)
         self.assertEqual(db.session.get(Producto,1).stock,12)
+        self.assertEqual(db.session.get(Producto,1).costo,4)
+
+    def test_producto_registra_y_actualiza_costo(self):
+        self.assertEqual(self.call('post','/inventario/productos',json={'nombre':'Aceite','unidad_medida':'Lt','precio':12,'stock':3,'costo':10}).status_code,201)
+        self.assertEqual(db.session.get(Producto,1).costo,10)
+        self.assertEqual(self.call('post','/inventario/productos',json={'nombre':'Sal','unidad_medida':'Kg','precio':2}).status_code,201)
+        self.assertIsNone(db.session.get(Producto,2).costo)
+        self.assertEqual(self.call('put','/inventario/productos/2',json={'costo':1.5}).status_code,200)
+        self.assertEqual(db.session.get(Producto,2).costo,1.5)
+
+    def test_indicadores_permisos_y_valores(self):
+        with patch('api.caja.ahora', return_value=instante('2026-09-10T15:00:00')):
+            self.assertEqual(self.call('post','/caja/abrir',json={}).status_code,200)
+        with patch('api.caja.ahora', return_value=instante('2026-09-10T15:01:00')):
+            self.assertEqual(self.call('post','/caja/transacciones',role=2,json={'tipo':'Venta','monto':300,'metodo_pago':'Yape'}).status_code,200)
+            self.assertEqual(self.call('post','/caja/transacciones',role=2,json={'tipo':'Gasto','monto':50,'metodo_pago':'Efectivo'}).status_code,200)
+        with patch('api.caja.ahora', return_value=instante('2026-09-10T15:02:00')):
+            self.call('post','/caja/cerrar')
+        db.session.get(Usuario, 3).estado = False
+        db.session.get(Usuario, 4).estado = False
+        db.session.add(SueldoSemanal(id_usuario=2, desde=date(2026, 8, 31), monto=100,
+                                     registrado_por=1, fecha=instante('2026-08-31T12:00:00')))
+        db.session.add(DescuentoSemanal(id_usuario=2, semana=date(2026, 9, 7), monto=10,
+                                        motivo='Platos', registrado_por=1,
+                                        fecha=instante('2026-09-08T12:00:00'), anulado=False))
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-10-02T00:00:00')):
+            r=self.call('get','/indicadores?periodo=mes&fecha=2026-09-10')
+            self.assertEqual(r.status_code,200)
+            data=r.json['data']
+            self.assertEqual(data['periodo'],'mes')
+            self.assertTrue(data['inicio'].startswith('2026-09-01'))
+            self.assertTrue(data['fin'].startswith('2026-10-01'))
+            kpis={k['codigo']:k for k in data['kpis']}
+            self.assertEqual(set(kpis), {'KPI-01','KPI-02','KPI-03','KPI-04','KPI-05','KPI-06','KPI-07','KPI-08'})
+            self.assertAlmostEqual(kpis['KPI-01']['valor'],83.33,places=2)
+            self.assertEqual(kpis['KPI-01']['detalle']['cobros'],300)
+            self.assertEqual(kpis['KPI-01']['detalle']['egresos'],50)
+            self.assertEqual(kpis['KPI-05']['detalle']['costo_laboral'],418.57)
+            self.assertEqual(kpis['KPI-05']['detalle']['empleados_sin_sueldo'],0)
+            self.assertEqual(kpis['KPI-05']['detalle']['semanas_empleado'],5)
+            self.assertAlmostEqual(kpis['KPI-05']['valor'],139.52,places=2)
+            self.assertIsNone(kpis['KPI-06']['valor'])
+            self.assertIsNone(kpis['KPI-07']['valor'])
+        with patch('api.indicadores.ahora', return_value=instante('2026-09-15T00:00:00')):
+            historicos = self.call('get','/indicadores?periodo=mes&fecha=2025-04-10').json['data']['kpis']
+            cobertura = next(k for k in historicos if k['codigo'] == 'KPI-03')
+            self.assertEqual(cobertura['detalle']['corte_datos'], '2025-05-01')
+        self.assertEqual(self.call('get','/indicadores',role=2).status_code,403)
+        self.assertEqual(self.call('get','/indicadores?periodo=trimestre').status_code,400)
+        self.assertEqual(self.call('get','/indicadores?fecha=2026-13-01').status_code,400)
+
+    def test_indicadores_comparan_mes_calendario_y_excluyen_reversas(self):
+        db.session.add_all([
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-03-01T17:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=200, metodo_pago='Efectivo',
+                            fecha=instante('2026-04-15T17:00:00')),
+        ])
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-05-02T00:00:00')):
+            datos = self.call('get', '/indicadores?periodo=mes&fecha=2026-04-10').json['data']['kpis']
+        variacion = next(k for k in datos if k['codigo'] == 'KPI-02')
+        self.assertEqual(variacion['detalle']['ventas_anterior'], 100)
+        self.assertEqual(variacion['valor'], 100)
+
+        TransaccionCaja.query.delete()
+        self.producto(stock=0)
+        producto = db.session.get(Producto, 1)
+        producto.costo = 2
+        producto.fecha_registro = instante('2026-08-01T12:00:00')
+        db.session.add_all([
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-09-10T17:00:00')),
+            CierreCaja(id_usuario=2, monto_inicial=0, total_ventas=100, total_gastos=0,
+                       estado='cerrada', fecha=instante('2026-09-01T04:30:00'),
+                       fecha_cierre=instante('2026-09-01T05:30:00')),
+            InventarioMovimiento(id_producto=1, id_usuario=3, tipo='Salida', cantidad=-4,
+                                 stock_anterior=10, stock_posterior=6, motivo='Merma por vencimiento',
+                                 fecha=instante('2026-09-09T17:00:00')),
+            InventarioMovimiento(id_producto=1, id_usuario=3, tipo='Salida', cantidad=-6,
+                                 stock_anterior=6, stock_posterior=0, motivo='Preparación de cocina',
+                                 fecha=instante('2026-09-10T17:00:00')),
+            InventarioMovimiento(id_producto=1, id_usuario=1, tipo='Salida', cantidad=-5,
+                                 stock_anterior=5, stock_posterior=0,
+                                 motivo='Anulación de compra DEMO (reversa de stock)', id_compra=999,
+                                 fecha=instante('2026-09-11T17:00:00')),
+        ])
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-10-02T00:00:00')):
+            datos = self.call('get', '/indicadores?periodo=mes&fecha=2026-09-10').json['data']['kpis']
+        kpis = {k['codigo']: k for k in datos}
+        self.assertEqual(kpis['KPI-03']['valor'], 0)
+        self.assertEqual(kpis['KPI-03']['detalle']['productos_bajo_umbral'], 1)
+        self.assertEqual(kpis['KPI-04']['valor'], 40)
+        self.assertEqual(kpis['KPI-06']['valor'], 88)
+        self.assertEqual(kpis['KPI-06']['detalle']['salidas_consideradas'], 1)
+        self.assertEqual(kpis['KPI-07']['detalle']['cierres_sin_conteo'], 1)
+
+    def test_cierre_registra_efectivo_contado(self):
+        self.call('post', '/caja/abrir', role=2, json={'monto_inicial': 0})
+        cierre = self.call('post', '/caja/cerrar', role=2, json={'efectivo_contado': 45}).json['data']
+        self.assertEqual(cierre['efectivo_contado'], 45.0)
+
+    def test_cierre_efectivo_contado_invalido(self):
+        self.assertEqual(self.call('post', '/caja/cerrar', role=2, json={'efectivo_contado': -5}).status_code, 409)
+        self.call('post', '/caja/abrir', role=2, json={'monto_inicial': 0})
+        self.assertEqual(self.call('post', '/caja/cerrar', role=2, json={'efectivo_contado': -5}).status_code, 400)
+
+    def test_kpi_07_diferencia_con_conteo(self):
+        self.producto(stock=0)
+        db.session.add_all([
+            CierreCaja(id_usuario=2, monto_inicial=50, total_ventas=100, total_gastos=0,
+                       efectivo_contado=160, estado='cerrada', fecha=instante('2026-09-02T09:00:00'),
+                       fecha_cierre=instante('2026-09-02T18:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-09-02T12:00:00')),
+        ])
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-10-02T00:00:00')):
+            datos = self.call('get', '/indicadores?periodo=mes&fecha=2026-09-10').json['data']['kpis']
+        kpi = next(k for k in datos if k['codigo'] == 'KPI-07')
+        self.assertAlmostEqual(kpi['valor'], 6.67, places=2)
+        self.assertEqual(kpi['unidad'], '%')
+        self.assertEqual(kpi['detalle']['cierres_sin_conteo'], 0)
+        self.assertEqual(kpi['detalle']['sobrante_total'], 10)
+        self.assertEqual(kpi['detalle']['faltante_total'], 0)
+        self.assertAlmostEqual(kpi['detalle']['diferencia_global'], 10, places=2)
+        self.assertEqual(len(kpi['serie']), 1)
+        self.assertAlmostEqual(kpi['serie'][0]['diferencia_abs'], 10, places=2)
+        self.assertEqual(kpi['serie'][0]['contado'], 160)
+        self.assertEqual(kpi['serie'][0]['esperado'], 150)
+
+    def test_indicadores_incluyen_campos_nuevos_y_tendencia(self):
+        db.session.add_all([
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-03-10T17:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=200, metodo_pago='Efectivo',
+                            fecha=instante('2026-04-10T17:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Gasto', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-04-10T18:00:00')),
+        ])
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-05-02T00:00:00')):
+            datos = self.call('get', '/indicadores?periodo=mes&fecha=2026-04-10').json['data']['kpis']
+        kpis = {k['codigo']: k for k in datos}
+        for codigo in kpis:
+            for campo in ('variacion', 'tendencia', 'comparacion', 'serie'):
+                self.assertIn(campo, kpis[codigo])
+        kpi_01 = kpis['KPI-01']
+        self.assertAlmostEqual(kpi_01['valor'], 50, places=1)
+        self.assertAlmostEqual(kpi_01['variacion'], -50, places=1)
+        self.assertEqual(kpi_01['tendencia'], 'baja')
+        self.assertEqual(kpi_01['comparacion']['margen_anterior'], 100.0)
+        self.assertEqual(len(kpi_01['serie']), 30)
+        self.assertIn('ingresos', kpi_01['serie'][0])
+        self.assertIn('egresos', kpi_01['serie'][0])
+        punto_venta = next(s for s in kpi_01['serie'] if s['ingresos'])
+        self.assertEqual(punto_venta['ingresos'], 200)
+        self.assertEqual(punto_venta['egresos'], 100)
+        kpi_02 = kpis['KPI-02']
+        self.assertAlmostEqual(kpi_02['valor'], 100, places=1)
+        self.assertEqual(kpi_02['tendencia'], 'sube')
+        self.assertEqual(kpi_02['comparacion']['ventas_anterior'], 100)
+
+    def test_indicadores_rango_personalizado(self):
+        db.session.add_all([
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
+                            fecha=instante('2026-09-10T17:00:00')),
+            TransaccionCaja(id_usuario=2, tipo='Venta', monto=50, metodo_pago='Efectivo',
+                            fecha=instante('2026-09-12T17:00:00')),
+        ])
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-10-02T00:00:00')):
+            r = self.call('get', '/indicadores?inicio=2026-09-10&fin=2026-09-12')
+        self.assertEqual(r.status_code, 200)
+        data = r.json['data']
+        self.assertEqual(data['periodo'], 'rango')
+        self.assertEqual(data['inicio'], '2026-09-10T05:00:00+00:00')
+        self.assertEqual(data['fin'], '2026-09-13T05:00:00+00:00')
+        self.assertEqual(data['prev_fin'], '2026-09-10T05:00:00+00:00')
+        kpi_02 = next(k for k in data['kpis'] if k['codigo'] == 'KPI-02')
+        self.assertEqual(kpi_02['detalle']['ventas_periodo'], 150)
+        self.assertEqual(len(kpi_02['serie']), 3)
+        por_etiqueta = {s['etiqueta']: s['valor'] for s in kpi_02['serie']}
+        self.assertEqual(por_etiqueta.get('10/09'), 100)
+        self.assertEqual(por_etiqueta.get('11/09'), 0)
+        self.assertEqual(por_etiqueta.get('12/09'), 50)
+
+    def test_indicadores_rango_invalido(self):
+        self.assertEqual(self.call('get', '/indicadores?inicio=2026-09-12&fin=2026-09-10').status_code, 400)
+        self.assertEqual(self.call('get', '/indicadores?inicio=2025-01-01&fin=2026-09-12').status_code, 400)
+        self.assertEqual(self.call('get', '/indicadores?inicio=2026-09-10').status_code, 400)
+        self.assertEqual(self.call('get', '/indicadores?inicio=abc&fin=2026-09-12').status_code, 400)
 
     def test_cocina_producto_y_unidad(self):
         r=self.call('post','/inventario/productos',role=3,json={'nombre':'Azúcar','unidad_medida':'Kg','precio':3,'stock':2})
@@ -234,6 +464,32 @@ class FlujosTest(BaseFlujos):
         self.assertEqual(IntentoLogin.query.count(), 1)
         self.assertEqual(ActividadUsuario.query.count(), 1)
         self.assertEqual(json.loads(Path(r['respaldo']).read_text(encoding='utf-8'))['identificador'], 'user2')
+
+    def test_costo_mensual_devuelve_12_meses(self):
+        r = self.call('get', '/personal/costo-mensual')
+        self.assertEqual(r.status_code, 200)
+        datos = r.json['data']
+        self.assertEqual(len(datos), 12)
+        for mes in datos:
+            self.assertEqual(sorted(mes.keys()), ['adelantos', 'anio', 'etiqueta', 'mes', 'neto', 'pagado'])
+        secuencia = [(m['anio'], m['mes']) for m in datos]
+        self.assertEqual(sorted(secuencia), secuencia)
+
+    def test_valor_stock_por_categoria(self):
+        self.producto(stock=10)
+        self.assertEqual(self.call('get', '/inventario/resumen').json['data']['valor_total'], 0)
+        r = self.call('get', '/inventario/valor-stock')
+        self.assertEqual(r.status_code, 200)
+        d = r.json['data']
+        self.assertEqual(d['sin_costo'], 1)
+        self.assertEqual(d['categorias'], [])
+        self.call('put', '/inventario/productos/1', json={'costo': 4})
+        resumen = self.call('get', '/inventario/resumen').json['data']
+        self.assertEqual(resumen['valor_total'], 40)
+        self.assertEqual(resumen['productos_sin_costo'], 0)
+        d = self.call('get', '/inventario/valor-stock').json['data']
+        self.assertEqual(d['con_costo'], 1)
+        self.assertEqual(d['categorias'], [{'categoria': 'Ingredientes', 'valor_stock': 40.0}])
 
 
 if __name__ == '__main__':

@@ -1,8 +1,9 @@
 """Vista local de revisión con datos ficticios; nunca utiliza la conexión real."""
 from pathlib import Path
+from datetime import date
 import bcrypt
 from flask import send_from_directory
-from tests.test_flows import FlujosTest, db, Usuario, PagoEmpleado, Adelanto, TransaccionCaja
+from tests.test_flows import FlujosTest, db, Usuario, Producto, PagoEmpleado, Adelanto, TransaccionCaja, SueldoSemanal
 from tests.datos_grafico import cargar_historico
 from api.fechas import ahora
 
@@ -13,6 +14,10 @@ with app.app_context():
     for u in Usuario.query.all():
         u.clave = bcrypt.hashpw(b'demo-local-2026', bcrypt.gensalt()).decode()
     fixture.producto(25)
+    db.session.get(Producto, 1).costo = 3.2
+    for id_usuario in (2, 3, 4):
+        db.session.add(SueldoSemanal(id_usuario=id_usuario, desde=date(2025, 3, 31), monto=500,
+                                     registrado_por=1, fecha=ahora()))
     db.session.add(PagoEmpleado(id_usuario=2,monto=250,estado='Pagado',fecha_pago=ahora(),descripcion='Salario semanal',tipo='Salario semanal'))
     db.session.add(Adelanto(id_usuario=2,monto=30,estado='Pendiente',fecha=ahora(),motivo='Transporte'))
     db.session.commit()
