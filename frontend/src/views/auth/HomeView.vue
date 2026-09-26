@@ -17,11 +17,19 @@
           y cada plato cuenta una historia de fusion sin limites.
         </p>
         <div class="hero-cta-group">
-          <router-link :to="links.login" class="hero-cta">
-            Acceso Empleados
+          <router-link :to="destinoAcceso" class="hero-cta">
+            {{ sesionActiva ? `Continuar como ${nombreSesion}` : 'Acceso Empleados' }}
             <i class="fa-solid fa-arrow-right"></i>
           </router-link>
+          <button v-if="sesionActiva" type="button" class="hero-cta hero-cta--secundario" :disabled="cambiandoCuenta" @click="usarOtraCuenta">
+            <i class="fa-solid fa-right-left"></i>
+            Entrar con otra cuenta
+          </button>
         </div>
+        <p v-if="sesionActiva" class="hero-sesion-aviso">
+          <i class="fa-solid fa-circle-info"></i>
+          Hay una sesión abierta en este equipo. Si no eres {{ nombreSesion }}, entra con tu propia cuenta.
+        </p>
       </div>
       <a href="#about" class="hero-scroll">
         Descubrir
@@ -143,9 +151,9 @@
       <div class="section-inner cta-banner">
         <h2>Formas parte del <span>equipo</span>?</h2>
         <p>Accede al sistema de gestion para administrar pedidos, inventario y mas.</p>
-        <router-link :to="links.login" class="hero-cta">
+        <router-link :to="destinoAcceso" class="hero-cta">
           <i class="fa-solid fa-lock-open"></i>
-          Ingresar al Sistema
+          {{ sesionActiva ? 'Ir a mi panel' : 'Ingresar al Sistema' }}
           <i class="fa-solid fa-arrow-right"></i>
         </router-link>
       </div>
@@ -156,19 +164,41 @@
       <div class="footer-inner">
         <img :src="logoSrc" alt="Bendito Buffet" class="footer-logo" loading="lazy" />
         <p>&copy; 2025-2026 Bendito Buffet. Todos los derechos reservados.</p>
-        <p>Sistema de Gestion Integral - <router-link :to="links.login">Acceso Empleados</router-link></p>
+        <p>Sistema de Gestion Integral - <router-link :to="destinoAcceso">Acceso Empleados</router-link></p>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { links } from '../../router/links'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { links, homeForRole } from '../../router/links'
+import { useAuthStore } from '../../stores/auth'
 import logoSrc from '../../assets/logo.png'
 import heroImg from '../../assets/cocina-criolla-peruana-arroz-chaufa.jpg'
 import comidaCriollaImg from '../../assets/comida-criolla.jpg'
 import selvaticoImg from '../../assets/selvatico.jpg'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const cambiandoCuenta = ref(false)
+const sesionActiva = computed(() => authStore.isAuthenticated)
+const nombreSesion = computed(() => authStore.user?.nombre || 'tu usuario')
+const destinoAcceso = computed(() => (sesionActiva.value ? homeForRole(authStore.userRole) : links.login))
+
+const usarOtraCuenta = async () => {
+  if (cambiandoCuenta.value) return
+  cambiandoCuenta.value = true
+  try {
+    await authStore.logout()
+  } catch {
+    authStore.limpiarSesion()
+  } finally {
+    cambiandoCuenta.value = false
+    router.push(links.login)
+  }
+}
 
 onMounted(() => {
   const observer = new IntersectionObserver((entries) => {
@@ -189,5 +219,29 @@ onMounted(() => {
 
 .home {
   background: #0a0a0a;
+}
+
+.hero-cta--secundario {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hero-cta--secundario:hover {
+  box-shadow: 0 8px 30px rgba(255, 255, 255, 0.18);
+}
+
+.hero-cta--secundario:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.hero-sesion-aviso {
+  margin: 1rem auto 0;
+  max-width: 34rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.82);
 }
 </style>
