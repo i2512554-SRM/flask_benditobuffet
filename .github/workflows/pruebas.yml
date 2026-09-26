@@ -51,7 +51,13 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Ejecutar pruebas
-        run: python -m unittest discover -s tests -t . -v
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -t . -v 2>&1 | tee resultado-pruebas.txt
+
+      - name: Publicar fallos como anotaciones
+        if: failure()
+        run: python .github/scripts/anotar_fallos.py resultado-pruebas.txt
 
   frontend:
     name: Frontend (build)

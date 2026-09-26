@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from flask import Flask
 from flask_jwt_extended import JWTManager, create_access_token
-from sqlalchemy import BigInteger, event, text
+from sqlalchemy import BigInteger, Integer, event, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.compiler import compiles
 from bd import db
@@ -57,6 +57,8 @@ def _sincronizar_secuencias(session, contexto_flush):
     conexion = session.connection()
     for tabla in tablas:
         for columna in tabla.primary_key.columns:
+            if not isinstance(columna.type, Integer) or columna.autoincrement is False:
+                continue
             conexion.execute(text(
                 f'SELECT setval(pg_get_serial_sequence(:tabla, :columna), '
                 f'GREATEST((SELECT MAX("{columna.name}") FROM "{tabla.name}"), 1)) '
