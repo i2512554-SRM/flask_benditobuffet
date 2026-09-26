@@ -60,12 +60,7 @@
               </span>
             </template>
           </Column>
-          <template #empty>
-            <div class="empty-state">
-              <i class="fa-solid fa-file-circle-question"></i>
-              <p>No hay solicitudes de adelanto registradas.</p>
-            </div>
-          </template>
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay solicitudes de adelanto" mensaje="Cuando el personal pida un adelanto aparecerá aquí." expresion="feliz" /></template>
         </DataTable>
       </div>
     </Transition>

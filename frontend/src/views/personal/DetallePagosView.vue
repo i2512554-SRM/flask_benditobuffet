@@ -36,6 +36,7 @@
     <div class="table-card" v-if="vista === 'pagos'">
       <h2>Pagos registrados</h2>
       <DataTable :value="detalle.pagos || []" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin pagos registrados" expresion="pensando" /></template>
         <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="monto" header="Monto" sortable>
           <template #body="slotProps">S/. {{ fmt(slotProps.data.monto) }}</template>
@@ -54,6 +55,7 @@
     <div class="table-card" v-if="vista === 'personal'">
       <h2>Pagos de personal</h2>
       <DataTable :value="detalle.pagos_personal || []" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin registros de pago" expresion="pensando" /></template>
         <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="tipo" header="Tipo" sortable>
           <template #body="slotProps">{{ slotProps.data.tipo || 'Pago' }}</template>
@@ -67,6 +69,7 @@
     <div class="table-card" v-if="vista === 'adelantos'">
       <h2>Adelantos</h2>
       <DataTable :value="detalle.adelantos || []" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin adelantos registrados" expresion="pensando" /></template>
         <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ fechaLegible(data.fecha) }}</template></Column>
         <Column field="motivo" header="Motivo" sortable></Column>
         <Column field="monto" header="Monto" sortable>
@@ -97,6 +100,8 @@ import Tag from 'primevue/tag'
 import api from '../../config/axios'
 import { links } from '../../router/links'
 
+const cargandoDatos = ref(true)
+
 const route = useRoute()
 const detalle = ref({ pagos: [], pagos_personal: [], adelantos: [], totales: { pagado: 0, adelantos: 0, neto: 0 } })
 const vista = ref('pagos')
@@ -107,8 +112,12 @@ const totales = computed(() => detalle.value.totales || { pagado: 0, adelantos: 
 
 onMounted(async () => {
   const id = route.params.id
-  const res = await api.get(`/personal/pagos/empleado/${id}`)
-  if (res.data.success) detalle.value = res.data.data
+  try {
+    const res = await api.get(`/personal/pagos/empleado/${id}`)
+    if (res.data.success) detalle.value = res.data.data
+  } finally {
+    cargandoDatos.value = false
+  }
 })
 </script>
 

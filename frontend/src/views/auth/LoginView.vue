@@ -2,6 +2,7 @@
   <div class="login">
     <Transition name="card" appear>
       <div class="card">
+        <OllitaMascota :expresion="expresionOllita" :tamano="104" class="ollita-login" :titulo="tituloOllita" />
         <img :src="logoSrc" class="logo stagger-1" alt="Logo Bendito Buffet" />
         <h2 class="stagger-2">Iniciar Sesión</h2>
         <p class="sub stagger-3">Sistema de Gestión Integral - Bendito Buffet</p>
@@ -72,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { homeForRole } from '../../router/links'
@@ -93,6 +94,19 @@ const success = ref(false)
 const errorMsg = ref('')
 const shakeKey = ref(0)
 const showPassword = ref(false)
+
+const expresionOllita = computed(() => {
+  if (success.value) return 'celebrando'
+  if (loading.value) return 'pensando'
+  if (errorMsg.value) return 'preocupada'
+  return 'feliz'
+})
+const tituloOllita = computed(() => ({
+  celebrando: 'Ollita celebra tu ingreso',
+  pensando: 'Ollita está verificando tus datos',
+  preocupada: 'Ollita no pudo iniciar tu sesión',
+  feliz: 'Ollita te da la bienvenida'
+})[expresionOllita.value])
 
 const handleLogin = async () => {
   loading.value = true
@@ -132,6 +146,7 @@ const handleLogin = async () => {
 
 /* ===== Card: glassmorphism sutil ===== */
 .card {
+  position: relative;
   width: min(100%, 460px);
   padding: 44px 40px;
   border-radius: 24px;
@@ -143,6 +158,12 @@ const handleLogin = async () => {
   box-shadow:
     0 2px 6px rgba(15, 23, 42, 0.04),
     0 24px 48px -12px rgba(15, 23, 42, 0.12);
+}
+
+.ollita-login {
+  position: absolute;
+  top: -64px;
+  right: 18px;
 }
 
 /* ===== Entrada de la tarjeta ===== */
@@ -431,6 +452,13 @@ hr {
   .card {
     padding: 32px 22px;
     border-radius: 20px;
+    margin-top: 44px;
+  }
+  .ollita-login {
+    width: 76px;
+    height: 76px;
+    top: -48px;
+    right: 12px;
   }
   .logo {
     width: 78px;

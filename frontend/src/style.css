@@ -453,3 +453,26 @@ tr:hover td {
 }
 input:focus::placeholder, textarea:focus::placeholder { color: transparent; }
 button:disabled { cursor: wait; opacity: .6; }
+
+/* ===== Ollita, mascota del sistema ===== */
+.hero-con-mascota {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.hero-con-mascota > div {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .hero-con-mascota {
+    gap: 0.6rem;
+  }
+
+  .hero-con-mascota .hero-mascota {
+    width: 56px;
+    height: 56px;
+  }
+}

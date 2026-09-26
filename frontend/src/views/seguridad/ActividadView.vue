@@ -9,6 +9,7 @@
     <div class="card-section">
       <DataTable :value="actividad" stripedRows paginator :rows="15" :rowsPerPageOptions="[15, 30, 50, 100]"
         class="p-datatable-sm" :loading="loading">
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin actividad registrada" expresion="pensando" /></template>
         <Column field="fecha" header="Fecha y hora" sortable><template #body="{data}">{{ formatFecha(data.fecha) }}</template></Column>
         <Column field="usuario" header="Usuario" sortable></Column>
         <Column field="correo" header="Correo" sortable></Column>

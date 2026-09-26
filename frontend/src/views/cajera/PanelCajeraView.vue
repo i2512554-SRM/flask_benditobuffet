@@ -1,14 +1,17 @@
 <template>
   <div class="cajera-panel">
     <div class="page-hero">
-      <div class="hero-left">
-        <h1>¡Hola, {{ nombre }}! 👋</h1>
+      <div class="hero-left hero-con-mascota">
+        <OllitaMascota expresion="feliz" :tamano="88" class="hero-mascota" />
+        <div>
+        <h1>¡{{ saludo }}, {{ nombre }}!</h1>
         <p>Bienvenida a tu panel de Caja</p>
         <div class="hero-badges">
           <span class="rol-badge" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
             <i class="fa-solid fa-cash-register"></i> Cajera
           </span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ fechaHoy }}</span>
+        </div>
         </div>
       </div>
       <router-link :to="links.caja.control" class="btn btn-outline">
@@ -161,12 +164,7 @@
                 <span class="text-muted">{{ slotProps.data.descripcion || '—' }}</span>
               </template>
             </Column>
-            <template #empty>
-              <div class="empty-state">
-                <i class="fa-solid fa-receipt"></i>
-                <span>Aún no hay movimientos registrados hoy.</span>
-              </div>
-            </template>
+            <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay movimientos hoy" mensaje="¡La caja está lista para la primera venta!" expresion="feliz" /></template>
           </DataTable>
         </div>
       </div>
@@ -192,7 +190,7 @@
 </template>
 
 <script setup>
-import { formatFecha as fechaLegible } from '../../utils/format'
+import { formatFecha as fechaLegible, saludoSegunHora } from '../../utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { links } from '../../router/links'
@@ -255,6 +253,7 @@ const cargarRendimiento = async () => {
 }
 
 const nombre = computed(() => authStore.user?.nombre || 'Cajera')
+const saludo = saludoSegunHora()
 const fechaHoy = computed(() => new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 }).format(new Date()))

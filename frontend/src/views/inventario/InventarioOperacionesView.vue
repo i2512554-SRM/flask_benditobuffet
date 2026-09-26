@@ -56,6 +56,7 @@
         </div>
       </div>
       <DataTable :value="productosVisibles" data-key="id_producto" :paginator="true" :rows="10" responsiveLayout="scroll" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No encontré productos" mensaje="Prueba otra búsqueda o registra un producto nuevo." expresion="pensando" /></template>
         <Column field="nombre" header="Producto" sortable></Column>
         <Column field="categoria" header="Categoría" sortable></Column>
         <Column field="precio" header="Precio" sortable>
@@ -94,6 +95,7 @@
     <div class="table-card" v-if="vista === 'compras'">
       <h2>Inversiones en productos</h2>
       <DataTable :value="compras" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay compras registradas" mensaje="Registra una inversión en productos para reponer stock." expresion="feliz" /></template>
         <Column field="codigo" header="Código" sortable></Column>
         <Column field="fecha" header="Fecha" sortable>
           <template #body="slotProps">{{ fmtFecha(slotProps.data.fecha) }}</template>
@@ -118,6 +120,7 @@
     <div class="table-card" v-if="vista === 'inversiones'">
       <h2>Inversiones</h2>
       <DataTable :value="inversiones" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay inversiones registradas" expresion="feliz" /></template>
         <Column field="fecha" header="Fecha" sortable>
           <template #body="slotProps">{{ fmtFecha(slotProps.data.fecha) }}</template>
         </Column>
@@ -153,6 +156,7 @@
         </div>
       </div>
       <DataTable :value="movimientos" :paginator="true" :rows="10" class="mt-4">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin movimientos de inventario" mensaje="Las entradas y salidas aparecerán aquí." expresion="pensando" /></template>
         <Column field="fecha" header="Fecha" sortable>
           <template #body="slotProps">{{ fmtFechaHora(slotProps.data.fecha) }}</template>
         </Column>
@@ -368,6 +372,7 @@
         <Button :disabled="$saving || procesandoOperacion" :loading="procesandoOperacion" label="Agregar proveedor" icon="pi pi-plus" @click="guardarProveedor" class="w-full" />
       </div>
       <DataTable :value="proveedores" :rows="8" class="mt-3">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay proveedores registrados" expresion="feliz" /></template>
         <Column field="nombre" header="Proveedor"></Column>
         <Column field="ruc" header="RUC">
           <template #body="slotProps">{{ slotProps.data.ruc || '-' }}</template>
@@ -429,6 +434,8 @@ import Tag from 'primevue/tag'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../config/axios'
 import { links } from '../../router/links'
+
+const cargandoDatos = ref(true)
 
 const route = useRoute()
 const router = useRouter()
@@ -813,10 +820,14 @@ const guardarProveedor = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    cargarProductos(), cargarCategorias(), cargarMovimientos(), cargarResumen(),
-    ...(esAdmin.value ? [cargarCompras(), cargarInversiones(), cargarProveedores()] : [])
-  ])
+  try {
+    await Promise.all([
+      cargarProductos(), cargarCategorias(), cargarMovimientos(), cargarResumen(),
+      ...(esAdmin.value ? [cargarCompras(), cargarInversiones(), cargarProveedores()] : [])
+    ])
+  } finally {
+    cargandoDatos.value = false
+  }
   if(route.query.accion === 'entrada') abrirAgregarStock()
   if(route.query.accion === 'nuevo') agregarDialog()
   if(route.query.accion === 'nueva-compra') {

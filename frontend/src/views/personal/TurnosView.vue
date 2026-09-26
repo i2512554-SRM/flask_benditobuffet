@@ -54,9 +54,7 @@
               />
             </template>
           </Column>
-          <template #empty>
-            <div class="empty-state">No hay empleados registrados.</div>
-          </template>
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay empleados registrados" expresion="pensando" /></template>
         </DataTable>
       </div>
     </Transition>

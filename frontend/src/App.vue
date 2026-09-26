@@ -15,10 +15,23 @@ watch(() => route.fullPath, () => { menuOpen.value = false })
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
 }
+
+const EXPRESION_AVISO = { success: 'celebrando', error: 'preocupada', warn: 'preocupada', info: 'feliz' }
+const expresionAviso = (severidad) => EXPRESION_AVISO[severidad] || 'pensando'
 </script>
 
 <template>
-  <Toast />
+  <Toast>
+    <template #message="{ message }">
+      <div class="aviso-ollita">
+        <OllitaMascota :expresion="expresionAviso(message.severity)" :tamano="46" :animada="false" />
+        <div class="aviso-ollita__texto">
+          <span class="p-toast-summary">{{ message.summary }}</span>
+          <div v-if="message.detail" class="p-toast-detail">{{ message.detail }}</div>
+        </div>
+      </div>
+    </template>
+  </Toast>
   <ConfirmDialog />
   <div class="app-layout" :class="{ 'no-layout': !showLayout }">
     <AppHeader v-if="showLayout" :menu-open="menuOpen" @toggle-menu="toggleMenu" />
@@ -34,6 +47,22 @@ const toggleMenu = () => {
 </template>
 
 <style scoped>
+.aviso-ollita {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.aviso-ollita__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .app-layout {
   display: flex;
   flex-direction: column;

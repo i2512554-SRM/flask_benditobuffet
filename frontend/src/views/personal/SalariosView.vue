@@ -84,9 +84,7 @@
             <Button label="Sueldo" size="small" :disabled="$saving" @click="abrir(data, 'sueldo')" />
             <Button label="Descuento" size="small" severity="secondary" :disabled="$saving" @click="abrir(data, 'descuentos')" />
           </template></Column>
-          <template #empty>
-            <div class="empty-state">No hay datos para esta semana.</div>
-          </template>
+          <template #empty><EstadoVacio compacto titulo="No hay datos para esta semana" expresion="pensando" /></template>
         </DataTable>
       </div>
     </Transition>
@@ -111,9 +109,7 @@
     <!-- Estado vacío -->
     <Transition name="fade">
       <div v-if="!loading && !salarios.length" class="empty-card">
-        <i class="fa-solid fa-coins empty-icon"></i>
-        <h3>Sin empleados para calcular</h3>
-        <p>No se encontraron empleados activos en el periodo seleccionado.</p>
+        <EstadoVacio titulo="Sin empleados para calcular" mensaje="No se encontraron empleados activos en el periodo seleccionado." expresion="pensando" />
       </div>
     </Transition>
   </div>

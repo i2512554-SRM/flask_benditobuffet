@@ -72,12 +72,7 @@
             </div>
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state">
-            <i class="fa-solid fa-utensils"></i>
-            <span>No se encontraron insumos.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No encontré insumos" mensaje="Revisa el nombre o la categoría que buscaste." expresion="pensando" /></template>
       </DataTable>
     </div>
 
@@ -119,12 +114,7 @@
         <Column field="usuario" header="Responsable">
           <template #body="slotProps">{{ slotProps.data.usuario || '-' }}</template>
         </Column>
-        <template #empty>
-          <div class="empty-state">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span>No hay movimientos.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin movimientos todavía" expresion="pensando" /></template>
       </DataTable>
     </div>
 
@@ -183,6 +173,8 @@ import Column from 'primevue/column'
 import api from '../../config/axios'
 import { links } from '../../router/links'
 import { formatFecha } from '../../utils/format'
+
+const cargandoDatos = ref(true)
 
 const router = useRouter()
 const toast = useToast()
@@ -290,7 +282,7 @@ const load = async () => {
   }
 }
 
-onMounted(load)
+onMounted(async () => { try { await load() } finally { cargandoDatos.value = false } })
 </script>
 
 <style scoped>

@@ -75,12 +75,7 @@
             </span>
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state">
-            <i class="fa-solid fa-receipt"></i>
-            <span>No hay movimientos con los filtros seleccionados.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No encontré movimientos" mensaje="Prueba cambiando los filtros." expresion="pensando" /></template>
       </DataTable>
     </div>
 

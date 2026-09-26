@@ -9,6 +9,7 @@
     <div class="card-section">
       <DataTable :value="roles" stripedRows paginator :rows="10" :rowsPerPageOptions="[10, 25, 50]"
         class="p-datatable-sm" :loading="loading">
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay roles configurados" expresion="preocupada" /></template>
         <Column field="id_rol" header="ID"></Column>
         <Column field="nombre" header="Rol" sortable></Column>
         <Column field="total_usuarios" header="Usuarios" sortable>

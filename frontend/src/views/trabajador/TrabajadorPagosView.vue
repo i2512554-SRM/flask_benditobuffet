@@ -32,12 +32,7 @@
             <Tag :value="slotProps.data.estado" :severity="severidadPago(slotProps.data.estado)" />
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state small">
-            <i class="fa-solid fa-wallet"></i>
-            <span>No tienes pagos registrados todavía.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no tienes pagos registrados" expresion="pensando" /></template>
       </DataTable>
     </div>
 
@@ -61,12 +56,7 @@
             <span class="text-muted">{{ slotProps.data.respuesta || '—' }}</span>
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state small">
-            <i class="fa-solid fa-hand-holding-dollar"></i>
-            <span>No tienes adelantos solicitados.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No has solicitado adelantos" expresion="feliz" /></template>
       </DataTable>
     </div>
   </div>
@@ -85,6 +75,8 @@ import Tag from 'primevue/tag'
 import api from '../../config/axios'
 import { links } from '../../router/links'
 
+const cargandoDatos = ref(true)
+
 const data = ref({})
 
 const formatMoney = (v) => Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
@@ -100,7 +92,7 @@ const load = async () => {
   }
 }
 
-onMounted(load)
+onMounted(async () => { try { await load() } finally { cargandoDatos.value = false } })
 </script>
 
 <style scoped>

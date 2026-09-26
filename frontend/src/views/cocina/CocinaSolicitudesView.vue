@@ -60,12 +60,7 @@
               <span class="text-muted">{{ slotProps.data.respuesta || '—' }}</span>
             </template>
           </Column>
-          <template #empty>
-            <div class="empty-state">
-              <i class="fa-solid fa-clipboard-list"></i>
-              <span>Aún no tienes solicitudes registradas.</span>
-            </div>
-          </template>
+          <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no tienes solicitudes" mensaje="Pide insumos a administración cuando los necesites." expresion="feliz" /></template>
         </DataTable>
       </div>
     </div>
@@ -86,6 +81,8 @@ import { useToast } from 'primevue/usetoast'
 import VolverBtn from '../../components/ui/VolverBtn.vue'
 import api from '../../config/axios'
 import { links } from '../../router/links'
+
+const cargandoDatos = ref(true)
 
 const route = useRoute()
 const toast = useToast()
@@ -142,7 +139,7 @@ const enviar = async () => {
   }
 }
 
-onMounted(() => { loadInsumos(); loadSolicitudes() })
+onMounted(async () => { loadInsumos(); try { await loadSolicitudes() } finally { cargandoDatos.value = false } })
 </script>
 
 <style scoped>

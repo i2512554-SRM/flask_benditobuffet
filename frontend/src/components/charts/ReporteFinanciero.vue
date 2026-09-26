@@ -31,7 +31,7 @@
           <Column field="metodo_pago" header="Método de pago" />
           <Column field="monto" header="Monto" sortable><template #body="{data}">S/ {{ dinero(data.monto) }}</template></Column>
           <Column field="descripcion" header="Descripción" />
-          <template #empty>No hay movimientos en este periodo.</template>
+          <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin movimientos en este periodo" mensaje="Prueba con otro rango de fechas." expresion="pensando" /></template>
         </DataTable>
       </details>
       <details>
@@ -44,7 +44,7 @@
           <Column field="total_gastos" header="Gastos"><template #body="{data}">S/ {{ dinero(data.total_gastos) }}</template></Column>
           <Column field="neto" header="Balance"><template #body="{data}">S/ {{ dinero(data.neto) }}</template></Column>
           <Column field="estado" header="Estado" />
-          <template #empty>No hay aperturas en este periodo.</template>
+          <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Sin aperturas de caja en este periodo" expresion="pensando" /></template>
         </DataTable>
       </details>
     </template>
@@ -58,6 +58,8 @@ import LineChartFinanciero from './LineChartFinanciero.vue'
 import DonaChart from './DonaChart.vue'
 import { formatFecha, fechaLocal } from '../../utils/format'
 import api from '../../config/axios'
+
+const cargandoDatos = ref(true)
 const periodo=ref('mes'), fecha=ref(fechaLocal()), datos=ref({}), loading=ref(false), error=ref('')
 const dinero=v=>Number(v || 0).toLocaleString('es-PE',{minimumFractionDigits:2, maximumFractionDigits:2})
 const tipoLabel=tipo=>tipo==='Venta'?'Ingreso':tipo==='Gasto'?'Egreso':tipo || '—'
@@ -89,7 +91,7 @@ function mover(paso) {
   else d.setUTCDate(d.getUTCDate()+paso*(periodo.value==='semana'?7:1))
   fecha.value=d.toISOString().slice(0,10); cargar()
 }
-onMounted(cargar)
+onMounted(async () => { try { await cargar() } finally { cargandoDatos.value = false } })
 </script>
 <style scoped>
 .reporte { margin-top:1rem; padding:1.25rem; border:1px solid var(--border-color); background:var(--bg-card); border-radius:14px; }

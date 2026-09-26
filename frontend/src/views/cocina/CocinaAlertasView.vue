@@ -37,12 +37,7 @@
             <Tag value="Agotado" severity="danger" />
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state small">
-            <i class="fa-solid fa-thumbs-up"></i>
-            <span>No hay productos agotados.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay productos agotados" mensaje="Todo el inventario tiene stock." expresion="feliz" /></template>
       </DataTable>
     </div>
 
@@ -61,12 +56,7 @@
             <Tag value="Stock bajo" severity="warning" />
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state small">
-            <i class="fa-solid fa-thumbs-up"></i>
-            <span>No hay productos con stock bajo.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Ningún producto con stock bajo" mensaje="La despensa está bien surtida." expresion="feliz" /></template>
       </DataTable>
     </div>
   </div>
@@ -80,6 +70,8 @@ import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../../components/ui/VolverBtn.vue'
 import api from '../../config/axios'
 import { links } from '../../router/links'
+
+const cargandoDatos = ref(true)
 
 const alertas = ref([])
 
@@ -97,7 +89,7 @@ const load = async () => {
   }
 }
 
-onMounted(load)
+onMounted(async () => { try { await load() } finally { cargandoDatos.value = false } })
 </script>
 
 <style scoped>

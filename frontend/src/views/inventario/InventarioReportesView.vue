@@ -60,7 +60,7 @@
         <Column field="stock" header="Stock" sortable />
         <Column field="costo" header="Costo unitario"><template #body="{data}">{{ data.costo == null ? 'Sin registrar' : 'S/ ' + formatMoney(data.costo) }}</template></Column>
         <Column header="Valor al costo"><template #body="{data}">{{ data.costo == null ? '—' : 'S/ ' + formatMoney(data.costo * data.stock) }}</template></Column>
-        <template #empty>No hay productos registrados.</template>
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay productos registrados" expresion="pensando" /></template>
       </DataTable>
       <h2>Movimientos recientes</h2>
       <DataTable :value="movimientos" paginator :rows="10" stripedRows>
@@ -71,7 +71,7 @@
         <Column field="unidad" header="Unidad" />
         <Column field="stock_posterior" header="Stock resultante" />
         <Column field="usuario" header="Responsable" />
-        <template #empty>No hay movimientos registrados.</template>
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay movimientos registrados" expresion="pensando" /></template>
       </DataTable>
     </section>
     <div class="loading-overlay" v-if="loading">

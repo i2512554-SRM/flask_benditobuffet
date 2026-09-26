@@ -47,3 +47,10 @@ export function horaLima(value = new Date()) {
     timeZone: 'America/Lima', hour: '2-digit', hour12: false
   }).format(fecha))
 }
+
+export function saludoSegunHora(value = new Date()) {
+  const hora = horaLima(value) ?? 12
+  if (hora >= 5 && hora < 12) return 'Buenos días'
+  if (hora >= 12 && hora < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}

@@ -1,12 +1,15 @@
 <template>
   <div class="trabajador-view">
     <div class="page-header">
-      <div>
-        <h1>{{ saludo }}, {{ data.usuario?.nombres || 'Trabajador' }} 👋</h1>
+      <div class="hero-con-mascota">
+        <OllitaMascota expresion="feliz" :tamano="88" class="hero-mascota" />
+        <div>
+        <h1>¡{{ saludo }}, {{ data.usuario?.nombres || 'Trabajador' }}!</h1>
         <p>Tu espacio personal: turnos, pagos y solicitudes</p>
         <div class="hero-badges">
           <span class="rol-badge-trab"><i class="fa-solid fa-user-check"></i> Trabajador</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ data.fecha ? fechaLarga(data.fecha) : 'Cargando...' }}</span>
+        </div>
         </div>
       </div>
       <div class="header-actions">
@@ -123,18 +126,13 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '../../config/axios'
 import { links } from '../../router/links'
-import { fechaLarga, formatFecha, horaLima, soloFecha } from '../../utils/format'
+import { fechaLarga, formatFecha, soloFecha, saludoSegunHora } from '../../utils/format'
 
 const data = ref({})
 const ultimoPago = ref({ monto: null, fecha: null })
 const resumen = computed(() => data.value.resumen || { total_pagado: 0, pagos: 0, adelantos_pendientes: 0, notificaciones_no_leidas: 0 })
 
-const saludo = computed(() => {
-  const h = horaLima() ?? 12
-  if (h < 12) return '¡Buenos días'
-  if (h < 19) return '¡Buenas tardes'
-  return '¡Buenas noches'
-})
+const saludo = saludoSegunHora()
 
 const formatMoney = (v) => Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
 

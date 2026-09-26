@@ -75,12 +75,7 @@
               <Button :disabled="$saving" label="Historial" size="small" severity="secondary" @click="$router.push(links.personal.pagoDetalle(slotProps.data.id_usuario))" />
             </template>
           </Column>
-          <template #empty>
-            <div class="empty-state">
-              <i class="fa-solid fa-money-bill-wave"></i>
-              <p>No hay pagos ni adelantos en este mes. Registra uno con los botones de arriba.</p>
-            </div>
-          </template>
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay pagos ni adelantos este mes" mensaje="Registra uno con los botones de arriba." expresion="pensando" /></template>
         </DataTable>
       </div>
     </Transition>
@@ -103,12 +98,7 @@
           <Column header="Acciones"><template #body="{ data }">
             <Button v-if="typeof data.id_pago === 'number' && (data.estado === 'Pendiente' || !data.tipo)" :disabled="$saving" :label="data.estado === 'Pendiente' ? 'Completar o cancelar' : 'Clasificar pago'" size="small" @click="abrirActualizacion(data)" />
           </template></Column>
-          <template #empty>
-            <div class="empty-state">
-              <i class="fa-solid fa-receipt"></i>
-              <p>No hay pagos registrados en el periodo seleccionado.</p>
-            </div>
-          </template>
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay pagos en el periodo seleccionado" expresion="pensando" /></template>
         </DataTable>
       </div>
     </Transition>

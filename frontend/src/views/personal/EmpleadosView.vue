@@ -84,9 +84,7 @@
               </span>
             </template>
           </Column>
-          <template #empty>
-            <div class="empty-state">No hay empleados registrados.</div>
-          </template>
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay empleados registrados" mensaje="Agrega al primero con el botón de arriba." expresion="feliz" /></template>
         </DataTable>
       </div>
     </Transition>

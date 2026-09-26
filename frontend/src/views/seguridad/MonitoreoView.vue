@@ -28,6 +28,7 @@
     <div class="table-card" v-if="bloqueos.length">
       <h2>Bloqueos activos</h2>
       <DataTable :value="bloqueos" :paginator="true" :rows="5" class="mt-3">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay bloqueos activos" mensaje="Nadie ha superado el límite de intentos." expresion="feliz" /></template>
         <Column field="usuario" header="Usuario"></Column>
         <Column field="usuario_nombre" header="Empleado">
           <template #body="slotProps">{{ slotProps.data.usuario_nombre || '-' }}</template>
@@ -55,6 +56,7 @@
         </div>
       </div>
       <DataTable :value="intentosFiltrados" :paginator="true" :rows="10" class="mt-3">
+        <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No encontré intentos de acceso" mensaje="Prueba con otro filtro o periodo." expresion="pensando" /></template>
         <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ formatFecha(data.fecha) }}</template></Column>
         <Column field="identificador" header="Usuario" sortable></Column>
         <Column field="usuario_nombre" header="Empleado">
@@ -81,6 +83,8 @@ import Select from 'primevue/select'
 import api from '../../config/axios'
 import { links } from '../../router/links'
 import { formatFecha } from '../../utils/format'
+
+const cargandoDatos = ref(true)
 
 const toast = useToast()
 const resumen = ref({ exitos: 0, fallos: 0, bloqueados: 0, bloqueos_activos: 0 })
@@ -124,7 +128,7 @@ const desbloquear = async (bloqueo) => {
   }
 }
 
-onMounted(cargar)
+onMounted(async () => { try { await cargar() } finally { cargandoDatos.value = false } })
 </script>
 
 <style scoped>

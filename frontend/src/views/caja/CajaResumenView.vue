@@ -112,12 +112,7 @@
                 <span class="text-muted">{{ soloHora(slotProps.data.fecha) }}</span>
               </template>
             </Column>
-            <template #empty>
-              <div class="empty-state">
-                <i class="fa-solid fa-receipt"></i>
-                <span>No hay movimientos en la apertura actual.</span>
-              </div>
-            </template>
+            <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Todavía no hay movimientos en esta apertura" mensaje="Registra la primera venta del turno." expresion="feliz" /></template>
           </DataTable>
           <div class="col-actions">
             <router-link :to="links.caja.movimientos" class="btn btn-outline btn-block">

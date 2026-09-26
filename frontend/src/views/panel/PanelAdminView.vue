@@ -1,12 +1,15 @@
 <template>
   <div class="panel-view">
     <div class="page-hero">
-      <div class="hero-left">
-        <h1>¡Hola, {{ nombre }}! 👋</h1>
+      <div class="hero-left hero-con-mascota">
+        <OllitaMascota expresion="feliz" :tamano="88" class="hero-mascota" />
+        <div>
+        <h1>¡{{ saludo }}, {{ nombre }}!</h1>
         <p>Resumen general de Bendito Buffet</p>
         <div class="hero-badges">
           <span class="rol-badge"><i class="fa-solid fa-user-shield"></i> Rol: Administrador</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ fechaHoy }}</span>
+        </div>
         </div>
       </div>
       <div class="hero-right">
@@ -300,7 +303,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { links } from '../../router/links'
 import LineChartFinanciero from '../../components/charts/LineChartFinanciero.vue'
-import { formatFecha, soloFecha } from '../../utils/format'
+import { formatFecha, soloFecha, saludoSegunHora } from '../../utils/format'
 import api from '../../config/axios'
 
 const authStore = useAuthStore()
@@ -350,6 +353,7 @@ const cargarRendimiento = async () => {
 }
 
 const nombre = computed(() => authStore.user?.nombre || 'Administrador')
+const saludo = saludoSegunHora()
 const fechaHoy = computed(() => {
   return new Intl.DateTimeFormat('es-PE', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'

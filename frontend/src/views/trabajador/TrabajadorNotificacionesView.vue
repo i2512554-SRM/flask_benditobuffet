@@ -26,10 +26,7 @@
         <span v-if="!n.leida" class="unread-dot" title="No leída"></span>
       </div>
 
-      <div v-if="!notifs.length" class="empty-state">
-        <i class="fa-regular fa-bell-slash"></i>
-        <span>No tienes notificaciones.</span>
-      </div>
+      <EstadoVacio v-if="!notifs.length" titulo="No tienes notificaciones" mensaje="Aquí te avisaré de tus pagos, adelantos y solicitudes." expresion="feliz" />
     </div>
   </div>
 </template>

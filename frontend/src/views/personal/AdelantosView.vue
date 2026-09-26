@@ -8,6 +8,7 @@
     </div>
     
     <DataTable :value="adelantos" :paginator="true" :rows="10" class="mt-4">
+      <template #empty><EstadoVacio v-if="cargandoDatos" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No hay adelantos registrados" expresion="feliz" /></template>
       <Column field="fecha" header="Fecha" sortable><template #body="{data}">{{ soloFecha(data.fecha) }}</template></Column>
       <Column field="id_usuario" header="Empleado"></Column>
       <Column field="monto" header="Monto" sortable>
@@ -63,6 +64,8 @@ import { links } from '../../router/links'
 import { ROLES } from '../../config/roles'
 import { soloFecha } from '../../utils/format'
 
+const cargandoDatos = ref(true)
+
 const toast = useToast()
 const adelantos = ref([])
 const empleados = ref([])
@@ -75,6 +78,8 @@ onMounted(async () => {
     await Promise.all([cargarAdelantos(), cargarEmpleados()])
   } catch (err) {
     toast.add({ severity: 'error', summary: 'No se pudieron cargar los adelantos', life: 3500 })
+  } finally {
+    cargandoDatos.value = false
   }
 })
 

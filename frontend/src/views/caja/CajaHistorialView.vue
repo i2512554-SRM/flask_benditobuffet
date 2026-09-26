@@ -92,12 +92,7 @@
             </button>
           </template>
         </Column>
-        <template #empty>
-          <div class="empty-state">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span>Aún no hay cierres registrados.</span>
-          </div>
-        </template>
+        <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="Aún no hay cierres registrados" mensaje="Aparecerán aquí cuando se cierre la caja." expresion="feliz" /></template>
       </DataTable>
     </div>
 

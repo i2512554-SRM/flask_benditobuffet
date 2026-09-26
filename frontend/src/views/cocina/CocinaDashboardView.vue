@@ -1,12 +1,15 @@
 <template>
   <div class="cocina-view">
     <div class="page-header">
-      <div>
-        <h1>¡Hola, {{ data.usuario?.nombres || 'Cocinero' }}! 👋</h1>
+      <div class="hero-con-mascota">
+        <OllitaMascota :expresion="(resumen.agotados || resumen.stock_bajo) ? 'preocupada' : 'feliz'" :tamano="88" class="hero-mascota" />
+        <div>
+        <h1>¡{{ saludo }}, {{ data.usuario?.nombres || 'Cocinero' }}!</h1>
         <p>Tu cocina a un vistazo: stock y solicitudes</p>
         <div class="hero-badges">
           <span class="rol-badge-cocina"><i class="fa-solid fa-utensils"></i> Cocinero</span>
           <span class="fecha-badge"><i class="fa-regular fa-calendar"></i> {{ data.fecha ? fechaLarga(data.fecha) : 'Cargando...' }}</span>
+        </div>
         </div>
       </div>
       <div class="header-actions">
@@ -113,6 +116,7 @@
       <h2>Últimas solicitudes pendientes</h2>
       <div class="table-card">
         <DataTable :value="data.pendientes" responsiveLayout="scroll">
+          <template #empty><EstadoVacio v-if="loading" compacto titulo="Revolviendo los datos…" expresion="pensando" /><EstadoVacio v-else compacto titulo="No tienes solicitudes pendientes" expresion="feliz" /></template>
           <Column field="producto" header="Producto" sortable></Column>
           <Column field="cantidad" header="Cantidad"></Column>
           <Column field="fecha" header="Fecha"><template #body="{data}">{{ formatFecha(data.fecha) }}</template></Column>
@@ -134,11 +138,12 @@ import DataTable from 'primevue/datatable'
 import { ref, computed, onMounted } from 'vue'
 import api from '../../config/axios'
 import { links } from '../../router/links'
-import { fechaLarga, formatFecha } from '../../utils/format'
+import { fechaLarga, formatFecha, saludoSegunHora } from '../../utils/format'
 
 const loading = ref(true)
 const data = ref({})
 const resumen = computed(() => data.value.resumen || { disponibles: 0, stock_bajo: 0, agotados: 0, solicitudes_pendientes: 0, total_insumos: 0 })
+const saludo = saludoSegunHora()
 
 const load = async () => {
   loading.value = true
