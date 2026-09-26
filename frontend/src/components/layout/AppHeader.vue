@@ -8,7 +8,7 @@
       >
         <i :class="menuOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars'"></i>
       </button>
-      <router-link to="/panel" class="header-brand" v-if="isAdmin">
+      <router-link :to="links.panel.admin" class="header-brand" v-if="isAdmin">
         <img :src="logoSrc" alt="Logo" class="header-logo" />
         <div>
           <h1>Bendito Buffet</h1>
@@ -24,8 +24,9 @@
       </div>
     </div>
     <div class="header-right">
-      <router-link to="/perfil" class="header-user" v-if="authStore.user">
-        <i class="fa-solid fa-user-circle"></i>
+      <router-link :to="links.perfil" class="header-user" v-if="authStore.user" :aria-label="`Perfil de ${authStore.user.nombre}`">
+        <img v-if="authStore.user.foto_perfil" :src="authStore.user.foto_perfil" class="header-avatar" alt="Foto de perfil" />
+        <span v-else class="header-avatar avatar-iniciales">{{ iniciales }}</span>
         <span>{{ authStore.user.nombre }}</span>
       </router-link>
       <button class="theme-toggle" @click="toggleDarkMode" :title="isDarkMode ? 'Modo claro' : 'Modo oscuro'">
@@ -43,6 +44,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useLogout } from '../../composables/useLogout'
+import { links } from '../../router/links'
+import { ROLES } from '../../config/roles'
 import logoSrc from '../../assets/logo.png'
 
 defineProps({
@@ -52,19 +55,22 @@ defineEmits(['toggle-menu'])
 
 const { confirmarCierre } = useLogout()
 const authStore = useAuthStore()
-const isAdmin = computed(() => authStore.user?.rol === 1)
+const isAdmin = computed(() => authStore.user?.rol === ROLES.ADMIN)
 const isDarkMode = ref(false)
 
+const iniciales = computed(() => {
+  const nombre = authStore.user?.nombre || ''
+  return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
+})
+
 onMounted(() => {
-  const saved = localStorage.getItem('dark-mode')
-  if (saved === 'true') {
-    isDarkMode.value = true
-  }
+  isDarkMode.value = localStorage.getItem('dark-mode') === 'true'
+  document.documentElement.classList.toggle('dark-mode', isDarkMode.value)
 })
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
-  document.documentElement.classList.toggle('dark-mode')
+  document.documentElement.classList.toggle('dark-mode', isDarkMode.value)
   localStorage.setItem('dark-mode', isDarkMode.value)
 }
 </script>
@@ -169,6 +175,26 @@ const toggleDarkMode = () => {
   color: var(--btn-primary);
 }
 
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-iniciales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .theme-toggle {
   display: flex;
   align-items: center;
@@ -215,7 +241,7 @@ const toggleDarkMode = () => {
   .app-header {
     padding: 0 1rem;
   }
-  .header-user span,
+  .header-user > span:not(.header-avatar),
   .btn-logout span {
     display: none;
   }

@@ -83,6 +83,8 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useLogout } from '../../composables/useLogout'
+import { links } from '../../router/links'
+import { ROLES } from '../../config/roles'
 import api from '../../config/axios'
 import logoSrc from '../../assets/logo.png'
 
@@ -106,26 +108,27 @@ const subtitle = computed(() => {
 })
 
 const areaItems = [
-  { to: '/trabajador/info', icon: 'fa-solid fa-id-card', label: 'Mi Información' },
-  { to: '/trabajador/turnos', icon: 'fa-solid fa-calendar-days', label: 'Mis Turnos' },
-  { to: '/trabajador/pagos', icon: 'fa-solid fa-money-check-dollar', label: 'Mis Pagos' },
-  { to: '/trabajador/notificaciones', icon: 'fa-solid fa-bell', label: 'Notificaciones' }
+  { to: links.trabajador.info, icon: 'fa-solid fa-id-card', label: 'Mi Información' },
+  { to: links.trabajador.turnos, icon: 'fa-solid fa-calendar-days', label: 'Mis Turnos' },
+  { to: links.trabajador.pagos, icon: 'fa-solid fa-money-check-dollar', label: 'Mis Pagos' },
+  { to: links.trabajador.notificaciones, icon: 'fa-solid fa-bell', label: 'Notificaciones' }
 ]
 
 const MENU_POR_ROL = {
-  1: [
-    { id: 'principal', item: { to: '/panel', label: 'Panel Principal', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
+  [ROLES.ADMIN]: [
+    { id: 'principal', item: { to: links.panel.admin, label: 'Panel Principal', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
+    { id: 'indicadores', item: { to: links.panel.kpis, label: 'Indicadores', icon: 'fa-solid fa-chart-simple', iconCls: 'ic-cyan' } },
     {
       id: 'caja',
       label: 'Caja',
       icon: 'fa-solid fa-cash-register',
       iconCls: 'ic-green',
       children: [
-        { to: '/caja/resumen', icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
-        { to: '/caja', icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
-        { to: '/caja/movimientos', icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
-        { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
-        { to: '/caja/reportes', icon: 'fa-solid fa-chart-line', label: 'Reportes Financieros' }
+        { to: links.caja.resumen, icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
+        { to: links.caja.control, icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
+        { to: links.caja.movimientos, icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
+        { to: links.caja.historial, icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
+        { to: links.caja.reportes, icon: 'fa-solid fa-chart-line', label: 'Reportes Financieros' }
       ]
     },
     {
@@ -134,13 +137,13 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-users',
       iconCls: 'ic-blue',
       children: [
-        { to: '/personal', icon: 'fa-solid fa-users', label: 'Gestión del Personal' },
-        { to: '/personal/empleados', icon: 'fa-solid fa-id-badge', label: 'Empleados' },
-        { to: '/personal/pagos', icon: 'fa-solid fa-money-check-dollar', label: 'Pagos' },
-        { to: '/personal/turnos', icon: 'fa-solid fa-calendar-days', label: 'Turnos' },
-        { to: '/personal/adelantos', icon: 'fa-solid fa-piggy-bank', label: 'Adelantos' },
-        { to: '/personal/solicitudes', icon: 'fa-solid fa-file-lines', label: 'Solicitudes' },
-        { to: '/personal/salarios', icon: 'fa-solid fa-sack-dollar', label: 'Salarios' }
+        { to: links.personal.modulo, icon: 'fa-solid fa-users', label: 'Gestión del Personal' },
+        { to: links.personal.empleados, icon: 'fa-solid fa-id-badge', label: 'Empleados' },
+        { to: links.personal.pagos, icon: 'fa-solid fa-money-check-dollar', label: 'Pagos' },
+        { to: links.personal.turnos, icon: 'fa-solid fa-calendar-days', label: 'Turnos' },
+        { to: links.personal.adelantos, icon: 'fa-solid fa-piggy-bank', label: 'Adelantos' },
+        { to: links.personal.solicitudes, icon: 'fa-solid fa-file-lines', label: 'Solicitudes' },
+        { to: links.personal.salarios, icon: 'fa-solid fa-sack-dollar', label: 'Salarios' }
       ]
     },
     {
@@ -149,10 +152,10 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-cubes-stacked',
       iconCls: 'ic-purple',
       children: [
-        { to: '/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Módulo' },
-        { to: '/inventario/operaciones?vista=productos', icon: 'fa-solid fa-box-open', label: 'Productos y Stock' },
-        { to: '/inventario/operaciones?vista=movimientos', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de movimientos' },
-        { to: '/inventario/reportes', icon: 'fa-solid fa-chart-column', label: 'Reportes' }
+        { to: links.inventario.modulo, icon: 'fa-solid fa-boxes-stacked', label: 'Módulo' },
+        { to: links.inventario.productoStock, icon: 'fa-solid fa-box-open', label: 'Productos y Stock' },
+        { to: links.inventario.movimientosHistorico, icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de movimientos' },
+        { to: links.inventario.reportes, icon: 'fa-solid fa-chart-column', label: 'Reportes' }
       ]
     },
     {
@@ -161,53 +164,54 @@ const MENU_POR_ROL = {
       icon: 'fa-solid fa-shield-halved',
       iconCls: 'ic-red',
       children: [
-        { to: '/seguridad', icon: 'fa-solid fa-shield-halved', label: 'Seguridad y Accesos' },
-        { to: '/seguridad/monitoreo', icon: 'fa-solid fa-eye', label: 'Monitoreo' },
-        { to: '/seguridad/roles', icon: 'fa-solid fa-user-shield', label: 'Roles' },
+        { to: links.seguridad.modulo, icon: 'fa-solid fa-shield-halved', label: 'Seguridad y Accesos' },
+        { to: links.seguridad.monitoreo, icon: 'fa-solid fa-eye', label: 'Monitoreo' },
+        { to: links.seguridad.roles, icon: 'fa-solid fa-user-shield', label: 'Roles' },
+        { to: links.seguridad.actividad, icon: 'fa-solid fa-list-check', label: 'Actividad' }
       ]
     },
-    { id: 'ia', item: { to: '/ia', label: 'IA Predictiva', icon: 'fa-solid fa-brain', iconCls: 'ic-cyan' } }
+    { id: 'ia', item: { to: links.ia, label: 'IA Predictiva', icon: 'fa-solid fa-brain', iconCls: 'ic-cyan' } }
   ],
-  2: [
-    { id: 'principal', item: { to: '/panel-cajera', label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange', chip: 'caja-saldo' } },
+  [ROLES.CAJERA]: [
+    { id: 'principal', item: { to: links.panel.cajera, label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange', chip: 'caja-saldo' } },
     {
       id: 'caja',
       label: 'Caja',
       icon: 'fa-solid fa-cash-register',
       iconCls: 'ic-green',
       children: [
-        { to: '/caja/resumen', icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
-        { to: '/caja', icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
-        { to: '/caja/movimientos', icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
-        { to: '/caja/historial', icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
-        { to: '/caja/reportes', icon: 'fa-solid fa-chart-line', label: 'Reportes Financieros' }
+        { to: links.caja.resumen, icon: 'fa-solid fa-wallet', label: 'Resumen de Caja' },
+        { to: links.caja.control, icon: 'fa-solid fa-cash-register', label: 'Control de Caja', chip: 'caja-control' },
+        { to: links.caja.movimientos, icon: 'fa-solid fa-arrows-rotate', label: 'Movimientos' },
+        { to: links.caja.historial, icon: 'fa-solid fa-clock-rotate-left', label: 'Historial de Cierres' },
+        { to: links.caja.reportes, icon: 'fa-solid fa-chart-line', label: 'Reportes Financieros' }
       ]
     },
     { id: 'miarea', label: 'Mi Área', icon: 'fa-solid fa-user', iconCls: 'ic-blue', children: areaItems }
   ],
-  3: [
-    { id: 'principal', item: { to: '/cocinero', label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
+  [ROLES.COCINA]: [
+    { id: 'principal', item: { to: links.panel.cocinero, label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
     {
       id: 'cocina',
       label: 'Cocina',
       icon: 'fa-solid fa-utensils',
       iconCls: 'ic-orange',
       children: [
-        { to: '/inventario', icon: 'fa-solid fa-boxes-stacked', label: 'Inventario' },
-        { to: '/cocinero/solicitudes', icon: 'fa-solid fa-list-check', label: 'Mis Solicitudes' },
-        { to: '/cocinero/alertas', icon: 'fa-solid fa-triangle-exclamation', label: 'Alertas' }
+        { to: links.inventario.modulo, icon: 'fa-solid fa-boxes-stacked', label: 'Inventario' },
+        { to: links.cocina.solicitudes, icon: 'fa-solid fa-list-check', label: 'Mis Solicitudes' },
+        { to: links.cocina.alertas, icon: 'fa-solid fa-triangle-exclamation', label: 'Alertas' }
       ]
     },
     { id: 'miarea', label: 'Mi Área', icon: 'fa-solid fa-user', iconCls: 'ic-blue', children: areaItems }
   ],
-  4: [
-    { id: 'principal', item: { to: '/trabajador', label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
+  [ROLES.TRABAJADOR]: [
+    { id: 'principal', item: { to: links.panel.trabajador, label: 'Mi Panel', icon: 'fa-solid fa-gauge-high', iconCls: 'ic-orange' } },
     { id: 'miarea', label: 'Mi Área', icon: 'fa-solid fa-user', iconCls: 'ic-blue', children: areaItems }
   ]
 }
 
 const menu = computed(() => {
-  const estructura = MENU_POR_ROL[rol.value] || MENU_POR_ROL[4]
+  const estructura = MENU_POR_ROL[rol.value] || MENU_POR_ROL[ROLES.TRABAJADOR]
   return estructura
     .map((e) => ({ ...e, children: e.children ? [...e.children] : undefined }))
     .filter((e) => !e.children || e.children.length > 0)
@@ -239,7 +243,7 @@ watch(
   (val) => {
     abiertas.value = {}
     if (!val) return
-    if (rol.value === 1 || rol.value === 2) cargarChips()
+    if (rol.value === ROLES.ADMIN || rol.value === ROLES.CAJERA) cargarChips()
   }
 )
 
@@ -261,7 +265,7 @@ const chip = (ck) => {
     return chips.value.abierta ? `S/. ${fmtMoney(chips.value.ventas_dia)}` : 'Cerrada'
   }
   if (ck === 'caja-saldo') {
-    return chips.value.abierta ? `S/. ${fmtMoney(chips.value.neto_dia)}` : 'Cerrada'
+    return chips.value.abierta ? `S/. ${fmtMoney(chips.value.saldo_actual)}` : 'Cerrada'
   }
   return null
 }

@@ -1,13 +1,13 @@
-<template><button class="volver-btn" type="button" @click="goBack"><i class="fa-solid fa-arrow-left"></i> Volver</button></template>
+<template><button class="volver-btn" type="button" @click="goBack"><i class="fa-solid fa-arrow-left"></i> {{ props.etiqueta }}</button></template>
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-const props = defineProps({ to: { type: [String, Object], default: '/' }, etiqueta: String })
+import { homeForRole } from '../../router/links'
+const props = defineProps({ to: { type: [String, Object], default: null }, etiqueta: { type: String, default: 'Volver' } })
 const router = useRouter()
 const auth = useAuthStore()
 function goBack() {
-  const panel = { 1: '/panel', 2: '/panel-cajera', 3: '/cocinero', 4: '/trabajador' }[auth.userRole]
-  router.push(panel || props.to || '/')
+  router.push(props.to || homeForRole(auth.userRole))
 }
 </script>
 <style scoped>

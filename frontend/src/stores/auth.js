@@ -2,9 +2,19 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../config/axios'
 
+const leerUsuarioGuardado = () => {
+  try {
+    const valor = JSON.parse(localStorage.getItem('user') || 'null')
+    return valor && typeof valor === 'object' ? valor : null
+  } catch {
+    localStorage.removeItem('user')
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  const user = ref(leerUsuarioGuardado())
   const sessionValid = ref(false)
   const sessionChecked = ref(false)
 
@@ -31,6 +41,19 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
+  const actualizarTokens = (tok, refresh) => {
+    if (!tok) return
+    token.value = tok
+    localStorage.setItem('token', tok)
+    if (refresh) localStorage.setItem('refresh_token', refresh)
+  }
+
+  const actualizarUsuario = (datos) => {
+    if (!user.value) return
+    user.value = { ...user.value, ...datos }
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
+
   const checkSession = async () => {
     if (!token.value) {
       sessionValid.value = false
@@ -44,7 +67,8 @@ export const useAuthStore = defineStore('auth', () => {
         guardarSesion(localStorage.getItem('token'), {
           id: info.id,
           nombre: info.nombre,
-          rol: info.rol
+          rol: info.rol,
+          foto_perfil: info.foto_perfil || null
         }, null)
         sessionValid.value = true
         sessionChecked.value = true
@@ -78,8 +102,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async () => {
-    await api.post('/auth/logout')
-    limpiarSesion()
+    try {
+      await api.post('/auth/logout')
+    } finally {
+      limpiarSesion()
+    }
   }
 
   const refreshToken = async () => {
@@ -109,6 +136,8 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     refreshToken,
     checkSession,
+    actualizarUsuario,
+    actualizarTokens,
     limpiarSesion
   }
 })

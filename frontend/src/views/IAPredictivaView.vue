@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-hero">
-      <VolverBtn to="/panel" />
+      <VolverBtn :to="links.panel.admin" />
       <h1>IA Predictiva</h1>
       <p>Análisis avanzado de los datos del restaurante</p>
     </div>
@@ -70,3 +70,7 @@
   line-height: 1.5;
 }
 </style>
+
+<script setup>
+import { links } from '../router/links'
+</script>

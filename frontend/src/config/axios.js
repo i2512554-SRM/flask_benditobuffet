@@ -1,5 +1,6 @@
 import { pendingWrites } from './pending'
 import axios from 'axios'
+import { links } from '../router/links'
 
 const pendingKeys = new Set()
 function release(config) {
@@ -80,7 +81,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      window.location.assign(links.login)
     }
     return Promise.reject(error)
   }

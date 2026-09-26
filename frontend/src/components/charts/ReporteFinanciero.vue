@@ -12,17 +12,22 @@
     <template v-else-if="!error">
       <p>{{ formatFecha(datos.inicio) }} — {{ formatFecha(finVisible) }} · Hora de Lima</p>
       <div class="totales">
-        <div><span>Ventas del periodo</span><strong>S/ {{ dinero(datos.ventas_mes) }}</strong></div>
-        <div><span>Egresos del periodo</span><strong>S/ {{ dinero(datos.egresos_mes) }}</strong></div>
+        <div><span>Ingresos</span><strong>S/ {{ dinero(datos.ventas_mes) }}</strong></div>
+        <div><span>Egresos</span><strong>S/ {{ dinero(datos.egresos_mes) }}</strong></div>
         <div><span>Balance de caja</span><strong>S/ {{ dinero(datos.neto_mes) }}</strong></div>
+        <div><span>Cantidad de movimientos</span><strong>{{ datos.transacciones?.length || 0 }}</strong></div>
       </div>
       <LineChartFinanciero :puntos="datos.puntos || []" />
+      <div v-if="metodosPago.length" class="metodos">
+        <h3>Distribución de ingresos por método de pago</h3>
+        <DonaChart :items="metodosPago" :altura="230" />
+      </div>
       <p class="nota">Cada movimiento se cuenta una sola vez. El balance es ventas menos egresos registrados; no representa la utilidad contable del restaurante.</p>
       <details open>
         <summary>Detalle de movimientos ({{ datos.transacciones?.length || 0 }})</summary>
         <DataTable :value="datos.transacciones || []" paginator :rows="10" stripedRows sortField="fecha" :sortOrder="-1">
           <Column field="fecha" header="Fecha y hora" sortable><template #body="{data}">{{ formatFecha(data.fecha) }}</template></Column>
-          <Column field="tipo" header="Tipo" sortable />
+          <Column field="tipo" header="Tipo" sortable><template #body="{data}">{{ tipoLabel(data.tipo) }}</template></Column>
           <Column field="metodo_pago" header="Método de pago" />
           <Column field="monto" header="Monto" sortable><template #body="{data}">S/ {{ dinero(data.monto) }}</template></Column>
           <Column field="descripcion" header="Descripción" />
@@ -50,11 +55,23 @@ import { ref, computed, onMounted } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import LineChartFinanciero from './LineChartFinanciero.vue'
+import DonaChart from './DonaChart.vue'
 import { formatFecha, fechaLocal } from '../../utils/format'
 import api from '../../config/axios'
 const periodo=ref('mes'), fecha=ref(fechaLocal()), datos=ref({}), loading=ref(false), error=ref('')
 const dinero=v=>Number(v || 0).toLocaleString('es-PE',{minimumFractionDigits:2, maximumFractionDigits:2})
+const tipoLabel=tipo=>tipo==='Venta'?'Ingreso':tipo==='Gasto'?'Egreso':tipo || '—'
 const finVisible=computed(()=>datos.value.fin ? new Date(new Date(datos.value.fin).getTime()-1000).toISOString() : null)
+const metodosPago=computed(()=>{
+  const agrupados={}
+  for (const t of datos.value.transacciones || []) {
+    if (t.tipo !== 'Venta') continue
+    const metodo=t.metodo_pago || 'No especificado'
+    agrupados[metodo]=(agrupados[metodo] || 0)+Number(t.monto || 0)
+  }
+  const colores={Efectivo:'#16a34a',Yape:'#3b82f6',Tarjeta:'#f59e0b','No especificado':'#94a3b8'}
+  return Object.entries(agrupados).map(([etiqueta,valor])=>({etiqueta,valor,color:colores[etiqueta]}))
+})
 let solicitud=0
 async function cargar() {
   if (!fecha.value) return
@@ -65,11 +82,12 @@ async function cargar() {
   finally { if(id===solicitud) loading.value=false }
 }
 function mover(paso) {
-  const d=new Date(fecha.value+'T12:00:00')
-  if(periodo.value==='mes') { d.setDate(1); d.setMonth(d.getMonth()+paso) }
-  else if(periodo.value==='anio') { d.setMonth(0,1); d.setFullYear(d.getFullYear()+paso) }
-  else d.setDate(d.getDate()+paso*(periodo.value==='semana'?7:1))
-  fecha.value=fechaLocal(d); cargar()
+  const [anio,mes,dia]=fecha.value.split('-').map(Number)
+  const d=new Date(Date.UTC(anio,mes-1,dia,12))
+  if(periodo.value==='mes') { d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+paso) }
+  else if(periodo.value==='anio') { d.setUTCMonth(0,1); d.setUTCFullYear(d.getUTCFullYear()+paso) }
+  else d.setUTCDate(d.getUTCDate()+paso*(periodo.value==='semana'?7:1))
+  fecha.value=d.toISOString().slice(0,10); cargar()
 }
 onMounted(cargar)
 </script>
@@ -83,5 +101,7 @@ input,select { padding:.65rem; border:1px solid var(--border-color); border-radi
 .totales { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin:1.5rem 0; }
 .totales div { display:grid; gap:.35rem; } .totales strong { font-size:1.5rem; }
 .nota { font-size:.9rem; color:var(--text-muted); margin:1rem 0; }
+.metodos { margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--border-color); }
+.metodos h3 { font-size:1rem; margin:0 0 .75rem; }
 summary { cursor:pointer; padding:1rem 0; font-weight:600; }
 </style>

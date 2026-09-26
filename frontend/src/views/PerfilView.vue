@@ -1,19 +1,18 @@
 <template>
   <div class="perfil-view">
     <VolverBtn />
-    <!-- Notificaciones de adelantos -->
+    <!-- Notificaciones sin leer -->
     <div v-if="notificaciones.length" class="notif-list">
       <div
         v-for="notif in notificaciones"
-        :key="notif.id_adelanto"
+        :key="notif.id_notificacion"
         class="notif-banner success"
-        @click="dismissNotif(notif.id_adelanto)"
+        title="Marcar como leída"
+        @click="dismissNotif(notif.id_notificacion)"
       >
         <i class="fa-solid fa-bell"></i>
-        Tu solicitud de adelanto por
-        <strong>S/. {{ formatMoney(notif.monto) }}</strong>
-        fue <strong>{{ notif.estado === 'Aprobado' ? 'aprobada' : 'rechazada' }}</strong>
-        <span v-if="notif.respuesta_admin">: {{ notif.respuesta_admin }}</span>
+        <strong>{{ notif.titulo }}</strong>
+        <span v-if="notif.mensaje">: {{ notif.mensaje }}</span>
       </div>
     </div>
 
@@ -60,7 +59,7 @@
             </div>
             <div class="info-block">
               <span>Fecha de registro</span>
-              <strong>{{ usuario.perfil.fecha_ingreso || 'No registrado' }}</strong>
+              <strong>{{ usuario.perfil.fecha_ingreso ? soloFecha(usuario.perfil.fecha_ingreso) : 'No registrado' }}</strong>
             </div>
             <div class="info-block">
               <span>Turnos</span>
@@ -76,7 +75,7 @@
           </div>
         </div>
 
-        <div class="profile-tabs">
+        <div v-if="tabs.length > 1" class="profile-tabs">
           <button :disabled="$saving"
             v-for="tab in tabs"
             :key="tab.key"
@@ -122,7 +121,7 @@
             </thead>
             <tbody>
               <tr v-for="pago in pagos" :key="pago.id_pago">
-                <td data-label="Fecha">{{ pago.fecha_pago }}</td>
+                <td data-label="Fecha">{{ soloFecha(pago.fecha_pago) }}</td>
                 <td data-label="Monto">S/. {{ formatMoney(pago.monto) }}</td>
                 <td data-label="Descripcion">{{ pago.descripcion }}</td>
                 <td data-label="Estado"><span class="badge badge-paid">{{ pago.estado }}</span></td>
@@ -154,7 +153,7 @@
           </div>
           <div class="form-row">
             <label>Monto</label>
-            <input type="text" v-model="adelantoForm.monto" placeholder="Ej. 150.00" class="input" />
+            <input type="number" v-model="adelantoForm.monto" min="0.01" step="0.01" inputmode="decimal" placeholder="Ej. 150.00" class="input" />
           </div>
           <div class="form-actions">
             <button class="btn btn-primary" @click="solicitarAdelanto" :disabled="$saving || (solicitando)">
@@ -177,7 +176,7 @@
             </thead>
             <tbody>
               <tr v-for="adelanto in adelantos" :key="adelanto.id_adelanto">
-                <td data-label="Fecha">{{ adelanto.fecha }}</td>
+                <td data-label="Fecha">{{ soloFecha(adelanto.fecha) }}</td>
                 <td data-label="Motivo">{{ adelanto.motivo }}</td>
                 <td data-label="Monto">S/. {{ formatMoney(adelanto.monto) }}</td>
                 <td data-label="Estado">
@@ -258,6 +257,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import VolverBtn from '../components/ui/VolverBtn.vue'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '../stores/auth'
+import { soloFecha } from '../utils/format'
 import api from '../config/axios'
 
 const toast = useToast()
@@ -306,9 +306,13 @@ const cargarPerfil = async () => {
       adelantos.value = d.adelantos
       notificaciones.value = d.notificaciones
       resumen.value = d.resumen
+      auth.actualizarUsuario({
+        nombre: d.usuario.nombres,
+        foto_perfil: d.usuario.perfil?.foto_perfil || null
+      })
       editarForm.value = { correo: d.usuario.correo || '', telefono: d.usuario.telefono || '', clave: '', foto: null }
       if (d.notificaciones && d.notificaciones.length) {
-        toast.add({ severity: 'info', summary: 'Notificaciones', detail: `${d.notificaciones.length} resultado(s) de tus adelantos`, life: 4000 })
+        toast.add({ severity: 'info', summary: 'Notificaciones', detail: `Tienes ${d.notificaciones.length} notificación(es) sin leer`, life: 4000 })
       }
     }
   } catch (err) {
@@ -318,8 +322,8 @@ const cargarPerfil = async () => {
 }
 
 const dismissNotif = (id) => {
-  notificaciones.value = notificaciones.value.filter((n) => n.id_adelanto !== id)
-  api.post('/perfil/notificaciones/leer').catch(() => {})
+  notificaciones.value = notificaciones.value.filter((n) => n.id_notificacion !== id)
+  api.post('/perfil/notificaciones/leer', { id_notificacion: id }).catch(() => {})
 }
 
 const toggleEdit = () => {
@@ -418,6 +422,7 @@ const cambiarContrasena = async () => {
   try {
     const res = await api.put('/perfil/contrasena', contrasenaForm.value)
     if (res.data.success) {
+      auth.actualizarTokens(res.data.data?.token, res.data.data?.refresh_token)
       toast.add({ severity: 'success', summary: 'Exito', detail: res.data.message, life: 3000 })
       modalContrasena.value = false
     } else {
@@ -723,13 +728,16 @@ onMounted(cargarPerfil)
 /* Editor */
 .profile-editor {
   padding: 1.5rem;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .edit-form {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  max-width: 520px;
+  max-width: 100%;
 }
 
 .edit-avatar {

@@ -2,6 +2,7 @@ import { useRouter } from 'vue-router'
 import { useConfirm } from 'primevue/useconfirm'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from 'primevue/usetoast'
+import { links } from '../router/links'
 
 export function useLogout() {
   const router = useRouter()
@@ -12,13 +13,13 @@ export function useLogout() {
   const cerrarSesion = async () => {
     try {
       await authStore.logout()
-      router.replace('/login')
     } catch (error) {
-      if (error.response?.status === 401) {
-        authStore.limpiarSesion(); router.replace('/login')
-      } else {
-        toast.add({ severity: 'error', summary: 'No se pudo cerrar la sesión', detail: 'Comprueba la conexión e intenta nuevamente.', life: 4000 })
+      if (error.response?.status !== 401) {
+        toast.add({ severity: 'warn', summary: 'Sesión cerrada localmente', detail: 'No se pudo confirmar el cierre en el servidor.', life: 4000 })
       }
+    } finally {
+      authStore.limpiarSesion()
+      router.replace(links.login)
     }
   }
 
