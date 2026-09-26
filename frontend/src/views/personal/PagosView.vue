@@ -176,6 +176,7 @@
 </template>
 
 <script setup>
+import { nuevaClaveOperacion } from '../../utils/claveOperacion'
 import { formatFecha as fechaLegible, fechaLocal } from '../../utils/format'
 import { ref, computed, onMounted, watch } from 'vue'
 import VolverBtn from '../../components/ui/VolverBtn.vue'
@@ -310,7 +311,7 @@ const openRegistrar = (tipo) => {
     estado: 'Pagado',
     descripcion: '',
     motivo: '',
-    clave_operacion: crypto.randomUUID()
+    clave_operacion: nuevaClaveOperacion()
   }
   dialogVisible.value = true
 }

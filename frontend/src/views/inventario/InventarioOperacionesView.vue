@@ -411,6 +411,7 @@
 </template>
 
 <script setup>
+import { nuevaClaveOperacion } from '../../utils/claveOperacion'
 import { formatFecha as fechaLegible } from '../../utils/format'
 import { ref, computed, onMounted, watch }  from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -629,7 +630,7 @@ const cargarActivos = async () => {
 const abrirAgregarStock = (prod = null) => {
   stockModo.value = 'entrada'
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: nuevaClaveOperacion() }
   cargarActivos()
   stockDialog.value = true
 }
@@ -637,7 +638,7 @@ const abrirAgregarStock = (prod = null) => {
 const abrirRegistrarSalida = (prod = null) => {
   stockModo.value = 'salida'
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: nuevaClaveOperacion() }
   cargarActivos()
   stockDialog.value = true
 }
@@ -683,7 +684,7 @@ const confirmarStock = async () => {
 
 const openCompra = () => {
   cargarActivos()
-  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '', clave_operacion: crypto.randomUUID() }
+  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '', clave_operacion: nuevaClaveOperacion() }
   compraDialog.value = true
 }
 

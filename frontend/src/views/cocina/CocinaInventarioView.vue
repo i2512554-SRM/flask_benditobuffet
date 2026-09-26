@@ -167,6 +167,7 @@
 </template>
 
 <script setup>
+import { nuevaClaveOperacion } from '../../utils/claveOperacion'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -226,7 +227,7 @@ const solicitar = (prod) => router.push({ path: links.cocina.solicitudes, query:
 const abrirStock = (modo, prod = null) => {
   stockModo.value = modo
   stockWarning.value = ''
-  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: crypto.randomUUID() }
+  stockForm.value = { id_producto: prod?.id_producto || null, cantidad: null, motivo: '', clave_operacion: nuevaClaveOperacion() }
   stockDialog.value = true
 }
 

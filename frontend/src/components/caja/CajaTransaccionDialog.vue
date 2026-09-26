@@ -24,6 +24,7 @@
 </template>
 
 <script setup>
+import { nuevaClaveOperacion } from '../../utils/claveOperacion'
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
@@ -67,7 +68,7 @@ watch(
         metodo_pago: 'Efectivo',
         monto: null,
         descripcion: '',
-        clave_operacion: crypto.randomUUID()
+        clave_operacion: nuevaClaveOperacion()
       }
     }
   }

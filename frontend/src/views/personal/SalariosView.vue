@@ -120,6 +120,7 @@
 </template>
 
 <script setup>
+import { nuevaClaveOperacion } from '../../utils/claveOperacion'
 import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
@@ -143,7 +144,7 @@ const dialogo = ref(false), empleado = ref(null), tipo = ref('sueldo'), monto = 
 const anulacionVisible = ref(false), descuentoAnular = ref(null), anulando = ref(false)
 const claveOperacion = ref('')
 function abrir(fila, accion) {
-  claveOperacion.value = crypto.randomUUID()
+  claveOperacion.value = nuevaClaveOperacion()
   empleado.value = fila; tipo.value = accion; monto.value = accion === 'sueldo' ? fila.sueldo_base : null
   motivo.value = ''; dialogo.value = true
 }
