@@ -14,7 +14,7 @@ from sqlalchemy.ext.compiler import compiles
 from bd import db
 from models import (Rol, Usuario, DocumentoIdentidad, Producto, Categoria, CierreCaja,
                     TransaccionCaja, PagoEmpleado, PagoPersonal, Adelanto,
-                    SueldoSemanal, DescuentoSemanal, InventarioMovimiento)
+                    SueldoSemanal, DescuentoSemanal, InventarioMovimiento, CompraInventario)
 from api.caja import caja_bp
 from api.personal import personal_bp
 from api.perfil import perfil_bp
@@ -269,6 +269,10 @@ class FlujosTest(BaseFlujos):
         producto = db.session.get(Producto, 1)
         producto.costo = 2
         producto.fecha_registro = instante('2026-08-01T12:00:00')
+        compra = CompraInventario(codigo='COMPRA-DEMO', id_usuario=1, total_compra=10, estado='Anulada',
+                                  fecha=instante('2026-09-11T16:00:00'))
+        db.session.add(compra)
+        db.session.flush()
         db.session.add_all([
             TransaccionCaja(id_usuario=2, tipo='Venta', monto=100, metodo_pago='Efectivo',
                             fecha=instante('2026-09-10T17:00:00')),
@@ -283,7 +287,7 @@ class FlujosTest(BaseFlujos):
                                  fecha=instante('2026-09-10T17:00:00')),
             InventarioMovimiento(id_producto=1, id_usuario=1, tipo='Salida', cantidad=-5,
                                  stock_anterior=5, stock_posterior=0,
-                                 motivo='Anulación de compra DEMO (reversa de stock)', id_compra=999,
+                                 motivo='Anulación de compra DEMO (reversa de stock)', id_compra=compra.id_compra,
                                  fecha=instante('2026-09-11T17:00:00')),
         ])
         db.session.commit()

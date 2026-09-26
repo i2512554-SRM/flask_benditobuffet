@@ -15,7 +15,8 @@ def bloques(texto):
         secciones = parte.split('-' * 70)
         cuerpo = secciones[1] if len(secciones) > 1 else ''
         lineas = [l for l in cuerpo.strip().splitlines() if l.strip()]
-        excepcion = next((l for l in reversed(lineas) if not l.startswith(' ') and not l.startswith('Traceback')), 'Sin detalle')
+        excepcion = next((l for l in reversed(lineas) if not l.startswith((' ', 'Traceback', '(Background', '[SQL', '[parameters'))
+                          and not l.startswith('During handling')), 'Sin detalle')
         ubicaciones = re.findall(r'File ".*?/((?:api|schemas|tests|models|app|bd)[^"]*)", line (\d+)', cuerpo)
         propia = next((f'{archivo}:{linea}' for archivo, linea in reversed(ubicaciones)
                        if not archivo.startswith('tests/')), ubicaciones[-1][0] + ':' + ubicaciones[-1][1] if ubicaciones else '')
