@@ -51,6 +51,7 @@ const toggleMenu = () => {
 
 .main-content {
   flex: 1;
+  min-width: 0;
   padding: 2rem;
   background: var(--bg-main);
   min-height: calc(100vh - 60px - 50px);
