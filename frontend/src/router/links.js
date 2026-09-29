@@ -40,6 +40,7 @@ export const links = {
     productoStock: '/inventario/operaciones?vista=productos',
     entrada: '/inventario/operaciones?vista=productos&accion=entrada',
     compras: '/inventario/operaciones?vista=compras',
+    nuevaCompra: (idProducto) => '/inventario/operaciones?vista=compras&accion=nueva-compra' + (idProducto ? `&producto=${idProducto}` : ''),
     inversiones: '/inventario/operaciones?vista=inversiones',
     nuevo: '/inventario/operaciones?accion=nuevo',
     movimientosHistorico: '/inventario/operaciones?vista=movimientos',

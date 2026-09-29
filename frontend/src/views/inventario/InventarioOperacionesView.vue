@@ -10,7 +10,7 @@
       <Button :disabled="$saving || ocupado" label="Nuevo producto" icon="pi pi-plus" @click="agregarDialog" />
       <Button :disabled="$saving || ocupado" label="Entrada sin compra" icon="pi pi-arrow-down" severity="secondary" @click="abrirAgregarStock()" />
       <Button :disabled="$saving || ocupado" label="Registrar salida" icon="pi pi-arrow-up" severity="secondary" @click="abrirRegistrarSalida()" />
-      <Button :disabled="$saving || ocupado" v-if="esAdmin" label="Registrar inversión (compra)" icon="pi pi-cart-plus" severity="secondary" @click="openCompra" />
+      <Button :disabled="$saving || ocupado" v-if="esAdmin" label="Registrar inversión (compra)" icon="pi pi-cart-plus" severity="secondary" @click="openCompra()" />
     </div>
 
     <div class="stats-grid">
@@ -689,9 +689,14 @@ const confirmarStock = async () => {
   }
 }
 
-const openCompra = () => {
+const productoDeRuta = () => {
+  const id = Number(route.query.producto)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
+const openCompra = (idProducto = null) => {
   cargarActivos()
-  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: null, cantidad: null, precio_unitario: null }], notas: '', clave_operacion: nuevaClaveOperacion() }
+  compraForm.value = { id_proveedor: null, detalle: [{ id_producto: idProducto, cantidad: null, precio_unitario: null }], notas: '', clave_operacion: nuevaClaveOperacion() }
   compraDialog.value = true
 }
 
@@ -832,13 +837,13 @@ onMounted(async () => {
   if(route.query.accion === 'nuevo') agregarDialog()
   if(route.query.accion === 'nueva-compra') {
     vista.value = 'compras'
-    openCompra()
+    openCompra(productoDeRuta())
   }
 })
 watch(() => route.query.vista, v => { vista.value = vistaValida.includes(v) ? v : 'productos' })
 watch(() => route.query.stock, v => { stockFiltro.value = (v === 'bajo' || v === 'agotados') ? v : null })
 watch(() => route.query.accion, a => {
-  if (a === 'nueva-compra' && esAdmin.value) { vista.value = 'compras'; openCompra() }
+  if (a === 'nueva-compra' && esAdmin.value) { vista.value = 'compras'; openCompra(productoDeRuta()) }
   if (a === 'entrada') abrirAgregarStock()
   if (a === 'salida') abrirRegistrarSalida()
   if (a === 'nuevo') agregarDialog()

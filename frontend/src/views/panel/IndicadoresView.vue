@@ -2,14 +2,14 @@
   <div>
     <div class="page-hero">
       <VolverBtn :to="links.panel.admin" />
-      <h1>Dashboard de Indicadores</h1>
-      <p>Ocho indicadores clave del negocio con comparación y tendencia</p>
+      <h1>¿Cómo va el negocio?</h1>
+      <p>Los indicadores clave con semáforo. Toca cualquiera para ver el detalle y qué hacer.</p>
     </div>
 
     <div class="kpi-toolbar">
       <label class="kpi-field">
         <span>Periodo</span>
-        <select v-model="periodo" class="input" @change="cargar">
+        <select v-model="periodo" class="input" @change="cargar()">
           <option v-for="opcion in periodos" :key="opcion.valor" :value="opcion.valor">{{ opcion.label }}</option>
         </select>
       </label>
@@ -29,95 +29,88 @@
           <input v-model="finRango" type="date" class="input" />
         </label>
       </template>
-      <button class="btn btn-primary" :disabled="loading" @click="cargar">
+      <button class="btn btn-primary" :disabled="loading" @click="cargar()">
         <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
         Consultar
       </button>
     </div>
 
     <div v-if="meta.inicio" class="kpi-rango">
-      <i class="fa-solid fa-calendar-days"></i>
-      {{ soloFecha(meta.inicio) }} — {{ soloFecha(finVisible) }}
+      <span><i class="fa-solid fa-calendar-days"></i> {{ soloFecha(meta.inicio) }} — {{ soloFecha(finVisible) }}</span>
+      <span v-if="meta.calculado" class="kpi-calculado">
+        <i class="fa-regular fa-clock"></i> Calculado a las {{ soloHora(meta.calculado) }}
+        <button type="button" class="kpi-recalcular" :disabled="loading" @click="cargar(true)">
+          <i class="fa-solid fa-rotate" :class="{ 'fa-spin': loading }"></i> Recalcular
+        </button>
+      </span>
     </div>
 
     <p v-if="error" role="alert" class="kpi-error">{{ error }}</p>
 
-    <div class="kpi-grid">
-      <article v-for="k in kpis" :key="k.codigo" class="kpi-card" :class="{ 'kpi-alerta': !!k.alerta }">
-        <div class="kpi-top">
-          <span class="kpi-code">{{ k.codigo }}</span>
-          <span v-if="k.estimado" class="kpi-badge" title="Cálculo aproximado con la información disponible">Estimado</span>
-        </div>
-        <h3>{{ k.nombre }}</h3>
-        <p v-if="k.descripcion" class="kpi-descripcion">{{ k.descripcion }}</p>
-        <div class="kpi-valor">
-          <template v-if="k.valor === null || k.valor === undefined">—</template>
-          <template v-else-if="k.unidad === 'S/'">S/ {{ fmtDinero(k.valor) }}</template>
-          <template v-else>{{ k.unidad === '%' ? k.valor + '%' : k.valor + ' ' + k.unidad }}</template>
-        </div>
-        <div v-if="tendenciaVisible(k)" class="kpi-tendencias">
-          <span class="tendencia" :class="claseTendencia(k)">
-            <i class="fa-solid" :class="iconoTendencia(k)"></i>
-            {{ textoVariacion(k) }}
-          </span>
-          <span class="vs-previa">vs periodo anterior</span>
-        </div>
-        <p v-if="k.nota" class="kpi-nota"><i class="fa-solid fa-circle-info"></i> {{ k.nota }}</p>
-        <p v-if="k.alerta" class="kpi-alerta-msg"><i class="fa-solid fa-triangle-exclamation"></i> {{ k.alerta }}</p>
-      </article>
-    </div>
+    <EstadoVacio v-if="loading && !kpis.length" titulo="Revolviendo los datos…" mensaje="Calculando los indicadores del periodo." expresion="pensando" />
 
-    <div v-if="kpis.length" class="charts-grid">
-      <article v-for="k in kpis" :key="k.codigo" class="chart-card">
-        <div class="chart-card-head">
-          <h3>{{ k.codigo }} · {{ k.nombre }}</h3>
-          <span class="chart-card-valor">
-            <template v-if="k.valor === null || k.valor === undefined">Sin datos</template>
-            <template v-else-if="k.unidad === 'S/'">S/ {{ fmtDinero(k.valor) }}</template>
-            <template v-else>{{ k.unidad === '%' ? k.valor + '%' : k.valor + ' ' + k.unidad }}</template>
+    <section v-if="kpis.length" class="kpi-resumen">
+      <OllitaMascota :expresion="resumen.expresion" :tamano="76" />
+      <div>
+        <h2>{{ resumen.titulo }}</h2>
+        <div class="kpi-resumen__chips">
+          <span v-for="estado in ['revisar', 'atencion', 'bien', 'sin_datos']" v-show="resumen.conteo[estado]" :key="estado" class="estado-pill" :class="`estado-${estado}`">
+            <i :class="ESTADOS[estado].icono"></i> {{ resumen.conteo[estado] }} {{ ESTADOS[estado].etiqueta.toLowerCase() }}
           </span>
         </div>
-        <template v-if="k.codigo === 'KPI-01'">
-          <LineChartFinanciero v-if="k.serie && k.serie.length" :puntos="serieFinanciera(k)" :series="['ingresos', 'egresos', 'ganancia']" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-line"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else-if="k.codigo === 'KPI-04'">
-          <BarChart v-if="k.serie && k.serie.length" :categorias="k.serie.map(s => s.etiqueta)" :series="[{ label: 'Tasa de merma (%)', valores: k.serie.map(s => s.valor), color: '#dc2626' }]" :moneda="false" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-column"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else-if="k.codigo === 'KPI-05'">
-          <BarChart v-if="k.serie && k.serie.length" :categorias="k.serie.map(s => s.etiqueta)" :series="[{ label: 'Costo laboral (%)', valores: k.serie.map(s => s.valor), color: '#8b5cf6' }]" :moneda="false" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-column"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else-if="k.codigo === 'KPI-06'">
-          <BarChart v-if="k.serie && k.serie.length" :categorias="k.serie.map(s => s.etiqueta)" :series="[{ label: 'Margen bruto (%)', valores: k.serie.map(s => s.valor), color: '#16a34a' }]" :moneda="false" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-column"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else-if="k.codigo === 'KPI-07'">
-          <BarChart v-if="k.serie && k.serie.length" :categorias="k.serie.map(s => s.etiqueta)" :series="[{ label: 'Diferencia', valores: k.serie.map(s => s.diferencia_abs), color: '#f59e0b' }]" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-column"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else-if="k.codigo === 'KPI-08'">
-          <DonaChart v-if="k.serie && k.serie.length" :items="k.serie" :moneda="true" :mostrar-total="true" :altura="260" apilado />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-pie"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-        <template v-else>
-          <BarChart v-if="k.serie && k.serie.length" :categorias="k.serie.map(s => s.etiqueta)" :series="[{ label: serieNombre(k), valores: k.serie.map(s => s.valor), color: '#3b82f6' }]" :moneda="k.codigo === 'KPI-02'" :horizontal="k.codigo === 'KPI-03'" />
-          <div v-else class="chart-empty"><i class="fa-solid fa-chart-column"></i><span>Sin datos para mostrar en este periodo.</span></div>
-        </template>
-      </article>
-    </div>
+      </div>
+    </section>
+
+    <section v-for="area in areasConKpis" :key="area.id" class="kpi-area">
+      <h2 class="kpi-area__titulo"><i :class="area.icono"></i> {{ area.titulo }}</h2>
+      <div class="kpi-grid">
+        <button
+          v-for="k in area.kpis"
+          :key="k.codigo"
+          type="button"
+          class="kpi-card"
+          :class="`borde-${estadoIndicador(k)}`"
+          :aria-label="`${infoIndicador(k.codigo).nombre}: ${valorIndicador(k)}. ${ESTADOS[estadoIndicador(k)].etiqueta}. Ver detalle`"
+          @click="abrirDetalle(k)"
+        >
+          <div class="kpi-top">
+            <span class="kpi-icono" :class="`estado-${estadoIndicador(k)}`"><i :class="infoIndicador(k.codigo).icono"></i></span>
+            <span class="estado-pill" :class="`estado-${estadoIndicador(k)}`">
+              <i :class="ESTADOS[estadoIndicador(k)].icono"></i> {{ ESTADOS[estadoIndicador(k)].etiqueta }}
+            </span>
+          </div>
+          <h3>{{ infoIndicador(k.codigo).nombre }}</h3>
+          <p class="kpi-pregunta">{{ infoIndicador(k.codigo).pregunta }}</p>
+          <div class="kpi-valor">{{ valorIndicador(k) }}</div>
+          <div v-if="tendenciaVisible(k)" class="kpi-tendencias">
+            <span class="tendencia" :class="claseTendencia(k)">
+              <i class="fa-solid" :class="iconoTendencia(k)"></i>
+              {{ textoVariacion(k) }}
+            </span>
+            <span class="vs-previa">{{ meta.comparacion_parcial ? 'vs mismo tramo anterior' : 'vs periodo anterior' }}</span>
+          </div>
+          <span class="kpi-ver">Ver detalle <i class="fa-solid fa-arrow-right"></i></span>
+        </button>
+      </div>
+    </section>
+
+    <KpiDetalle
+      v-model:visible="detalleVisible"
+      :kpi="kpiSeleccionado"
+      :periodo-texto="periodoTexto"
+      :comparacion-parcial="Boolean(meta.comparacion_parcial)"
+      @meta-actualizada="aplicarMeta"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { links } from '../../router/links'
-import { soloFecha, fechaLocal } from '../../utils/format'
+import { soloFecha, soloHora, fechaLocal } from '../../utils/format'
 import api from '../../config/axios'
-import LineChartFinanciero from '../../components/charts/LineChartFinanciero.vue'
-import BarChart from '../../components/charts/BarChart.vue'
-import DonaChart from '../../components/charts/DonaChart.vue'
+import KpiDetalle from '../../components/indicadores/KpiDetalle.vue'
+import { AREAS, ESTADOS, infoIndicador, valorIndicador, estadoIndicador } from '../../config/indicadores'
 
 const periodos = [
   { valor: 'dia', label: 'Hoy' },
@@ -130,11 +123,11 @@ const periodos = [
 
 const SUBE_ES_MALO = new Set(['KPI-04', 'KPI-05', 'KPI-08'])
 
-const cargar = async () => {
+const cargar = async (refrescar = false) => {
   loading.value = true
   error.value = ''
   try {
-    const params = {}
+    const params = refrescar ? { refrescar: '1' } : {}
     if (periodo.value === 'rango') {
       if (!inicioRango.value || !finRango.value) {
         error.value = 'Selecciona un rango de fechas válido'
@@ -150,6 +143,9 @@ const cargar = async () => {
     if (res.data.success) {
       kpis.value = res.data.data.kpis || []
       meta.value = res.data.data
+      if (kpiSeleccionado.value) {
+        kpiSeleccionado.value = kpis.value.find((k) => k.codigo === kpiSeleccionado.value.codigo) || null
+      }
     }
   } catch (err) {
     const mensaje = err.response?.data?.error || 'No se pudieron calcular los indicadores. Intenta nuevamente.'
@@ -183,7 +179,33 @@ const finVisible = computed(() => {
   return finExclusivo.toISOString()
 })
 
-const fmtDinero = (val) => 'S/ ' + Number(val || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })
+const detalleVisible = ref(false)
+const kpiSeleccionado = ref(null)
+const abrirDetalle = (kpi) => {
+  kpiSeleccionado.value = kpi
+  detalleVisible.value = true
+}
+
+const aplicarMeta = (codigo, limites) => {
+  const kpi = kpis.value.find((k) => k.codigo === codigo)
+  if (kpi) kpi.limites = limites
+  cargar()
+}
+
+const periodoTexto = computed(() => (meta.value.inicio ? `${soloFecha(meta.value.inicio)} — ${soloFecha(finVisible.value)}` : ''))
+
+const areasConKpis = computed(() => AREAS
+  .map((area) => ({ ...area, kpis: kpis.value.filter((k) => infoIndicador(k.codigo).area === area.id) }))
+  .filter((area) => area.kpis.length))
+
+const resumen = computed(() => {
+  const conteo = { bien: 0, atencion: 0, revisar: 0, sin_datos: 0 }
+  kpis.value.forEach((k) => { conteo[estadoIndicador(k)] += 1 })
+  if (conteo.revisar) return { conteo, expresion: 'preocupada', titulo: conteo.revisar === 1 ? 'Hay 1 indicador para revisar' : `Hay ${conteo.revisar} indicadores para revisar` }
+  if (conteo.atencion) return { conteo, expresion: 'pensando', titulo: 'Todo en orden, con algunos puntos a vigilar' }
+  if (conteo.bien) return { conteo, expresion: 'celebrando', titulo: '¡El negocio va bien en este periodo!' }
+  return { conteo, expresion: 'pensando', titulo: 'Aún no hay datos suficientes para este periodo' }
+})
 
 const esPorcentaje = (k) => k.codigo === 'KPI-02'
 
@@ -204,21 +226,8 @@ const iconoTendencia = (k) => {
 const textoVariacion = (k) => {
   if (k.variacion === null || k.variacion === undefined) return 'Sin comparación'
   const signo = k.variacion > 0 ? '+' : ''
-  return signo + Number(k.variacion).toLocaleString('es-PE', { maximumFractionDigits: 2 }) + (esPorcentaje(k) ? '%' : ' pp')
+  return signo + Number(k.variacion).toLocaleString('es-PE', { maximumFractionDigits: 2 }) + (esPorcentaje(k) ? '%' : ' puntos')
 }
-
-const serieNombre = (k) => {
-  if (k.codigo === 'KPI-02') return 'Ventas (S/)'
-  if (k.codigo === 'KPI-03') return 'Cobertura (días)'
-  return k.nombre
-}
-
-const serieFinanciera = (k) => (k.serie || []).map((s) => ({
-  etiqueta: s.etiqueta,
-  ingresos: s.ingresos,
-  egresos: s.egresos,
-  ganancia: (s.ingresos || 0) - (s.egresos || 0)
-}))
 
 onMounted(() => {
   periodo.value = 'mes'
@@ -266,40 +275,134 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
+.kpi-rango {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
 .kpi-rango i {
   color: var(--btn-primary);
+}
+
+.kpi-calculado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.kpi-recalcular {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--btn-primary);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--btn-primary) 45%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.kpi-recalcular:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.kpi-recalcular i {
+  color: inherit;
 }
 
 .kpi-error {
   margin-top: 1rem;
   padding: 0.8rem 1rem;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--color-rojo) 12%, transparent);
+  color: var(--color-rojo);
   font-size: 0.85rem;
 }
 
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+.kpi-resumen {
+  display: flex;
+  align-items: center;
   gap: 1rem;
   margin-top: 1.25rem;
-}
-
-.kpi-card {
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 14px;
   box-shadow: var(--shadow-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
 }
 
-.kpi-card.kpi-alerta {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-color));
+.kpi-resumen h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: var(--text-main);
 }
+
+.kpi-resumen__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kpi-area {
+  margin-top: 1.5rem;
+}
+
+.kpi-area__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.kpi-area__titulo i {
+  color: var(--btn-primary);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.1rem 1.25rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-top-width: 4px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.kpi-card:focus-visible {
+  outline: 3px solid var(--btn-primary);
+  outline-offset: 2px;
+}
+
+.borde-bien { border-top-color: #16a34a; }
+.borde-atencion { border-top-color: #f59e0b; }
+.borde-revisar { border-top-color: var(--color-rojo); }
+.borde-sin_datos { border-top-color: var(--border-color); }
 
 .kpi-top {
   display: flex;
@@ -307,47 +410,40 @@ onMounted(() => {
   align-items: center;
 }
 
-.kpi-code {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--btn-primary);
-}
-
-.kpi-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--btn-primary) 12%, transparent);
-  color: var(--btn-primary);
+.kpi-icono {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
 }
 
 .kpi-card h3 {
-  margin: 0;
-  font-size: 0.92rem;
+  margin: 0.2rem 0 0;
+  font-size: 1rem;
   color: var(--text-main);
 }
 
-.kpi-descripcion {
+.kpi-pregunta {
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.8rem;
+  line-height: 1.4;
   color: var(--text-muted);
 }
 
 .kpi-valor {
-  font-size: 2rem;
+  margin-top: 0.2rem;
+  font-size: 1.6rem;
   font-weight: 700;
+  line-height: 1.15;
   color: var(--text-main);
-  line-height: 1.1;
 }
 
 .kpi-tendencias {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.8rem;
 }
@@ -362,13 +458,13 @@ onMounted(() => {
 }
 
 .tend-buena {
-  color: #16a34a;
+  color: #15803d;
   background: color-mix(in srgb, #16a34a 12%, transparent);
 }
 
 .tend-mala {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--color-rojo);
+  background: color-mix(in srgb, var(--color-rojo) 12%, transparent);
 }
 
 .tend-estable {
@@ -380,83 +476,37 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-.kpi-alerta-msg {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--danger);
-  display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-}
-
-.kpi-nota {
-  margin: 0;
-  font-size: 0.76rem;
-  line-height: 1.45;
-  color: var(--text-muted);
-  display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-}
-
-.kpi-nota i {
-  margin-top: 0.15rem;
+.kpi-ver {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--btn-primary);
 }
 
-.kpi-alerta-msg i {
-  margin-top: 0.15rem;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.chart-card {
-  padding: 1.25rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  box-shadow: var(--shadow-soft);
-}
-
-.chart-card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.chart-card-head h3 {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--text-main);
-}
-
-.chart-card-valor {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--btn-primary);
-  white-space: nowrap;
-}
-
-.chart-empty {
-  height: 220px;
-  display: flex;
-  flex-direction: column;
+.estado-pill {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
-.chart-empty i {
-  font-size: 1.6rem;
-  opacity: 0.4;
+.estado-bien { color: #15803d; background: color-mix(in srgb, #16a34a 14%, transparent); }
+.estado-atencion { color: #b45309; background: color-mix(in srgb, #f59e0b 18%, transparent); }
+.estado-revisar { color: var(--color-rojo); background: color-mix(in srgb, var(--color-rojo) 14%, transparent); }
+.estado-sin_datos { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
+
+@media (max-width: 600px) {
+  .kpi-resumen {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .kpi-resumen__chips {
+    justify-content: center;
+  }
 }
 </style>
