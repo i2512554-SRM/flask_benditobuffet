@@ -100,11 +100,19 @@
         </div>
         <div class="field col-6">
           <label for="nombres">Nombres</label>
-          <InputText id="nombres" v-model="form.nombres" @input="limpiarCampo('nombres', $event)" class="w-full" />
+          <InputText id="nombres" v-model="form.nombres" @input="limpiarCampo('nombres', $event)" :readonly="nombresVerificados" :class="{ 'campo-verificado': nombresVerificados }" class="w-full" />
         </div>
         <div class="field col-6">
           <label for="apellido">Apellidos</label>
-          <InputText id="apellido" v-model="form.apellido" @input="limpiarCampo('apellido', $event)" class="w-full" />
+          <InputText id="apellido" v-model="form.apellido" @input="limpiarCampo('apellido', $event)" :readonly="nombresVerificados" :class="{ 'campo-verificado': nombresVerificados }" class="w-full" />
+        </div>
+        <div v-if="nombresVerificados" class="field col-12 dni-aviso verificado">
+          <i class="fa-solid fa-lock"></i>
+          Nombres verificados con RENIEC. Para editarlos, cambia el DNI.
+        </div>
+        <div v-else-if="dniSinResultado" class="field col-12 dni-aviso manual">
+          <i class="fa-solid fa-pen"></i>
+          No se encontraron datos para este DNI: escribe los nombres y apellidos manualmente.
         </div>
         <div class="field col-6">
           <label for="correo">Correo</label>
@@ -122,8 +130,11 @@
           <label for="turno">Turno</label>
           <MultiSelect id="turno" v-model="form.turno" :options="turnos" optionLabel="label" optionValue="value" class="w-full" placeholder="Uno o varios turnos" />
         </div>
+        <div v-if="!editing.id_usuario" class="field col-12">
+          <label for="clave-empleado">Contraseña inicial *</label>
+          <InputText id="clave-empleado" v-model="form.clave" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" class="w-full" />
+        </div>
       </div>
-      <div class="field" v-if="!editing.id_usuario"><label for="clave-empleado">Contraseña inicial *</label><InputText id="clave-empleado" v-model="form.clave" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" class="w-full" /></div>
       <template #footer>
         <Button :disabled="$saving" label="Cancelar" severity="secondary" @click="dialogVisible = false" />
         <Button :disabled="$saving" label="Guardar" :loading="guardando" @click="guardar" />
@@ -133,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import VolverBtn from '../../components/ui/VolverBtn.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -161,9 +172,20 @@ function limpiarCampo(campo, evento) {
     : valor.replace(/[^\p{L} '-]/gu, '')
   evento.target.value = limpio
   form.value[campo] = limpio
+  if (campo === 'dni' && limpio !== dniVerificado.value) {
+    if (dniVerificado.value) {
+      form.value.nombres = ''
+      form.value.apellido = ''
+    }
+    dniVerificado.value = null
+    dniSinResultado.value = false
+  }
 }
 const guardando = ref(false)
 const consultandoDni = ref(false)
+const dniVerificado = ref(null)
+const dniSinResultado = ref(false)
+const nombresVerificados = computed(() => Boolean(dniVerificado.value) && dniVerificado.value === form.value.dni)
 const filtros = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
 const roles = [
   { id_rol: 1, nombre: 'Administrador' },
@@ -203,12 +225,16 @@ const cargar = async () => {
 const agregarDialog = () => {
   editing.value = {}
   form.value = { clave: '', dni: '', nombres: '', apellido: '', correo: '', telefono: '', id_rol: 2, turno: [] }
+  dniVerificado.value = null
+  dniSinResultado.value = false
   dialogVisible.value = true
 }
 
 const editar = (emp) => {
   editing.value = emp
   form.value = { ...emp, turno: turnoList(emp.turno).filter(t => t !== 'Mañana') }
+  dniVerificado.value = null
+  dniSinResultado.value = false
   dialogVisible.value = true
 }
 
@@ -219,21 +245,26 @@ const consultarDni = async () => {
     return
   }
   consultandoDni.value = true
+  dniVerificado.value = null
+  dniSinResultado.value = false
   try {
     const res = await api.get(`/dni/${dni}`)
     const d = res.data
-    if (d && (d.nombres || d.nombres === '')) {
-      form.value.nombres = d.nombres || form.value.nombres
-      form.value.apellido = `${d.apellidoPaterno || ''} ${d.apellidoMaterno || ''}`.trim() || form.value.apellido
+    const nombres = (d?.nombres || '').trim()
+    const apellidos = `${d?.apellidoPaterno || ''} ${d?.apellidoMaterno || ''}`.trim()
+    if (nombres && apellidos) {
+      form.value.nombres = nombres
+      form.value.apellido = apellidos
+      dniVerificado.value = dni
       toast.add({ severity: 'success', summary: 'Datos encontrados en RENIEC', life: 2500 })
-    } else if (d && d.error) {
-      toast.add({ severity: 'warn', summary: d.error, life: 4000 })
     } else {
-      toast.add({ severity: 'warn', summary: 'No se encontraron datos para ese DNI', life: 3500 })
+      dniSinResultado.value = true
+      toast.add({ severity: 'warn', summary: 'No se encontraron datos para ese DNI', detail: 'Escribe los nombres manualmente.', life: 3500 })
     }
   } catch (err) {
+    dniSinResultado.value = true
     const msg = err.response?.data?.error || 'No se pudo consultar el DNI'
-    toast.add({ severity: 'error', summary: msg, life: 4500 })
+    toast.add({ severity: 'error', summary: msg, detail: 'Puedes escribir los nombres manualmente.', life: 4500 })
   } finally {
     consultandoDni.value = false
   }
@@ -329,6 +360,10 @@ const cambiarEstado = async (emp, estado) => {
 .acciones-row { display: inline-flex; gap: 0.25rem; align-items: center; }
 
 .dni-row { display: flex; gap: 0.5rem; }
+.campo-verificado { background: var(--bg-secondary); cursor: not-allowed; }
+.dni-aviso { display: flex; align-items: center; gap: 0.5rem; margin-top: -0.25rem; font-size: 0.85rem; }
+.dni-aviso.verificado { color: var(--color-verde-fuerte); }
+.dni-aviso.manual { color: var(--text-muted); }
 .dni-row .p-inputtext { flex: 1; }
 
 .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }

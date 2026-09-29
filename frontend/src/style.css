@@ -476,3 +476,54 @@ button:disabled { cursor: wait; opacity: .6; }
     height: 56px;
   }
 }
+
+/* ===== Utilidades de formularios (clases estilo PrimeFlex usadas en los diálogos) ===== */
+.formgrid,
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -0.5rem;
+}
+
+.formgrid > .field,
+.grid > .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+  box-sizing: border-box;
+}
+
+.formgrid > .field > label,
+.grid > .field > label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+.col-6 { flex: 0 0 50%; max-width: 50%; }
+
+@media (max-width: 576px) {
+  .formgrid > .col-6,
+  .grid > .col-6 {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+.w-full { width: 100%; }
+.w-full.p-inputnumber .p-inputnumber-input,
+.w-full.p-select,
+.w-full.p-multiselect,
+.w-full.p-datepicker .p-datepicker-input { width: 100%; }
+.w-10 { width: 10%; }
+.w-15 { width: 15%; }
+.w-20 { width: 20%; }
+.w-25 { width: 25%; }
+.w-30 { width: 30%; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
