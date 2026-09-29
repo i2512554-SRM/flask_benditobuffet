@@ -34,6 +34,7 @@ Guía de convenciones del proyecto **Bendito Buffet** (Flask + Vue 3 + PrimeVue)
 - Roles: usar las constantes y decoradores de `api/roles.py` (`ADMIN`, `CAJERA`, `COCINA`, `TRABAJADOR`, `requiere_roles`, `admin_required`); en el frontend, `config/roles.js`. No escribir IDs de rol literales.
 - Respuestas de error: siempre `{"success": false, "error": "..."}`; `message` solo para respuestas exitosas.
 - Series por intervalos (reportes, indicadores): una sola consulta y sumas acumuladas (`_prefijos_movimientos` / `_totales_intervalo` en `api/caja.py`), nunca una consulta por punto.
+- Límites del semáforo de indicadores: los sugeridos están en `METAS_SUGERIDAS` (`api/indicadores.py`) y los ajustados por el administrador en la tabla `metas_indicadores`. Cada KPI los envía en `limites`; el frontend (`config/indicadores.js`) no define límites propios.
 
 ## Convenciones de código
 

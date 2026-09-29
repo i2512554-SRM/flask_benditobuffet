@@ -3,8 +3,8 @@ import bcrypt
 from unittest.mock import patch
 
 from bd import db
-from models import (Adelanto, Notificacion, PagoEmpleado, Producto, SolicitudInsumo,
-                    SueldoSemanal, Usuario)
+from models import (Adelanto, InventarioMovimiento, Notificacion, PagoEmpleado, Producto, SolicitudInsumo,
+                    SueldoSemanal, TransaccionCaja, Usuario)
 from tests.test_flows import BaseFlujos, instante
 
 
@@ -205,3 +205,148 @@ class CorreccionesTest(BaseFlujos):
         self.assertEqual(compra.status_code, 201)
         self.assertEqual(compra.json['data']['n_detalle'], 2)
         self.assertEqual(self.call('get', '/inventario/compras').json['data'][0]['n_detalle'], 2)
+
+    def test_indicadores_reutilizan_calculo_hasta_que_cambian_los_datos(self):
+        from sqlalchemy import event
+        consultas = []
+        contar = lambda *args, **kwargs: consultas.append(1)
+        ruta = '/indicadores?periodo=mes&fecha=2026-09-10'
+        event.listen(db.engine, 'before_cursor_execute', contar)
+        try:
+            with patch('api.indicadores.ahora', return_value=instante('2026-09-20T15:00:00')):
+                primera = self.call('get', ruta)
+                antes = len(consultas)
+                segunda = self.call('get', ruta)
+                reutilizada = len(consultas) - antes
+                self.assertEqual(self.call('post', '/caja/abrir', json={}).status_code, 200)
+                tras_cambio = self.call('get', ruta)
+                forzada = self.call('get', ruta + '&refrescar=1')
+        finally:
+            event.remove(db.engine, 'before_cursor_execute', contar)
+        self.assertFalse(primera.json['data']['desde_cache'])
+        self.assertTrue(segunda.json['data']['desde_cache'])
+        self.assertLess(reutilizada, 5)
+        self.assertEqual(primera.json['data']['kpis'], segunda.json['data']['kpis'])
+        self.assertFalse(tras_cambio.json['data']['desde_cache'])
+        self.assertFalse(forzada.json['data']['desde_cache'])
+        self.assertTrue(primera.json['data']['calculado'])
+
+    def test_despensa_informa_el_producto_de_cada_insumo_critico(self):
+        self.producto(stock=2)
+        db.session.get(Producto, 1).fecha_registro = instante('2026-08-01T00:00:00')
+        db.session.add(InventarioMovimiento(id_producto=1, id_usuario=3, tipo='Salida', cantidad=-4,
+                                            motivo='Preparación', fecha=instante('2026-09-15T12:00:00')))
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-09-20T15:00:00')):
+            kpis = {k['codigo']: k for k in self.call('get', '/indicadores?periodo=mes&fecha=2026-09-10').json['data']['kpis']}
+        self.assertEqual(kpis['KPI-03']['serie'][0]['id_producto'], 1)
+
+    def test_mercaderia_sin_moverse_excluye_equipamiento(self):
+        from models import Categoria
+        db.session.add(Categoria(id_categoria=2, nombre='Equipamiento', fecha_creacion=instante('2026-01-01T00:00:00')))
+        self.producto(stock=10)
+        producto = db.session.get(Producto, 1)
+        producto.costo = 2
+        producto.fecha_registro = instante('2026-08-01T00:00:00')
+        db.session.add(Producto(id_producto=2, nombre='Cocina industrial', precio=0, costo=2500, stock=1,
+                                unidad_medida='Un', id_categoria=2, estado=True,
+                                fecha_registro=instante('2026-08-01T00:00:00'), fecha_edicion=instante('2026-08-01T00:00:00')))
+        db.session.add(InventarioMovimiento(id_producto=1, id_usuario=3, tipo='Salida', cantidad=-1,
+                                            motivo='Preparación', fecha=instante('2026-09-15T12:00:00')))
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-09-20T15:00:00')):
+            kpis = {k['codigo']: k for k in self.call('get', '/indicadores?periodo=mes&fecha=2026-09-10').json['data']['kpis']}
+        self.assertEqual(kpis['KPI-08']['valor'], 0)
+        self.assertEqual(kpis['KPI-08']['detalle']['valor_total'], 20)
+
+    def test_periodo_en_curso_se_compara_con_el_mismo_tramo(self):
+        self.call('post', '/caja/abrir', json={})
+        for fecha, monto in (('2026-08-05T17:00:00', 100), ('2026-08-25T17:00:00', 900), ('2026-09-05T17:00:00', 110)):
+            db.session.add(TransaccionCaja(id_usuario=2, tipo='Venta', monto=monto, metodo_pago='Yape', fecha=instante(fecha)))
+        db.session.commit()
+        with patch('api.indicadores.ahora', return_value=instante('2026-09-10T15:00:00')):
+            data = self.call('get', '/indicadores?periodo=mes&fecha=2026-09-10&refrescar=1').json['data']
+        kpis = {k['codigo']: k for k in data['kpis']}
+        self.assertTrue(data['comparacion_parcial'])
+        self.assertTrue(data['prev_fin'].startswith('2026-08-10'))
+        self.assertEqual(kpis['KPI-02']['detalle']['ventas_anterior'], 100)
+        self.assertEqual(kpis['KPI-02']['valor'], 10)
+
+    def test_historial_y_reportes_de_caja_no_consultan_usuarios_por_fila(self):
+        from sqlalchemy import event
+        from models import CierreCaja
+        for dia in range(1, 21):
+            db.session.add(CierreCaja(id_usuario=2, monto_inicial=100, total_ventas=0, total_gastos=0, estado='cerrada',
+                                      fecha=instante(f'2026-09-{dia:02d}T16:00:00'), fecha_cierre=instante(f'2026-09-{dia:02d}T23:00:00')))
+            db.session.add(TransaccionCaja(id_usuario=2 if dia % 2 else 1, tipo='Venta', monto=10, metodo_pago='Yape',
+                                           fecha=instante(f'2026-09-{dia:02d}T18:00:00')))
+        db.session.commit()
+        db.session.expunge_all()
+        consultas = []
+        contar = lambda conexion, cursor, sql, *resto: consultas.append(sql)
+        event.listen(db.engine, 'before_cursor_execute', contar)
+        try:
+            historial = self.call('get', '/caja/historial', role=2)
+            reporte = self.call('get', '/caja/reportes?periodo=mes&fecha=2026-09-15', role=2)
+        finally:
+            event.remove(db.engine, 'before_cursor_execute', contar)
+        self.assertEqual(len(historial.json['data']), 20)
+        self.assertEqual(len(reporte.json['data']['transacciones']), 20)
+        consultas_usuarios = [sql for sql in consultas if 'FROM usuarios' in sql and 'sesiones_usuario' not in sql]
+        self.assertLess(len(consultas_usuarios), 12)
+
+    def _kpis(self, ruta='/indicadores?periodo=mes&fecha=2026-09-10'):
+        with patch('api.indicadores.ahora', return_value=instante('2026-09-20T15:00:00')):
+            return {k['codigo']: k for k in self.call('get', ruta).json['data']['kpis']}
+
+    def test_metas_de_indicadores_se_ajustan_y_restauran(self):
+        limites = self._kpis()['KPI-04']['limites']
+        self.assertEqual((limites['atencion'], limites['revisar'], limites['personalizada']), (5, 10, False))
+        self.assertEqual(limites['sugerido'], {'atencion': 5, 'revisar': 10})
+        self.assertFalse(limites['mayor_es_mejor'])
+
+        respuesta = self.call('put', '/indicadores/metas/KPI-04', json={'atencion': 8, 'revisar': '12.345'})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json['data']['revisar'], 12.35)
+        self.assertEqual(respuesta.json['data']['actualizado_por'], 'Ana Pérez')
+
+        limites = self._kpis()['KPI-04']['limites']
+        self.assertEqual((limites['atencion'], limites['revisar'], limites['personalizada']), (8, 12.35, True))
+        self.assertTrue(limites['actualizado_en'].endswith('+00:00'))
+        self.assertEqual(self._kpis()['KPI-05']['limites']['personalizada'], False)
+
+        restaurada = self.call('delete', '/indicadores/metas/KPI-04')
+        self.assertEqual(restaurada.status_code, 200)
+        self.assertFalse(restaurada.json['data']['personalizada'])
+        self.assertEqual(self._kpis()['KPI-04']['limites']['atencion'], 5)
+
+    def test_metas_de_indicadores_validan_orden_rango_y_permisos(self):
+        casos = [
+            ('KPI-03', {'atencion': 2, 'revisar': 5}, 400),
+            ('KPI-04', {'atencion': 12, 'revisar': 8}, 400),
+            ('KPI-04', {'atencion': 50, 'revisar': 150}, 400),
+            ('KPI-04', {'atencion': 5}, 400),
+            ('KPI-04', {'atencion': True, 'revisar': 10}, 400),
+            ('KPI-04', {'atencion': 'nan', 'revisar': 10}, 400),
+            ('KPI-99', {'atencion': 5, 'revisar': 10}, 404),
+        ]
+        for codigo, cuerpo, estado in casos:
+            with self.subTest(codigo=codigo, cuerpo=cuerpo):
+                respuesta = self.call('put', f'/indicadores/metas/{codigo}', json=cuerpo)
+                self.assertEqual(respuesta.status_code, estado)
+                self.assertFalse(respuesta.json['success'])
+                self.assertTrue(respuesta.json['error'])
+        self.assertEqual(self.call('put', '/indicadores/metas/KPI-04', role=2, json={'atencion': 5, 'revisar': 10}).status_code, 403)
+        self.assertEqual(self.call('delete', '/indicadores/metas/KPI-04', role=2).status_code, 403)
+
+    def test_despensa_cuenta_insumos_criticos_con_la_meta_ajustada(self):
+        self.producto(stock=5)
+        db.session.get(Producto, 1).fecha_registro = instante('2026-08-01T00:00:00')
+        db.session.add(InventarioMovimiento(id_producto=1, id_usuario=3, tipo='Salida', cantidad=-1,
+                                            motivo='Preparación', fecha=instante('2026-09-15T12:00:00')))
+        db.session.commit()
+        antes = self._kpis()['KPI-03']['detalle']
+        self.assertEqual((antes['productos_bajo_umbral'], antes['umbral_dias']), (1, 7))
+        self.assertEqual(self.call('put', '/indicadores/metas/KPI-03', json={'atencion': 4, 'revisar': 2}).status_code, 200)
+        despues = self._kpis()['KPI-03']['detalle']
+        self.assertEqual((despues['productos_bajo_umbral'], despues['umbral_dias']), (0, 4))

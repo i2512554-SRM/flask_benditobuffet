@@ -552,3 +552,19 @@ class BloqueoLogin(db.Model):
 
     def __repr__(self):
         return f"<BloqueoLogin {self.id} {self.usuario} intentos={self.intentos}>"
+
+
+class MetaIndicador(db.Model):
+    __tablename__ = 'metas_indicadores'
+    __table_args__ = (
+        db.CheckConstraint('limite_atencion <> limite_revisar', name='ck_metas_indicadores_limites'),
+    )
+
+    codigo = db.Column(db.String(10), primary_key=True)
+    limite_atencion = db.Column(db.Numeric(10, 2), nullable=False)
+    limite_revisar = db.Column(db.Numeric(10, 2), nullable=False)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario', ondelete='SET NULL'))
+    actualizado_en = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<MetaIndicador {self.codigo} atencion={self.limite_atencion} revisar={self.limite_revisar}>"

@@ -1,28 +1,67 @@
+import math
+import threading
+import time
 from datetime import date, timedelta
 from bisect import bisect_left, bisect_right
 from decimal import Decimal
 
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity
+
+from sqlalchemy import event
+from sqlalchemy.orm import Session
 
 from bd import db
 from models import (Usuario, Producto, InventarioMovimiento, SueldoSemanal, DescuentoSemanal,
-                    CierreCaja, TransaccionCaja, Categoria)
+                    CierreCaja, TransaccionCaja, Categoria, MetaIndicador)
 from api.fechas import ahora, utc, LIMA, periodo_financiero, limites_dia
 from api.caja import _movimientos, _totales, _prefijos_movimientos, _totales_intervalo
 from api.roles import ADMIN, requiere_roles
-from schemas.indicadores import kpis_schema
+from schemas.indicadores import kpis_schema, meta_indicador_schema
 
 indicadores_bp = Blueprint('indicadores', __name__)
 
 VENTANA_DIAS = 30
-UMBRAL_COBERTURA_DIAS = 7
-UMBRAL_MERMA_PCT = 10
-UMBRAL_COSTO_LABORAL_PCT = 45
-UMBRAL_INMOVILIZADO_PCT = 30
+METAS_SUGERIDAS = {
+    'KPI-01': {'mayor_es_mejor': True, 'absoluto': False, 'atencion': 15, 'revisar': 0, 'minimo': -100, 'maximo': 100},
+    'KPI-02': {'mayor_es_mejor': True, 'absoluto': False, 'atencion': 0, 'revisar': -10, 'minimo': -100, 'maximo': 100},
+    'KPI-03': {'mayor_es_mejor': True, 'absoluto': False, 'atencion': 7, 'revisar': 3, 'minimo': 0, 'maximo': 90},
+    'KPI-04': {'mayor_es_mejor': False, 'absoluto': False, 'atencion': 5, 'revisar': 10, 'minimo': 0, 'maximo': 100},
+    'KPI-05': {'mayor_es_mejor': False, 'absoluto': False, 'atencion': 35, 'revisar': 45, 'minimo': 0, 'maximo': 100},
+    'KPI-06': {'mayor_es_mejor': True, 'absoluto': False, 'atencion': 65, 'revisar': 55, 'minimo': 0, 'maximo': 100},
+    'KPI-07': {'mayor_es_mejor': False, 'absoluto': True, 'atencion': 0.5, 'revisar': 2, 'minimo': 0, 'maximo': 100},
+    'KPI-08': {'mayor_es_mejor': False, 'absoluto': False, 'atencion': 15, 'revisar': 30, 'minimo': 0, 'maximo': 100},
+}
 PALABRAS_MERMA = ('merma', 'deterioro', 'vencid', 'dañ', 'desperdicio', 'faltante', 'caduc', 'avaria', 'robo')
 
 
 _permitido = requiere_roles(ADMIN, mensaje='Acceso restringido a indicadores')
+
+
+def _limites(codigo, guardada=None):
+    sugerida = METAS_SUGERIDAS[codigo]
+    limites = {
+        'mayor_es_mejor': sugerida['mayor_es_mejor'],
+        'absoluto': sugerida['absoluto'],
+        'minimo': sugerida['minimo'],
+        'maximo': sugerida['maximo'],
+        'sugerido': {'atencion': sugerida['atencion'], 'revisar': sugerida['revisar']},
+        'atencion': sugerida['atencion'],
+        'revisar': sugerida['revisar'],
+        'personalizada': guardada is not None,
+        'actualizado_en': None,
+        'actualizado_por': None,
+    }
+    if guardada is not None:
+        datos = meta_indicador_schema.dump(guardada)
+        datos.pop('codigo')
+        limites.update(datos)
+    return limites
+
+
+def _metas():
+    guardadas = {m.codigo: m for m in MetaIndicador.query.all()}
+    return {codigo: _limites(codigo, guardadas.get(codigo)) for codigo in METAS_SUGERIDAS}
 
 
 def _costo_unidad(producto):
@@ -169,7 +208,7 @@ def _kpi_01_02(inicio, fin, prev_inicio, prev_fin, puntos, prefijos):
     return kpi_01, kpi_02, ventas, gastos, ventas_previas
 
 
-def _kpi_03(corte, datos):
+def _kpi_03(corte, datos, limites):
     inicio = corte - timedelta(days=VENTANA_DIAS)
     salidas = datos.salidas_entre(inicio, corte)
     dias_operativos = len({utc(s.fecha).astimezone(LIMA).date() for s in salidas}) or 1
@@ -198,8 +237,8 @@ def _kpi_03(corte, datos):
             continue
         productos_con_consumo += 1
         suma_coberturas += cobertura
-        criticos.append({'etiqueta': producto.nombre, 'valor': round(cobertura, 2)})
-        if cobertura <= UMBRAL_COBERTURA_DIAS:
+        criticos.append({'etiqueta': producto.nombre, 'valor': round(cobertura, 2), 'id_producto': int(producto.id_producto)})
+        if cobertura <= limites['atencion']:
             bajo_umbral += 1
 
     criticos.sort(key=lambda x: x['valor'])
@@ -207,7 +246,7 @@ def _kpi_03(corte, datos):
     alerta = None
     if valor is None:
         alerta = 'Sin consumo registrado en la ventana reciente'
-    elif valor <= UMBRAL_COBERTURA_DIAS:
+    elif valor < limites['atencion']:
         alerta = 'Cobertura baja: reposición próxima'
 
     return _kpi(
@@ -215,6 +254,7 @@ def _kpi_03(corte, datos):
         detalle={'dias_operativos': dias_operativos, 'ventana_dias': VENTANA_DIAS,
                  'productos_con_consumo': productos_con_consumo,
                  'productos_bajo_umbral': bajo_umbral, 'productos_sin_consumo': sin_consumo,
+                 'umbral_dias': limites['atencion'],
                  'corte_datos': corte.astimezone(LIMA).date().isoformat()},
         alerta=alerta,
         nota='Usa el stock actual y el consumo registrado antes de la fecha de corte.',
@@ -258,7 +298,7 @@ def _merma_periodo(inicio, fin, datos):
             'porcentaje': porcentaje, 'serie': serie}
 
 
-def _kpi_04(inicio, fin, prev_inicio, prev_fin, datos):
+def _kpi_04(inicio, fin, prev_inicio, prev_fin, datos, limites):
     actual = _merma_periodo(inicio, fin, datos)
     anterior = _merma_periodo(prev_inicio, prev_fin, datos)
 
@@ -270,7 +310,7 @@ def _kpi_04(inicio, fin, prev_inicio, prev_fin, datos):
         alerta = 'Falta registrar el costo de productos con salidas en el periodo'
     elif actual['porcentaje'] is None:
         alerta = 'Sin salidas de inventario en el periodo'
-    elif actual['porcentaje'] > UMBRAL_MERMA_PCT:
+    elif actual['porcentaje'] >= limites['revisar']:
         alerta = 'Merma alta: revisar pérdidas del periodo'
 
     return _kpi(
@@ -357,7 +397,7 @@ def _costo_laboral_periodo(inicio, fin):
             'empleados_sin_sueldo': empleados_sin_sueldo, 'serie': serie}
 
 
-def _kpi_05(inicio, fin, ventas, prev_inicio, prev_fin, prev_ventas):
+def _kpi_05(inicio, fin, ventas, prev_inicio, prev_fin, prev_ventas, limites):
     actual = _costo_laboral_periodo(inicio, fin)
     anterior = _costo_laboral_periodo(prev_inicio, prev_fin)
 
@@ -374,7 +414,7 @@ def _kpi_05(inicio, fin, ventas, prev_inicio, prev_fin, prev_ventas):
         alerta = 'No hay sueldos semanales vigentes en el periodo'
     elif valor is None:
         alerta = 'Sin ventas registradas en el periodo'
-    elif valor > UMBRAL_COSTO_LABORAL_PCT:
+    elif valor >= limites['revisar']:
         alerta = 'Costo laboral alto respecto a las ventas'
 
     return _kpi(
@@ -586,7 +626,7 @@ def _kpi_07(inicio, fin, prev_inicio, prev_fin):
     )
 
 
-def _kpi_08(corte, datos):
+def _kpi_08(corte, datos, limites):
     inicio = corte - timedelta(days=VENTANA_DIAS)
     salidas = datos.salidas_entre(inicio, corte)
     en_movimiento = {int(s.id_producto) for s in salidas}
@@ -598,7 +638,8 @@ def _kpi_08(corte, datos):
     por_categoria = {}
 
     productos = [p for p in datos.productos.values()
-                 if p.estado and float(p.stock or 0) > 0 and utc(p.fecha_registro) < utc(corte)]
+                 if p.estado and float(p.stock or 0) > 0 and utc(p.fecha_registro) < utc(corte)
+                 and 'equipamiento' not in categorias.get(p.id_categoria, '').lower()]
     for producto in productos:
         costo, sin_costo = _costo_unidad(producto)
         if sin_costo:
@@ -620,7 +661,7 @@ def _kpi_08(corte, datos):
         alerta = 'Falta registrar el costo de productos con stock'
     elif valor is None:
         alerta = 'Sin valor de inventario activo'
-    elif valor > UMBRAL_INMOVILIZADO_PCT:
+    elif valor >= limites['revisar']:
         alerta = 'Alto capital sin movimiento en la ventana reciente'
 
     serie = [{'etiqueta': nombre, 'valor': round(b['inmovilizado'], 2)}
@@ -633,7 +674,7 @@ def _kpi_08(corte, datos):
                  'productos_sin_costo': productos_sin_costo, 'ventana_dias': VENTANA_DIAS,
                  'corte_datos': corte.astimezone(LIMA).date().isoformat()},
         alerta=alerta,
-        nota='Usa el stock y el costo promedio ponderado actuales con los movimientos anteriores a la fecha de corte.',
+        nota='Usa el stock y el costo promedio ponderado actuales con los movimientos anteriores a la fecha de corte. No incluye equipamiento.',
         estimado=True,
         tendencia='sin_base',
         comparacion={'valor_total': round(valor_total, 2),
@@ -642,9 +683,98 @@ def _kpi_08(corte, datos):
     )
 
 
+VIGENCIA_CACHE_SEGUNDOS = 600
+_cache = {}
+_cache_lock = threading.Lock()
+
+
+def limpiar_cache_indicadores():
+    with _cache_lock:
+        _cache.clear()
+
+
+@event.listens_for(Session, 'after_flush')
+def _invalidar_por_escritura(session, contexto):
+    limpiar_cache_indicadores()
+
+
 @indicadores_bp.route('/indicadores', methods=['GET'])
 @_permitido
 def get_indicadores():
+    parametros = tuple(sorted((k, v) for k, v in request.args.items() if k != 'refrescar'))
+    clave = (parametros, ahora().astimezone(LIMA).strftime('%Y-%m-%d %H'))
+    if request.args.get('refrescar') != '1':
+        with _cache_lock:
+            guardado = _cache.get(clave)
+        if guardado and time.monotonic() - guardado[0] < VIGENCIA_CACHE_SEGUNDOS:
+            return jsonify(success=True, data={**guardado[1], 'desde_cache': True})
+    respuesta = _calcular_indicadores()
+    if isinstance(respuesta, tuple):
+        return respuesta
+    with _cache_lock:
+        _cache[clave] = (time.monotonic(), respuesta)
+    return jsonify(success=True, data={**respuesta, 'desde_cache': False})
+
+
+def _formato_limite(valor):
+    return f'{valor:g}'
+
+
+def _validar_meta(codigo, data):
+    sugerida = METAS_SUGERIDAS[codigo]
+    if not isinstance(data, dict):
+        return None, 'Los datos de la meta no son válidos.'
+    valores = {}
+    for campo in ('atencion', 'revisar'):
+        valor = data.get(campo)
+        if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
+            return None, 'Ingresa ambos límites de la meta.'
+        try:
+            numero = float(valor)
+        except ValueError:
+            return None, 'Ingresa ambos límites de la meta.'
+        if not math.isfinite(numero) or not sugerida['minimo'] <= numero <= sugerida['maximo']:
+            return None, (f'Los límites deben estar entre {_formato_limite(sugerida["minimo"])} '
+                          f'y {_formato_limite(sugerida["maximo"])}.')
+        valores[campo] = round(numero, 2)
+    if sugerida['mayor_es_mejor'] and valores['revisar'] >= valores['atencion']:
+        return None, 'El valor para "Revisar" debe ser menor que el valor desde el que está "Bien".'
+    if not sugerida['mayor_es_mejor'] and valores['revisar'] <= valores['atencion']:
+        return None, 'El valor para "Revisar" debe ser mayor que el valor hasta el que está "Bien".'
+    return valores, None
+
+
+@indicadores_bp.route('/indicadores/metas/<codigo>', methods=['PUT'])
+@_permitido
+def put_meta_indicador(codigo):
+    if codigo not in METAS_SUGERIDAS:
+        return jsonify({'success': False, 'error': 'Indicador no encontrado'}), 404
+    valores, error = _validar_meta(codigo, request.get_json(silent=True))
+    if error:
+        return jsonify({'success': False, 'error': error}), 400
+    meta = db.session.get(MetaIndicador, codigo) or MetaIndicador(codigo=codigo)
+    meta.limite_atencion = valores['atencion']
+    meta.limite_revisar = valores['revisar']
+    meta.id_usuario = int(get_jwt_identity())
+    meta.actualizado_en = ahora()
+    db.session.add(meta)
+    db.session.commit()
+    return jsonify(success=True, message='Meta guardada', data=_limites(codigo, meta))
+
+
+@indicadores_bp.route('/indicadores/metas/<codigo>', methods=['DELETE'])
+@_permitido
+def delete_meta_indicador(codigo):
+    if codigo not in METAS_SUGERIDAS:
+        return jsonify({'success': False, 'error': 'Indicador no encontrado'}), 404
+    meta = db.session.get(MetaIndicador, codigo)
+    if meta is not None:
+        db.session.delete(meta)
+        db.session.commit()
+    return jsonify(success=True, message='Se restauró la meta sugerida', data=_limites(codigo))
+
+
+def _calcular_indicadores():
     periodo = request.args.get('periodo', 'mes').strip().lower()
     fecha_param = request.args.get('fecha')
     inicio_param = request.args.get('inicio')
@@ -683,32 +813,37 @@ def get_indicadores():
         return jsonify({'success': False, 'error': 'Fecha o periodo no válido'}), 400
 
     corte = min(fin, max(inicio, ahora()))
+    comparacion_parcial = corte < fin
+    if comparacion_parcial:
+        prev_fin = min(prev_fin, prev_inicio + (corte - inicio))
     ventana = corte - timedelta(days=VENTANA_DIAS)
     datos = _Datos(min(prev_inicio, ventana), max(fin, corte))
     prefijos = _prefijos_caja(puntos[0][1], puntos[-1][2]) if puntos else _prefijos_movimientos([])
 
+    metas = _metas()
     kpi_01, kpi_02, ventas, _, prev_ventas = _kpi_01_02(inicio, fin, prev_inicio, prev_fin, puntos, prefijos)
     kpis = [
         kpi_01,
         kpi_02,
-        _kpi_03(corte, datos),
-        _kpi_04(inicio, fin, prev_inicio, prev_fin, datos),
-        _kpi_05(inicio, corte, ventas, prev_inicio, prev_fin, prev_ventas),
+        _kpi_03(corte, datos, metas['KPI-03']),
+        _kpi_04(inicio, fin, prev_inicio, prev_fin, datos, metas['KPI-04']),
+        _kpi_05(inicio, corte, ventas, prev_inicio, prev_fin, prev_ventas, metas['KPI-05']),
         _kpi_06(inicio, fin, ventas, prev_inicio, prev_fin, prev_ventas, puntos, prefijos, datos),
         _kpi_07(inicio, fin, prev_inicio, prev_fin),
-        _kpi_08(corte, datos),
+        _kpi_08(corte, datos, metas['KPI-08']),
     ]
+    for kpi in kpis:
+        kpi['limites'] = metas[kpi['codigo']]
 
-    return jsonify({
-        'success': True,
-        'data': {
-            'periodo': periodo,
-            'fecha': fecha.isoformat(),
-            'inicio': inicio.isoformat(),
-            'fin': fin.isoformat(),
-            'prev_inicio': prev_inicio.isoformat(),
-            'prev_fin': prev_fin.isoformat(),
-            'corte': corte.isoformat(),
-            'kpis': kpis_schema.dump(kpis),
-        }
-    })
+    return {
+        'periodo': periodo,
+        'fecha': fecha.isoformat(),
+        'inicio': inicio.isoformat(),
+        'fin': fin.isoformat(),
+        'prev_inicio': prev_inicio.isoformat(),
+        'prev_fin': prev_fin.isoformat(),
+        'comparacion_parcial': comparacion_parcial,
+        'corte': corte.isoformat(),
+        'calculado': ahora().isoformat(),
+        'kpis': kpis_schema.dump(kpis),
+    }

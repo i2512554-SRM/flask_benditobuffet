@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import text
-from models import db, TransaccionCaja, CierreCaja
+from models import db, TransaccionCaja, CierreCaja, Usuario
 from schemas.caja import transacciones_schema, cierre_schema, transaccion_schema
 from api.fechas import ahora, limites_dia, periodo_financiero, utc, LIMA
 from api.idempotencia import normalizar_clave
@@ -76,6 +76,11 @@ def _totales_intervalo(prefijos, inicio, fin):
         'neto': float((total_ventas - total_gastos).quantize(Decimal('.01'))),
     }
 
+def _precargar_usuarios(*listas):
+    ids = {o.id_usuario for lista in listas for o in lista if o is not None and o.id_usuario}
+    return Usuario.query.filter(Usuario.id_usuario.in_(ids)).all() if ids else []
+
+
 def _historial(inicio=None, fin_periodo=None):
     query = CierreCaja.query
     if inicio is not None:
@@ -84,6 +89,7 @@ def _historial(inicio=None, fin_periodo=None):
     cierres = query.all() if inicio is not None else query.limit(200).all()
     if not cierres:
         return []
+    responsables = _precargar_usuarios(cierres)
     corte = ahora()
     resultado, intervalos = [], []
     siguiente = CierreCaja.query.filter(CierreCaja.fecha > cierres[0].fecha).order_by(CierreCaja.fecha).first()
@@ -122,6 +128,7 @@ def get_caja_actual():
     cierre = _abierta()
     movimientos = _movimientos(utc(cierre.fecha) if cierre else inicio, ahora()).order_by(TransaccionCaja.fecha.desc()).all()
     sesion = _totales(movimientos)
+    responsables = _precargar_usuarios(movimientos, [cierre])
     return jsonify(success=True, data={
         'abierta': cierre is not None, 'cierre': cierre_schema.dump(cierre) if cierre else None,
         'ventas_dia': totales['ventas'], 'gastos_dia': totales['gastos'], 'neto_dia': totales['neto'],
@@ -180,9 +187,11 @@ def get_transacciones():
     movimientos = _movimientos(cierre.fecha if cierre else inicio, fin).order_by(TransaccionCaja.fecha.desc()).all()
     if request.args.get('historico', type=int) == 1:
         limite = max(1, min(request.args.get('limit', 50, type=int), 500))
+        ultimos = TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).limit(limite).all()
+        responsables = _precargar_usuarios(movimientos, ultimos)
         return jsonify(success=True, data={'transacciones': transacciones_schema.dump(movimientos),
-            'historico': _historial(), 'ultimos_movimientos': transacciones_schema.dump(
-                TransaccionCaja.query.order_by(TransaccionCaja.fecha.desc()).limit(limite).all())})
+            'historico': _historial(), 'ultimos_movimientos': transacciones_schema.dump(ultimos)})
+    responsables = _precargar_usuarios(movimientos)
     return jsonify(success=True, data=transacciones_schema.dump(movimientos))
 
 @caja_bp.route('/transacciones', methods=['POST'])
@@ -250,6 +259,7 @@ def reportes():
 
 def _datos_reporte(periodo='mes', fecha_texto=None):
     inicio, fin, movimientos, puntos, totales = _calcular_reporte(periodo, fecha_texto)
+    responsables = _precargar_usuarios(movimientos)
     return {
         'ventas_mes': totales['ventas'], 'egresos_mes': totales['gastos'], 'neto_mes': totales['neto'],
         'inicio': inicio.isoformat(), 'fin': fin.isoformat(), 'puntos': puntos,
