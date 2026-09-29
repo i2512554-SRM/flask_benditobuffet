@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppDrawer from './components/layout/AppDrawer.vue'
 import AppFooter from './components/layout/AppFooter.vue'
+import AvisoInactividad from './components/layout/AvisoInactividad.vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 
@@ -33,6 +34,7 @@ const expresionAviso = (severidad) => EXPRESION_AVISO[severidad] || 'pensando'
     </template>
   </Toast>
   <ConfirmDialog />
+  <AvisoInactividad v-if="showLayout" />
   <div class="app-layout" :class="{ 'no-layout': !showLayout }">
     <AppHeader v-if="showLayout" :menu-open="menuOpen" @toggle-menu="toggleMenu" />
     <AppDrawer v-if="showLayout" :open="menuOpen" @close="menuOpen = false" />
