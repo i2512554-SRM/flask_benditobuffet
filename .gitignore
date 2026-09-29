@@ -25,6 +25,7 @@ build/
 # IDE
 .vscode/
 .idea/
+.agents_backup/
 
 # Sistema operativo
 Thumbs.db

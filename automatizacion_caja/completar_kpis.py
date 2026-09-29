@@ -1,4 +1,8 @@
-"""Completa campos que dejan los KPIs sin dato: costo de productos y sueldos semanales."""
+"""Completa el costo de productos base de ejemplo (Arroz, Azúcar) para que los indicadores tengan dato.
+
+Solo para bases de demostración. Los sueldos de ejemplo los genera sembrar_historicos.py.
+Aplicar: --confirmo-datos-de-ejemplo
+"""
 import os
 import sys
 from pathlib import Path
@@ -10,16 +14,13 @@ os.chdir(_PROJECT_ROOT)
 from dotenv import load_dotenv
 load_dotenv(_PROJECT_ROOT / '.env')
 
-from datetime import date
 import psycopg
 from flask import Flask
 from bd import init_db, db
-from models import Producto, Usuario, SueldoSemanal
+from models import Producto, Usuario
 
 COSTO_ARROZ = 4.40
 COSTO_AZUCAR = 4.00
-SUELDO_SEMANAL = 300.00
-DESDE_SUELDO = date(2024, 12, 30)
 
 
 def limpiar_prepared_statements():
@@ -32,6 +33,9 @@ def limpiar_prepared_statements():
 
 
 def main():
+    if '--confirmo-datos-de-ejemplo' not in sys.argv:
+        print('Este script modifica datos de ejemplo. Ejecútalo con --confirmo-datos-de-ejemplo.')
+        return
     limpiar_prepared_statements()
     app = Flask(__name__)
     init_db(app)
@@ -54,24 +58,6 @@ def main():
         print('Costos actualizados:')
         for p in Producto.query.order_by(Producto.id_producto).all():
             print('  ', p.nombre, '->', float(p.costo) if p.costo is not None else None)
-
-        empleados = Usuario.query.filter(Usuario.estado.is_(True), Usuario.id_rol != 1).order_by(Usuario.id_usuario).all()
-        insertados, existentes = 0, 0
-        for e in empleados:
-            previo = SueldoSemanal.query.filter_by(id_usuario=e.id_usuario).first()
-            if previo:
-                existentes += 1
-                continue
-            db.session.add(SueldoSemanal(
-                id_usuario=e.id_usuario,
-                desde=DESDE_SUELDO,
-                monto=SUELDO_SEMANAL,
-                registrado_por=admin.id_usuario,
-                fecha=db.func.now(),
-            ))
-            insertados += 1
-        db.session.commit()
-        print(f'Sueldos semanales: {insertados} insertados, {existentes} ya existentes.')
 
 
 if __name__ == '__main__':

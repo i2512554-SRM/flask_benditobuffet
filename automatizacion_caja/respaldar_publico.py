@@ -9,6 +9,8 @@ import argparse
 import hashlib
 import os
 import subprocess
+
+import psycopg
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +21,18 @@ TABLAS_CRITICAS = (
     'transacciones_caja', 'inventario_movimientos', 'compras_inventario',
     'pagos_empleados', 'usuario_perfiles', 'cierres_caja', 'solicitudes_insumos',
 )
+
+
+def tablas_por_permiso(entorno):
+    with psycopg.connect(host=entorno['DB_HOST'], port=int(entorno.get('DB_PORT', '6543')),
+                         user=entorno['DB_USER'], password=entorno['DB_PASSWORD'],
+                         dbname=entorno.get('DB_NAME', 'postgres'), sslmode='require',
+                         prepare_threshold=None) as conexion:
+        filas = conexion.execute(
+            "SELECT c.relname, has_table_privilege(c.oid, 'SELECT') FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') ORDER BY c.relname").fetchall()
+    return [nombre for nombre, permitido in filas if permitido], [nombre for nombre, permitido in filas if not permitido]
 
 
 def respaldar(bin_dir, destino):
@@ -41,6 +55,7 @@ def respaldar(bin_dir, destino):
     if archivo.exists():
         raise RuntimeError('El archivo de respaldo ya existe.')
 
+    accesibles, sin_permiso = tablas_por_permiso(entorno)
     entorno['PGPASSWORD'] = entorno['DB_PASSWORD']
     entorno['PGSSLMODE'] = 'require'
     conexion = [
@@ -50,7 +65,8 @@ def respaldar(bin_dir, destino):
     try:
         subprocess.run([
             str(pg_dump), *conexion, '--format=custom', '--compress=6',
-            '--schema=public', '--no-owner', '--no-acl',
+            *[opcion for tabla in accesibles for opcion in ('--table', f'public."{tabla}"')],
+            '--no-owner', '--no-acl',
             '--enable-row-security', '--no-password', '--file', str(archivo),
         ], env=entorno, check=True, capture_output=True)
         if archivo.stat().st_size < 1024:
@@ -71,7 +87,9 @@ def respaldar(bin_dir, destino):
         print(f'Respaldo verificado: {archivo}')
         print(f'Tamaño: {archivo.stat().st_size} bytes')
         print(f'SHA256: {resumen.hexdigest()}')
-        print('Alcance: esquema public; no incluye Storage ni contraseñas de roles.')
+        print(f'Alcance: {len(accesibles)} tablas del esquema public; no incluye Storage ni contraseñas de roles.')
+        if sin_permiso:
+            print('Sin permiso de lectura para el usuario de la app (no incluidas): ' + ', '.join(sin_permiso))
         return archivo
     except (subprocess.CalledProcessError, RuntimeError) as error:
         if archivo.exists():
