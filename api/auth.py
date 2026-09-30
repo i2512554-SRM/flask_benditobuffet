@@ -9,6 +9,7 @@ from api.fechas import utc
 from models import SesionUsuario
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import and_, or_, text
+from sqlalchemy.orm import joinedload
 from bd import db
 from models import Usuario, DocumentoIdentidad, BloqueoLogin, IntentoLogin
 import bcrypt
@@ -162,9 +163,7 @@ def _limpiar_bloqueos(identificador, ip):
             text('SELECT pg_advisory_xact_lock(CAST(:llave AS BIGINT))'),
             {'llave': _clave_advisory('usuario', identificador, ip)}
         )
-    for b in BloqueoLogin.query.filter_by(usuario=identificador, ip=ip, tipo='usuario').all():
-        db.session.delete(b)
-    db.session.commit()
+    BloqueoLogin.query.filter_by(usuario=identificador, ip=ip, tipo='usuario').delete(synchronize_session=False)
 
 
 def verificar_clave(usuario, clave):
@@ -209,7 +208,7 @@ def login():
         restante_min = max(1, int((utc(bloqueo.bloqueado_hasta) - _ahora()).total_seconds() // 60) + 1)
         return _respuesta_bloqueado(restante_min)
 
-    usuario = Usuario.query.outerjoin(
+    usuario = Usuario.query.options(joinedload(Usuario.rol), joinedload(Usuario.perfil)).outerjoin(
         DocumentoIdentidad,
         DocumentoIdentidad.id_documento == Usuario.id_documento
     ).filter(
@@ -239,9 +238,9 @@ def login():
     if not usuario.estado or not usuario.rol or not usuario.rol.estado:
         return jsonify(success=False, error='Cuenta inactiva'), 401
 
+    datos_usuario = usuario_login_schema.dump(usuario)
     _limpiar_bloqueos(identificador, ip)
-    _registrar_intento(identificador, ip, 'exito')
-
+    db.session.add(IntentoLogin(identificador=identificador, ip=ip, resultado='exito', fecha=_ahora()))
     access_token, refresh_token = crear_sesion(usuario)
 
     return jsonify({
@@ -249,7 +248,7 @@ def login():
         'data': {
             'token': access_token,
             'refresh_token': refresh_token,
-            'user': usuario_login_schema.dump(usuario)
+            'user': datos_usuario
         }
     })
 

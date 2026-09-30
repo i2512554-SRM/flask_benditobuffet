@@ -253,4 +253,27 @@ router.beforeEach(async (to) => {
   return true
 })
 
+const CLAVE_RECARGA = 'recargaPorVersion'
+
+router.onError((error, to) => {
+  const mensaje = String(error?.message || '')
+  const vistaNoDisponible = /dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(mensaje)
+  if (!vistaNoDisponible) return
+  try {
+    if (sessionStorage.getItem(CLAVE_RECARGA) === to.fullPath) return
+    sessionStorage.setItem(CLAVE_RECARGA, to.fullPath)
+  } catch {
+    return
+  }
+  window.location.assign(to.fullPath)
+})
+
+router.afterEach(() => {
+  try {
+    sessionStorage.removeItem(CLAVE_RECARGA)
+  } catch {
+    return
+  }
+})
+
 export default router

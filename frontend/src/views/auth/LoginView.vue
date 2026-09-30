@@ -84,8 +84,7 @@ const authStore = useAuthStore()
 
 // Limpia cualquier sesión/token viejo guardado en el navegador
 // para evitar que un token caducado bloquee el inicio de sesión.
-localStorage.removeItem('token')
-localStorage.removeItem('user')
+authStore.limpiarSesion()
 
 const usuario = ref('')
 const contrasena = ref('')
@@ -120,7 +119,9 @@ const handleLogin = async () => {
     const destino = homeForRole(authStore.user?.rol)
     setTimeout(() => router.push(destino), 650)
   } catch (error) {
-    errorMsg.value = error?.response?.data?.error || 'Credenciales inválidas'
+    errorMsg.value = error?.response
+      ? error.response.data?.error || 'No se pudo iniciar sesión. Intenta nuevamente.'
+      : 'No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.'
     shakeKey.value++
   } finally {
     loading.value = false

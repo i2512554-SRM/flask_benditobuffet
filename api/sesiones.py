@@ -16,13 +16,14 @@ def crear_sesion(usuario):
     vigencia = current_app.config.get('JWT_REFRESH_TOKEN_EXPIRES', timedelta(days=30))
     if isinstance(vigencia, (int, float)):
         vigencia = timedelta(seconds=vigencia)
-    s = SesionUsuario(id=str(uuid.uuid4()), id_usuario=usuario.id_usuario,
-        huella_clave=huella(usuario), expira=ahora() + vigencia, revocada=False)
-    db.session.add(s)
+    sid = str(uuid.uuid4())
+    identidad = str(usuario.id_usuario)
+    db.session.add(SesionUsuario(id=sid, id_usuario=usuario.id_usuario,
+        huella_clave=huella(usuario), expira=ahora() + vigencia, revocada=False))
     db.session.commit()
-    claims = {'sid': s.id}
-    return (create_access_token(identity=str(usuario.id_usuario), additional_claims=claims),
-            create_refresh_token(identity=str(usuario.id_usuario), additional_claims=claims))
+    claims = {'sid': sid}
+    return (create_access_token(identity=identidad, additional_claims=claims),
+            create_refresh_token(identity=identidad, additional_claims=claims))
 
 
 def configurar_sesiones(jwt):

@@ -350,3 +350,31 @@ class CorreccionesTest(BaseFlujos):
         self.assertEqual(self.call('put', '/indicadores/metas/KPI-03', json={'atencion': 4, 'revisar': 2}).status_code, 200)
         despues = self._kpis()['KPI-03']['detalle']
         self.assertEqual((despues['productos_bajo_umbral'], despues['umbral_dias']), (0, 4))
+
+    def test_login_exitoso_usa_una_sola_transaccion(self):
+        from sqlalchemy import event
+        from models import BloqueoLogin, IntentoLogin, SesionUsuario
+        usuario = db.session.get(Usuario, 2)
+        usuario.clave = bcrypt.hashpw(b'clave-segura-1', bcrypt.gensalt(rounds=4)).decode()
+        db.session.commit()
+        self.assertEqual(self.client.post('/api/auth/login', json={'usuario': 'user2', 'clave': 'otra'}).status_code, 401)
+        consultas, confirmaciones = [], []
+        contar = lambda *args, **kwargs: consultas.append(1)
+        confirmar = lambda *args, **kwargs: confirmaciones.append(1)
+        event.listen(db.engine, 'before_cursor_execute', contar)
+        event.listen(db.engine, 'commit', confirmar)
+        try:
+            respuesta = self.client.post('/api/auth/login', json={'usuario': 'user2', 'clave': 'clave-segura-1'})
+        finally:
+            event.remove(db.engine, 'before_cursor_execute', contar)
+            event.remove(db.engine, 'commit', confirmar)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json['data']['user']['rol'], 2)
+        self.assertLessEqual(len(consultas), 7)
+        self.assertEqual(len(confirmaciones), 1)
+        self.assertEqual(BloqueoLogin.query.filter_by(usuario='user2', tipo='usuario').count(), 0)
+        self.assertEqual(IntentoLogin.query.filter_by(identificador='user2', resultado='exito').count(), 1)
+        sesion = SesionUsuario.query.filter_by(id_usuario=2).one()
+        me = self.client.get('/api/auth/me', headers={'Authorization': 'Bearer ' + respuesta.json['data']['token']})
+        self.assertEqual(me.status_code, 200)
+        self.assertFalse(sesion.revocada)

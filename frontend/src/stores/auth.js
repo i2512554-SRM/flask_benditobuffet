@@ -76,6 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       sessionValid.value = false
+      if (![401, 403].includes(error.response?.status)) return Boolean(user.value)
     }
     limpiarSesion()
     sessionChecked.value = true

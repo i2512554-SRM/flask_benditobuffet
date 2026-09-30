@@ -1,0 +1,268 @@
+{
+  "fecha_revision": "2026-09-30",
+  "origen": "Base configurada en el entorno local; entorno productivo no confirmado",
+  "solo_lectura": true,
+  "anonimizacion": "No se consultaron identificadores personales, nombres, DNI, correos, teléfonos, IP, contraseñas, sesiones ni textos libres. Importes, fechas y estados conservan su valor; estas muestras no se deben publicar como datos abiertos.",
+  "resultados": {
+    "origen_demo": [
+      {
+        "tabla": "transacciones_caja",
+        "total": 2240,
+        "marcados_demo": 2234
+      },
+      {
+        "tabla": "pagos_empleados",
+        "total": 81,
+        "marcados_demo": 80
+      },
+      {
+        "tabla": "inventario_movimientos",
+        "total": 1673,
+        "marcados_demo": 1641
+      },
+      {
+        "tabla": "productos",
+        "total": 12,
+        "marcados_demo": 10
+      }
+    ],
+    "roles": [
+      {
+        "id_rol": 1,
+        "nombre": "Administrador",
+        "estado": true
+      },
+      {
+        "id_rol": 2,
+        "nombre": "Cajera",
+        "estado": true
+      },
+      {
+        "id_rol": 3,
+        "nombre": "Cocinero",
+        "estado": true
+      },
+      {
+        "id_rol": 4,
+        "nombre": "Mozo",
+        "estado": true
+      }
+    ],
+    "usuarios_por_rol": [
+      {
+        "id_rol": 1,
+        "estado": true,
+        "cantidad": 2
+      },
+      {
+        "id_rol": 2,
+        "estado": true,
+        "cantidad": 4
+      },
+      {
+        "id_rol": 3,
+        "estado": true,
+        "cantidad": 3
+      },
+      {
+        "id_rol": 4,
+        "estado": true,
+        "cantidad": 3
+      }
+    ],
+    "productos_resumen": [
+      {
+        "estado": true,
+        "unidad_medida": "Kg",
+        "cantidad": 10,
+        "sin_costo": 0
+      },
+      {
+        "estado": true,
+        "unidad_medida": "Lt",
+        "cantidad": 1,
+        "sin_costo": 0
+      },
+      {
+        "estado": true,
+        "unidad_medida": "Un",
+        "cantidad": 1,
+        "sin_costo": 0
+      }
+    ],
+    "productos": [
+      {
+        "precio": "16.00",
+        "costo": "13.000",
+        "stock": "65.000",
+        "unidad_medida": "Kg",
+        "estado": true
+      },
+      {
+        "precio": "5.00",
+        "costo": "4.200",
+        "stock": "180.000",
+        "unidad_medida": "Kg",
+        "estado": true
+      },
+      {
+        "precio": "4.50",
+        "costo": "2.500",
+        "stock": "160.000",
+        "unidad_medida": "Kg",
+        "estado": true
+      }
+    ],
+    "caja": [
+      {
+        "tipo": "Venta",
+        "monto": "246.50",
+        "metodo_pago": "Yape",
+        "fecha": "2026-09-28T02:34:00+00:00",
+        "marcado_demo": true
+      },
+      {
+        "tipo": "Gasto",
+        "monto": "137.34",
+        "metodo_pago": "Efectivo",
+        "fecha": "2026-09-28T02:23:00+00:00",
+        "marcado_demo": true
+      },
+      {
+        "tipo": "Venta",
+        "monto": "229.00",
+        "metodo_pago": "Efectivo",
+        "fecha": "2026-09-28T01:33:00+00:00",
+        "marcado_demo": true
+      }
+    ],
+    "cierres": [
+      {
+        "estado": "cerrada",
+        "monto_inicial": "200.00",
+        "total_ventas": "3308.50",
+        "total_gastos": "137.34",
+        "neto": "3171.16",
+        "efectivo_contado": "1715.66",
+        "fecha": "2026-09-27T16:30:00+00:00",
+        "fecha_cierre": "2026-09-28T03:40:00+00:00"
+      },
+      {
+        "estado": "cerrada",
+        "monto_inicial": "200.00",
+        "total_ventas": "3334.00",
+        "total_gastos": "110.40",
+        "neto": "3223.60",
+        "efectivo_contado": "851.10",
+        "fecha": "2026-09-26T16:30:00+00:00",
+        "fecha_cierre": "2026-09-27T03:40:00+00:00"
+      }
+    ],
+    "pagos": [
+      {
+        "monto": "450.00",
+        "estado": "Pagado",
+        "tipo": "Salario semanal",
+        "semana": "2026-09-21",
+        "fecha_pago": "2026-09-27T05:00:00+00:00",
+        "marcado_demo": true
+      },
+      {
+        "monto": "300.00",
+        "estado": "Pagado",
+        "tipo": "Salario semanal",
+        "semana": "2026-09-21",
+        "fecha_pago": "2026-09-27T05:00:00+00:00",
+        "marcado_demo": true
+      },
+      {
+        "monto": "450.00",
+        "estado": "Pagado",
+        "tipo": "Salario semanal",
+        "semana": "2026-09-21",
+        "fecha_pago": "2026-09-27T05:00:00+00:00",
+        "marcado_demo": true
+      }
+    ],
+    "adelantos": [
+      {
+        "monto": "150.00",
+        "estado": "Pendiente",
+        "fecha": "2026-09-10T17:54:37.839983+00:00",
+        "fecha_gestion": null
+      },
+      {
+        "monto": "80.00",
+        "estado": "Aprobado",
+        "fecha": "2026-09-07T00:00:00+00:00",
+        "fecha_gestion": "2026-09-07T18:03:37.435117+00:00"
+      },
+      {
+        "monto": "15000.00",
+        "estado": "Rechazado",
+        "fecha": "2026-08-31T17:18:49.897348+00:00",
+        "fecha_gestion": "2026-09-07T20:00:00.260122+00:00"
+      }
+    ],
+    "solicitudes_insumos": [
+      {
+        "cantidad": "4.000",
+        "estado": "Pendiente",
+        "fecha": "2026-09-26T03:56:59.256957+00:00"
+      }
+    ],
+    "compras": [
+      {
+        "total_compra": "20.00",
+        "estado": "Completada",
+        "fecha": "2026-09-10T09:00:00+00:00"
+      }
+    ],
+    "inversiones": [
+      {
+        "monto": "2500.00",
+        "estado": "Anulada",
+        "fecha": "2026-09-05T10:00:00+00:00"
+      }
+    ],
+    "movimientos": [
+      {
+        "tipo": "Salida",
+        "cantidad": "-1.946",
+        "stock_anterior": null,
+        "stock_posterior": null,
+        "fecha": "2026-09-28T03:00:00+00:00"
+      },
+      {
+        "tipo": "Salida",
+        "cantidad": "-3.266",
+        "stock_anterior": null,
+        "stock_posterior": null,
+        "fecha": "2026-09-28T03:00:00+00:00"
+      },
+      {
+        "tipo": "Salida",
+        "cantidad": "-0.858",
+        "stock_anterior": null,
+        "stock_posterior": null,
+        "fecha": "2026-09-28T03:00:00+00:00"
+      }
+    ],
+    "notificaciones_resumen": [
+      {
+        "leida": false,
+        "cantidad": 1
+      }
+    ],
+    "sueldos_resumen": [
+      {
+        "cantidad": 10,
+        "primera_vigencia": "2026-03-30",
+        "ultima_vigencia": "2026-03-30"
+      }
+    ],
+    "descuentos_resumen": [],
+    "metas": []
+  },
+  "consulta_utc": "2026-09-30T18:52:34.569258+00:00"
+}

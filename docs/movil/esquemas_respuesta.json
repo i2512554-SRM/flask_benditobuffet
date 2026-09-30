@@ -1,0 +1,2065 @@
+[
+  {
+    "nombre": "RolSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "id_rol",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_creacion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "ActividadSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "id_actividad",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "accion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoAdminSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "id_adelanto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "empleado",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha_gestion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "respuesta_admin",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "IntentoLoginSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "id",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "identificador",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario_nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "ip",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "resultado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "BloqueoLoginSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "id",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario_nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario_rol",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "ip",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "intentos",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "bloqueado_hasta",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "ActividadRecienteSchema",
+    "fuente": "schemas/admin.py",
+    "campos": [
+      {
+        "nombre": "tipo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "titulo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "icono",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "UsuarioSesionSchema",
+    "fuente": "schemas/auth.py",
+    "campos": [
+      {
+        "nombre": "id",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": "id_usuario",
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "nombres",
+        "solo_salida": false
+      },
+      {
+        "nombre": "rol",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "foto_perfil",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "TransaccionCajaSchema",
+    "fuente": "schemas/caja.py",
+    "campos": [
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "responsable",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_transaccion",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "tipo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "metodo_pago",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "categoria",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "clave_operacion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "CierreCajaSchema",
+    "fuente": "schemas/caja.py",
+    "campos": [
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha_cierre",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "monto_inicial",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "total_ventas",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "total_gastos",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "neto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "efectivo_contado",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "responsable",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "turno",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_cierre",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "observaciones",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "ProductoCocinaSchema",
+    "fuente": "schemas/cocina.py",
+    "campos": [
+      {
+        "nombre": "id_producto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "categoria",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "stock",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "unidad",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "unidad_medida",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "activo",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": "estado",
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "SolicitudInsumoSchema",
+    "fuente": "schemas/cocina.py",
+    "campos": [
+      {
+        "nombre": "id_solicitud",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_producto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "producto",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "cantidad",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "observacion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "respuesta",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "ConsultaDniSchema",
+    "fuente": "schemas/dni.py",
+    "campos": [
+      {
+        "nombre": "success",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "dni",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombres",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "apellidoPaterno",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "apellidoMaterno",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "KpiSchema",
+    "fuente": "schemas/indicadores.py",
+    "campos": [
+      {
+        "nombre": "codigo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "valor",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "unidad",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "alerta",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nota",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estimado",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "variacion",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "tendencia",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "comparacion",
+        "tipo_marshmallow": "Dict",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "serie",
+        "tipo_marshmallow": "List",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "detalle",
+        "tipo_marshmallow": "Dict",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "limites",
+        "tipo_marshmallow": "Dict",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "MetaIndicadorSchema",
+    "fuente": "schemas/indicadores.py",
+    "campos": [
+      {
+        "nombre": "codigo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "atencion",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": "limite_atencion",
+        "solo_salida": false
+      },
+      {
+        "nombre": "revisar",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": "limite_revisar",
+        "solo_salida": false
+      },
+      {
+        "nombre": "actualizado_en",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "actualizado_por",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "ProductoSchema",
+    "fuente": "schemas/inventario.py",
+    "campos": [
+      {
+        "nombre": "categoria",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "categoria",
+        "solo_salida": false
+      },
+      {
+        "nombre": "precio",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "costo",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "stock",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_producto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombre",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "unidad_medida",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_registro",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_edicion",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "InversionSchema",
+    "fuente": "schemas/inventario.py",
+    "campos": [
+      {
+        "nombre": "proveedor",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "proveedor",
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_inversion",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "notas",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_anulacion",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "DetalleCompraInventarioSchema",
+    "fuente": "schemas/inventario.py",
+    "campos": [
+      {
+        "nombre": "producto",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "producto",
+        "solo_salida": false
+      },
+      {
+        "nombre": "cantidad",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "precio_unitario",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "subtotal",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_detalle",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "CompraInventarioSchema",
+    "fuente": "schemas/inventario.py",
+    "campos": [
+      {
+        "nombre": "proveedor",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "proveedor",
+        "solo_salida": false
+      },
+      {
+        "nombre": "detalle",
+        "tipo_marshmallow": "List",
+        "nullable_declarado": false,
+        "atributo": "detalle",
+        "solo_salida": false
+      },
+      {
+        "nombre": "total_compra",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "n_detalle",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_compra",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "codigo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "notas",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "clave_operacion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "InventarioMovimientoSchema",
+    "fuente": "schemas/inventario.py",
+    "campos": [
+      {
+        "nombre": "producto",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "producto",
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "usuario",
+        "solo_salida": false
+      },
+      {
+        "nombre": "unidad",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "unidad",
+        "solo_salida": false
+      },
+      {
+        "nombre": "cantidad",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "stock_anterior",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "stock_posterior",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_movimiento",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_producto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "tipo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_compra",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "observacion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "clave_operacion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "DateTime",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "DatosPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "foto_perfil",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha_ingreso",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "horario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "salario",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "UsuarioPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombres",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "apellido",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "correo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "telefono",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "dni",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "rol",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_rol",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "turno",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "turnos",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha_creacion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "perfil",
+        "tipo_marshmallow": "Method",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "PagoPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_pago",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "id_adelanto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "respuesta_admin",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "ActividadPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "id_actividad",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "accion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "NotificacionPerfilSchema",
+    "fuente": "schemas/perfil.py",
+    "campos": [
+      {
+        "nombre": "id_notificacion",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "titulo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "mensaje",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "PuntoRendimientoSchema",
+    "fuente": "schemas/rendimiento.py",
+    "campos": [
+      {
+        "nombre": "etiqueta",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "ingresos",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "egresos",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "ganancia",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "NotificacionSchema",
+    "fuente": "schemas/trabajador.py",
+    "campos": [
+      {
+        "nombre": "id_notificacion",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "titulo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "mensaje",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "leida",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "PagoTrabajadorSchema",
+    "fuente": "schemas/trabajador.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoTrabajadorSchema",
+    "fuente": "schemas/trabajador.py",
+    "campos": [
+      {
+        "nombre": "id_adelanto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "respuesta",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": "respuesta_admin",
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "InfoTrabajadorSchema",
+    "fuente": "schemas/trabajador.py",
+    "campos": [
+      {
+        "nombre": "nombres",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "apellido",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "dni",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "correo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "telefono",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "cargo",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "turnos",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado_laboral",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "fecha_ingreso",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "horario",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "UsuarioSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "dni",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": "dni",
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha_creacion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "nombres",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "apellido",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "correo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "telefono",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "usuario",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "Boolean",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "turno",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "PagoHistorialSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "empleado",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "tipo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "semana",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoHistorialSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "empleado",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      }
+    ]
+  },
+  {
+    "nombre": "PagoDetalleSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "PagoPersonalSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_pago",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "tipo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "descripcion",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoDetalleSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_adelanto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "respuesta",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": true,
+        "atributo": "respuesta_admin",
+        "solo_salida": false
+      }
+    ]
+  },
+  {
+    "nombre": "AdelantoListadoSchema",
+    "fuente": "schemas/usuario.py",
+    "campos": [
+      {
+        "nombre": "id_adelanto",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "id_usuario",
+        "tipo_marshmallow": "Integer",
+        "nullable_declarado": true,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "monto",
+        "tipo_marshmallow": "Float",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "fecha",
+        "tipo_marshmallow": "Function",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": true
+      },
+      {
+        "nombre": "estado",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      },
+      {
+        "nombre": "motivo",
+        "tipo_marshmallow": "String",
+        "nullable_declarado": false,
+        "atributo": null,
+        "solo_salida": false
+      }
+    ]
+  }
+]
