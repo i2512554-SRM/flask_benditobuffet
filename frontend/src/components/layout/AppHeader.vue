@@ -1,0 +1,249 @@
+<template>
+  <header class="app-header">
+    <div class="header-left">
+      <button
+        class="menu-toggle"
+        :title="menuOpen ? 'Cerrar menú' : 'Abrir menú'"
+        @click="$emit('toggle-menu')"
+      >
+        <i :class="menuOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars'"></i>
+      </button>
+      <router-link :to="links.panel.admin" class="header-brand" v-if="isAdmin">
+        <img :src="logoSrc" alt="Logo" class="header-logo" />
+        <div>
+          <h1>Bendito Buffet</h1>
+          <span class="header-subtitle">Sistema de Gestion</span>
+        </div>
+      </router-link>
+      <div class="header-brand" v-else>
+        <img :src="logoSrc" alt="Logo" class="header-logo" />
+        <div>
+          <h1>Bendito Buffet</h1>
+          <span class="header-subtitle">Sistema de Gestion</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <router-link :to="links.perfil" class="header-user" v-if="authStore.user" :aria-label="`Perfil de ${authStore.user.nombre}`">
+        <img v-if="authStore.user.foto_perfil" :src="authStore.user.foto_perfil" class="header-avatar" alt="Foto de perfil" />
+        <span v-else class="header-avatar avatar-iniciales">{{ iniciales }}</span>
+        <span>{{ authStore.user.nombre }}</span>
+      </router-link>
+      <button class="theme-toggle" @click="toggleDarkMode" :title="isDarkMode ? 'Modo claro' : 'Modo oscuro'">
+        <i :class="isDarkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
+      </button>
+      <button class="btn-logout" @click="confirmarCierre">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Cerrar Sesion</span>
+      </button>
+    </div>
+  </header>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+import { useLogout } from '../../composables/useLogout'
+import { links } from '../../router/links'
+import { ROLES } from '../../config/roles'
+import logoSrc from '../../assets/logo.png'
+
+defineProps({
+  menuOpen: { type: Boolean, default: false }
+})
+defineEmits(['toggle-menu'])
+
+const { confirmarCierre } = useLogout()
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.rol === ROLES.ADMIN)
+const isDarkMode = ref(false)
+
+const iniciales = computed(() => {
+  const nombre = authStore.user?.nombre || ''
+  return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
+})
+
+onMounted(() => {
+  isDarkMode.value = localStorage.getItem('dark-mode') === 'true'
+  document.documentElement.classList.toggle('dark-mode', isDarkMode.value)
+})
+
+const toggleDarkMode = () => {
+  isDarkMode.value = !isDarkMode.value
+  document.documentElement.classList.toggle('dark-mode', isDarkMode.value)
+  localStorage.setItem('dark-mode', isDarkMode.value)
+}
+</script>
+
+<style scoped>
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1.5rem;
+  height: 60px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-soft);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: all 0.18s ease;
+}
+
+.menu-toggle:hover {
+  color: var(--btn-primary);
+  border-color: var(--btn-primary);
+  background: var(--hover-color);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.header-brand h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: all 0.18s ease;
+}
+
+.header-user:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--btn-primary);
+}
+
+.header-user i {
+  font-size: 1.3rem;
+  color: var(--btn-primary);
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-iniciales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 1rem;
+}
+
+.theme-toggle:hover {
+  color: var(--btn-primary);
+  border-color: var(--btn-primary);
+  background: var(--hover-color);
+}
+
+.btn-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+}
+
+.btn-logout:hover {
+  color: var(--color-rojo);
+  border-color: var(--color-rojo);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 1rem;
+  }
+  .header-user > span:not(.header-avatar),
+  .btn-logout span {
+    display: none;
+  }
+}
+</style>

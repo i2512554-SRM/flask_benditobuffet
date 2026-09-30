@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from bd import db
 
 
@@ -74,7 +76,7 @@ class UsuarioPerfil(db.Model):
     foto_perfil = db.Column(db.String(255))
     fecha_ingreso = db.Column(db.Date)
     horario = db.Column(db.String(100))
-    salario = db.Column(db.Float)
+    salario = db.Column(db.Numeric(12, 2))
     fecha_creacion = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
 
     usuario = db.relationship('Usuario', back_populates='perfil')
@@ -104,19 +106,66 @@ class PagoEmpleado(db.Model):
     __table_args__ = (
         db.Index('ix_pagos_empleados_usuario', 'id_usuario'),
         db.Index('ix_pagos_empleados_fecha', 'fecha_pago'),
+        db.Index('ux_pagos_empleados_operacion', 'clave_operacion', unique=True),
     )
 
     id_pago = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha_pago = db.Column(db.DateTime(timezone=True), nullable=False)
     estado = db.Column(db.String(80), nullable=False)
     descripcion = db.Column(db.String(255))
+    tipo = db.Column(db.String(100))
+    semana = db.Column(db.Date)
+    id_pago_personal = db.Column(db.BigInteger, db.ForeignKey('pagos_personal.id_pago'), unique=True)
+    clave_operacion = db.Column(db.String(36), nullable=True)
 
     usuario_empleado = db.relationship('Usuario', foreign_keys=[id_usuario])
 
     def __repr__(self):
         return f"<PagoEmpleado {self.id_pago} usuario={self.id_usuario} monto={self.monto}>"
+
+
+class SueldoSemanal(db.Model):
+    __tablename__ = 'sueldos_semanales'
+    __table_args__ = (db.UniqueConstraint('id_usuario', 'desde'), db.CheckConstraint('monto >= 0'))
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    desde = db.Column(db.Date, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
+    registrado_por = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
+class DescuentoSemanal(db.Model):
+    __tablename__ = 'descuentos_semanales'
+    __table_args__ = (db.CheckConstraint('monto > 0'),)
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    semana = db.Column(db.Date, nullable=False, index=True)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
+    motivo = db.Column(db.String(255), nullable=False)
+    registrado_por = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+    anulado = db.Column(db.Boolean, nullable=False, default=False)
+    clave_operacion = db.Column(db.String(36), unique=True)
+
+
+class SesionUsuario(db.Model):
+    __tablename__ = 'sesiones_usuario'
+    id = db.Column(db.String(36), primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    huella_clave = db.Column(db.String(64), nullable=False)
+    expira = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    revocada = db.Column(db.Boolean, nullable=False, default=False)
+
+
+class AtencionInsumo(db.Model):
+    __tablename__ = 'atenciones_insumos'
+    __table_args__ = (db.UniqueConstraint('id_compra', 'id_solicitud'),)
+    id = db.Column(db.BigInteger, primary_key=True)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=False, index=True)
+    id_solicitud = db.Column(db.BigInteger, db.ForeignKey('solicitudes_insumos.id_solicitud'), nullable=False)
 
 
 class PagoPersonal(db.Model):
@@ -128,7 +177,7 @@ class PagoPersonal(db.Model):
 
     id_pago = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.Date, nullable=False)
     tipo = db.Column(db.String(100), nullable=False)
     estado = db.Column(db.String(80), nullable=False, server_default='Completado')
@@ -151,7 +200,7 @@ class Adelanto(db.Model):
     id_adelanto = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
     motivo = db.Column(db.String(255), nullable=False)
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
     estado = db.Column(db.String(80), nullable=False, default='Pendiente')
     respuesta_admin = db.Column(db.Text, nullable=True)
@@ -188,10 +237,18 @@ class IntentoLogin(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True)
     identificador = db.Column(db.String(255), nullable=False, index=True)
+    ip = db.Column(db.String(50))
+    resultado = db.Column(db.String(20), nullable=False, default='exito')
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
+    usuario_rel = db.relationship('Usuario', primaryjoin='foreign(IntentoLogin.identificador)==Usuario.usuario', uselist=False, viewonly=True)
+
+    @property
+    def usuario_nombre(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
     def __repr__(self):
-        return f"<IntentoLogin {self.id} {self.identificador} {self.fecha}>"
+        return f"<IntentoLogin {self.id} {self.identificador} {self.resultado} {self.fecha}>"
 
 
 class TransaccionCaja(db.Model):
@@ -199,15 +256,17 @@ class TransaccionCaja(db.Model):
     __table_args__ = (
         db.Index('ix_transacciones_caja_usuario', 'id_usuario'),
         db.Index('ix_transacciones_caja_fecha', 'fecha'),
+        db.Index('ux_transacciones_caja_operacion', 'clave_operacion', unique=True),
     )
 
     id_transaccion = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
     tipo = db.Column(db.String(50))
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     metodo_pago = db.Column(db.String(50))
     categoria = db.Column(db.String(150))
     descripcion = db.Column(db.Text)
+    clave_operacion = db.Column(db.String(36), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     def __repr__(self):
@@ -222,10 +281,14 @@ class CierreCaja(db.Model):
 
     id_cierre = db.Column(db.BigInteger, primary_key=True)
     id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'))
-    total_ventas = db.Column(db.Float, nullable=False)
-    total_gastos = db.Column(db.Float, nullable=False)
-    neto = db.Column(db.Float, nullable=False)
+    monto_inicial = db.Column(db.Numeric(12, 2), nullable=False, server_default='0', default=0)
+    total_ventas = db.Column(db.Numeric(12, 2), nullable=False)
+    total_gastos = db.Column(db.Numeric(12, 2), nullable=False)
+    neto = db.Column(db.Numeric(12, 2), db.Computed('(total_ventas - total_gastos)'))
+    efectivo_contado = db.Column(db.Numeric(12, 2), nullable=True)
     observaciones = db.Column(db.Text)
+    estado = db.Column(db.String(20), nullable=False, default='cerrada')
+    fecha_cierre = db.Column(db.DateTime(timezone=True), nullable=True)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
 
     def __repr__(self):
@@ -240,8 +303,12 @@ class Producto(db.Model):
 
     id_producto = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(200), nullable=False)
-    precio = db.Column(db.Float, nullable=False)
-    stock = db.Column(db.Float, nullable=False)
+    precio = db.Column(db.Numeric(12, 2), nullable=False)
+    costo = db.Column(db.Numeric(12, 3), nullable=True)
+    stock = db.Column(db.Numeric(12, 3), nullable=False)
+    unidad_medida = db.Column(db.String(10), nullable=False, default='Un', server_default='Un')
+    descripcion = db.Column(db.String(255), nullable=True)
+    estado = db.Column(db.Boolean, nullable=False, default=True, server_default='true')
     id_categoria = db.Column(db.BigInteger, db.ForeignKey('categorias.id_categoria'), nullable=False)
     fecha_registro = db.Column(db.DateTime(timezone=True), nullable=False)
     fecha_edicion = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -266,8 +333,10 @@ class Inversion(db.Model):
     descripcion = db.Column(db.String(255), nullable=False)
     id_proveedor = db.Column(db.BigInteger, db.ForeignKey('proveedores.id_proveedor'), nullable=True)
     notas = db.Column(db.Text, nullable=True)
-    monto = db.Column(db.Float, nullable=False)
+    monto = db.Column(db.Numeric(12, 2), nullable=False)
     fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+    estado = db.Column(db.String(20), nullable=False, default='Registrada', server_default='Registrada')
+    fecha_anulacion = db.Column(db.DateTime(timezone=True), nullable=True)
 
     proveedor_rel = db.relationship('Proveedor', foreign_keys=[id_proveedor])
 
@@ -298,3 +367,204 @@ class Categoria(db.Model):
 
     def __repr__(self):
         return f"<Categoria {self.id_categoria} {self.nombre}>"
+
+
+class CompraInventario(db.Model):
+    __tablename__ = 'compras_inventario'
+    __table_args__ = (
+        db.Index('ix_compras_inventario_fecha', 'fecha'),
+        db.Index('ux_compras_inventario_operacion', 'clave_operacion', unique=True),
+    )
+
+    id_compra = db.Column(db.BigInteger, primary_key=True)
+    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    id_proveedor = db.Column(db.BigInteger, db.ForeignKey('proveedores.id_proveedor'), nullable=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    total_compra = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    notas = db.Column(db.Text)
+    estado = db.Column(db.String(30), nullable=False, default='Completada')
+    clave_operacion = db.Column(db.String(36), nullable=True)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    detalle = db.relationship('DetalleCompraInventario', back_populates='compra', cascade='all, delete-orphan')
+    proveedor_rel = db.relationship('Proveedor', foreign_keys=[id_proveedor])
+
+    @property
+    def proveedor(self):
+        return self.proveedor_rel.nombre if self.proveedor_rel else None
+
+    @property
+    def n_detalle(self):
+        return len(self.detalle)
+
+    def __repr__(self):
+        return f"<CompraInventario {self.id_compra} {self.codigo} {self.total_compra}>"
+
+
+class DetalleCompraInventario(db.Model):
+    __tablename__ = 'detalle_compras_inventario'
+    __table_args__ = (
+        db.Index('ix_detalle_compras_inventario_compra', 'id_compra'),
+    )
+
+    id_detalle = db.Column(db.BigInteger, primary_key=True)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=False)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False, default=0)
+    precio_unitario = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    subtotal = db.Column(db.Numeric(12, 2), db.Computed('(cantidad * precio_unitario)'))
+
+    compra = db.relationship('CompraInventario', back_populates='detalle')
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    def __repr__(self):
+        return f"<DetalleCompraInventario {self.id_detalle} producto={self.id_producto}>"
+
+
+class InventarioMovimiento(db.Model):
+    __tablename__ = 'inventario_movimientos'
+    __table_args__ = (
+        db.Index('ix_inventario_movimientos_producto', 'id_producto'),
+        db.Index('ix_inventario_movimientos_fecha', 'fecha'),
+        db.Index('ux_inventario_movimientos_operacion', 'clave_operacion', unique=True),
+    )
+
+    id_movimiento = db.Column(db.BigInteger, primary_key=True)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    tipo = db.Column(db.String(30), nullable=False)
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False, default=0)
+    stock_anterior = db.Column(db.Numeric(12, 3), nullable=True)
+    stock_posterior = db.Column(db.Numeric(12, 3), nullable=True)
+    motivo = db.Column(db.String(255), nullable=True)
+    id_compra = db.Column(db.BigInteger, db.ForeignKey('compras_inventario.id_compra'), nullable=True)
+    observacion = db.Column(db.String(255))
+    clave_operacion = db.Column(db.String(36), nullable=True)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+    usuario_rel = db.relationship('Usuario', foreign_keys=[id_usuario])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    @property
+    def unidad(self):
+        return self.producto_rel.unidad_medida if self.producto_rel else None
+
+    @property
+    def usuario(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
+    def __repr__(self):
+        return f"<InventarioMovimiento {self.id_movimiento} {self.tipo} {self.cantidad}>"
+
+
+class SolicitudInsumo(db.Model):
+    __tablename__ = 'solicitudes_insumos'
+    __table_args__ = (
+        db.Index('ix_solicitudes_insumos_usuario', 'id_usuario'),
+        db.Index('ix_solicitudes_insumos_producto', 'id_producto'),
+        db.Index('ix_solicitudes_insumos_estado', 'estado'),
+    )
+
+    id_solicitud = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    id_producto = db.Column(db.BigInteger, db.ForeignKey('productos.id_producto'), nullable=False)
+    cantidad = db.Column(db.Numeric(12, 3), nullable=False)
+    observacion = db.Column(db.String(255))
+    estado = db.Column(db.String(30), nullable=False, default='Pendiente')
+    respuesta = db.Column(db.String(255))
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_solicitud = db.relationship('Usuario', foreign_keys=[id_usuario])
+    producto_rel = db.relationship('Producto', foreign_keys=[id_producto])
+
+    @property
+    def producto(self):
+        return self.producto_rel.nombre if self.producto_rel else None
+
+    @property
+    def solicitante(self):
+        return f"{self.usuario_solicitud.nombres} {self.usuario_solicitud.apellido}".strip() if self.usuario_solicitud else None
+
+    def __repr__(self):
+        return f"<SolicitudInsumo {self.id_solicitud} producto={self.id_producto} estado={self.estado}>"
+
+
+class Notificacion(db.Model):
+    __tablename__ = 'notificaciones'
+    __table_args__ = (
+        db.Index('ix_notificaciones_usuario', 'id_usuario'),
+        db.Index('ix_notificaciones_leida', 'leida'),
+        db.Index('ix_notificaciones_fecha', 'fecha'),
+    )
+
+    id_notificacion = db.Column(db.BigInteger, primary_key=True)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    titulo = db.Column(db.String(120), nullable=False)
+    mensaje = db.Column(db.String(500))
+    leida = db.Column(db.Boolean, nullable=False, default=False)
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_notif = db.relationship('Usuario', foreign_keys=[id_usuario])
+
+    def __repr__(self):
+        return f"<Notificacion {self.id_notificacion} usuario={self.id_usuario}>"
+
+
+def crear_notificacion(id_usuario, titulo, mensaje):
+    n = Notificacion(id_usuario=id_usuario, titulo=(titulo or '')[:120], mensaje=(mensaje or '')[:500] or None,
+                     fecha=datetime.now(timezone.utc))
+    db.session.add(n)
+    return n
+
+
+class BloqueoLogin(db.Model):
+    __tablename__ = 'bloqueos_login'
+    __table_args__ = (
+        db.Index('ix_bloqueos_login_usuario', 'usuario'),
+        db.Index('ix_bloqueos_login_fecha', 'fecha'),
+    )
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    usuario = db.Column(db.String(255), nullable=False)
+    ip = db.Column(db.String(50))
+    intentos = db.Column(db.Integer, nullable=False, default=0)
+    bloqueado_hasta = db.Column(db.DateTime(timezone=True), nullable=True)
+    tipo = db.Column(db.String(20), nullable=False, default='usuario')
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    usuario_rel = db.relationship('Usuario', primaryjoin='foreign(BloqueoLogin.usuario)==Usuario.usuario', uselist=False, viewonly=True)
+
+    @property
+    def usuario_nombre(self):
+        return f"{self.usuario_rel.nombres} {self.usuario_rel.apellido}".strip() if self.usuario_rel else None
+
+    @property
+    def usuario_rol(self):
+        return self.usuario_rel.rol.id_rol if self.usuario_rel and self.usuario_rel.rol else None
+
+    def __repr__(self):
+        return f"<BloqueoLogin {self.id} {self.usuario} intentos={self.intentos}>"
+
+
+class MetaIndicador(db.Model):
+    __tablename__ = 'metas_indicadores'
+    __table_args__ = (
+        db.CheckConstraint('limite_atencion <> limite_revisar', name='ck_metas_indicadores_limites'),
+    )
+
+    codigo = db.Column(db.String(10), primary_key=True)
+    limite_atencion = db.Column(db.Numeric(10, 2), nullable=False)
+    limite_revisar = db.Column(db.Numeric(10, 2), nullable=False)
+    id_usuario = db.Column(db.BigInteger, db.ForeignKey('usuarios.id_usuario', ondelete='SET NULL'))
+    actualizado_en = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<MetaIndicador {self.codigo} atencion={self.limite_atencion} revisar={self.limite_revisar}>"

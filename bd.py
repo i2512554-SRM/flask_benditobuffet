@@ -1,29 +1,24 @@
 import os
-
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.engine import URL
 from dotenv import load_dotenv
 
 load_dotenv()
-
 db = SQLAlchemy()
 
 
 def init_db(app):
-
-    user = os.getenv("DB_USER", "postgres")
-    password = os.getenv("DB_PASSWORD", "benditobeffet2026")
-    host = os.getenv("DB_HOST", "db.dotnogeffcylgiplpfyj.supabase.co")
-    port = os.getenv("DB_PORT", "5432")
-    database = os.getenv("DB_NAME", "postgres")
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"postgresql+psycopg://{user}:{password}@{host}:{port}/{database}?sslmode=require"
-    )
-
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True
-    }
-
+    requeridas = ('DB_USER', 'DB_PASSWORD', 'DB_HOST')
+    if any(not os.getenv(nombre) for nombre in requeridas):
+        raise RuntimeError('Configure DB_USER, DB_PASSWORD y DB_HOST en el entorno del servidor.')
+    puerto = int(os.getenv('DB_PORT', '6543'))
+    opciones_motor = {'pool_pre_ping': True}
+    if puerto == 6543:
+        opciones_motor['connect_args'] = {'prepare_threshold': None}
+    app.config['SQLALCHEMY_DATABASE_URI'] = URL.create(
+        'postgresql+psycopg', username=os.environ['DB_USER'], password=os.environ['DB_PASSWORD'],
+        host=os.environ['DB_HOST'], port=puerto,
+        database=os.getenv('DB_NAME', 'postgres'), query={'sslmode': 'require'})
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = opciones_motor
     db.init_app(app)
